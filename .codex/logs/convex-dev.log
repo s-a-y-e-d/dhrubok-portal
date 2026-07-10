@@ -1,0 +1,17 @@
+
+> dhrubok-portal@0.1.0 convex:dev
+> convex dev
+
+▌ Developing against deployment:
+▌ [Local] Port 3210 • No Convex account (run npx convex login to link to a project)
+▌ └─ http://127.0.0.1:3210
+Downloading Convex dashboard
+- Preparing Convex functions...
+
+√ 00:19:58 Convex functions ready! (5.46s)
+- Preparing Convex functions...
+
+√ 00:23:07 Convex functions ready! (1.83s)
+- Preparing Convex functions...
+
+√ 00:23:11 Convex functions ready! (1.03s)

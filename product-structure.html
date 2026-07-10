@@ -1,0 +1,2213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dhrubok Portal — Product Structure</title>
+  <meta name="description" content="Complete product structure and specification for Dhrubok Portal, a private coaching centre management system." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ══════════════════════════════════════════════════
+       DESIGN SYSTEM — from DESIGN.md (Notion analysis)
+       ══════════════════════════════════════════════════ */
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* ── Colors ── */
+      --primary: #0075de;
+      --primary-active: #005bab;
+      --secondary: #213183;
+      --on-primary: #ffffff;
+      --canvas: #ffffff;
+      --canvas-soft: #f6f5f4;
+      --surface: #ffffff;
+      --ink: #000000;
+      --ink-secondary: #31302e;
+      --ink-muted: #615d59;
+      --ink-faint: #a39e98;
+      --hairline: #e6e6e6;
+
+      /* ── Sticker palette (decoration only) ── */
+      --accent-sky: #62aef0;
+      --accent-purple: #d6b6f6;
+      --accent-purple-deep: #391c57;
+      --accent-pink: #ff64c8;
+      --accent-orange: #dd5b00;
+      --accent-orange-deep: #793400;
+      --accent-teal: #2a9d99;
+      --accent-green: #1aae39;
+      --accent-brown: #523410;
+
+      /* ── Rounded ── */
+      --rounded-xs: 4px;
+      --rounded-sm: 5px;
+      --rounded-md: 8px;
+      --rounded-lg: 12px;
+      --rounded-xl: 16px;
+      --rounded-full: 9999px;
+
+      /* ── Spacing ── */
+      --sp-xxs: 4px;
+      --sp-xs: 8px;
+      --sp-sm: 12px;
+      --sp-md: 16px;
+      --sp-lg: 24px;
+      --sp-xl: 28px;
+      --sp-xxl: 32px;
+
+      /* ── Shadows ── */
+      --shadow-soft:
+        0 0.175px 1.041px rgba(0,0,0,0.01),
+        0 0.8px 2.925px rgba(0,0,0,0.02),
+        0 2.025px 7.847px rgba(0,0,0,0.027),
+        0 4px 18px rgba(0,0,0,0.04);
+      --shadow-elevated:
+        0 0.175px 1.041px rgba(0,0,0,0.01),
+        0 0.8px 2.925px rgba(0,0,0,0.02),
+        0 2.025px 7.847px rgba(0,0,0,0.027),
+        0 4px 18px rgba(0,0,0,0.04),
+        0 23px 52px rgba(0,0,0,0.05);
+
+      /* ── Font ── */
+      --font: 'Inter', -apple-system, system-ui, "Segoe UI", Helvetica, Arial, 'Noto Sans Bengali', sans-serif;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 72px;
+      font-feature-settings: 'lnum' 1, 'locl' 1;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--canvas-soft);
+      color: var(--ink);
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--hairline); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--ink-faint); }
+
+    /* ══════════════════════════════════════════════════
+       SIDEBAR
+       ══════════════════════════════════════════════════ */
+    .sidebar {
+      position: fixed;
+      top: 0; left: 0;
+      width: 260px;
+      height: 100vh;
+      background: var(--canvas);
+      border-right: 1px solid var(--hairline);
+      overflow-y: auto;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.25s ease;
+    }
+
+    .sidebar-header {
+      padding: var(--sp-lg) var(--sp-md) var(--sp-md);
+      border-bottom: 1px solid var(--hairline);
+      flex-shrink: 0;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-sm);
+      text-decoration: none;
+      color: var(--ink);
+    }
+
+    .sidebar-logo-icon {
+      width: 36px; height: 36px;
+      background: var(--secondary);
+      border-radius: var(--rounded-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--on-primary);
+      font-family: 'Noto Sans Bengali', sans-serif;
+    }
+
+    .sidebar-logo-text h1 {
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.33;
+      letter-spacing: -0.125px;
+    }
+
+    .sidebar-logo-text span {
+      font-size: 12px;
+      color: var(--ink-muted);
+      font-weight: 400;
+    }
+
+    .sidebar-nav {
+      padding: var(--sp-xs) var(--sp-xs);
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .nav-group-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.125px;
+      color: var(--ink-faint);
+      padding: var(--sp-md) var(--sp-sm) var(--sp-xxs);
+      text-transform: uppercase;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-xs);
+      padding: 6px var(--sp-sm);
+      border-radius: var(--rounded-sm);
+      color: var(--ink-secondary);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 1.43;
+      transition: background 0.15s ease;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .nav-link:hover { background: var(--canvas-soft); }
+
+    .nav-link.active {
+      background: var(--canvas-soft);
+      color: var(--ink);
+      font-weight: 500;
+    }
+
+    .nav-link.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 6px; bottom: 6px;
+      width: 3px;
+      background: var(--primary);
+      border-radius: 2px;
+    }
+
+    .nav-link .nav-icon {
+      width: 20px;
+      text-align: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .nav-link .nav-num {
+      font-size: 11px;
+      color: var(--ink-faint);
+      margin-left: auto;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Mobile toggle ── */
+    .mobile-toggle {
+      display: none;
+      position: fixed;
+      bottom: 20px; right: 20px;
+      width: 48px; height: 48px;
+      border-radius: var(--rounded-full);
+      background: var(--primary);
+      color: var(--on-primary);
+      border: none;
+      font-size: 20px;
+      z-index: 200;
+      cursor: pointer;
+      box-shadow: var(--shadow-elevated);
+      transition: transform 0.15s ease;
+    }
+    .mobile-toggle:active { transform: scale(0.9); }
+    .sidebar-overlay { display: none; }
+
+    /* ══════════════════════════════════════════════════
+       MAIN
+       ══════════════════════════════════════════════════ */
+    .main { margin-left: 260px; min-height: 100vh; }
+
+    /* ── Hero — the single dark "night" band ── */
+    .hero {
+      background: var(--secondary);
+      color: var(--on-primary);
+      padding: 72px 64px 56px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Decorative sticker dots */
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 30px; right: 80px;
+      width: 10px; height: 10px;
+      background: var(--accent-pink);
+      border-radius: 50%;
+      box-shadow:
+        40px 20px 0 var(--accent-sky),
+        -30px 60px 0 var(--accent-purple),
+        80px 70px 0 var(--accent-teal),
+        120px 30px 0 6px var(--accent-orange),
+        -70px 20px 0 3px var(--accent-green),
+        160px 80px 0 2px var(--accent-pink),
+        50px 100px 0 4px var(--accent-sky),
+        -20px 110px 0 1px var(--accent-purple);
+      opacity: 0.35;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      background: var(--surface);
+      border-radius: var(--rounded-full);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.125px;
+      color: var(--primary);
+      margin-bottom: var(--sp-lg);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .hero h1 {
+      font-size: 54px;
+      font-weight: 700;
+      line-height: 1.04;
+      letter-spacing: -1.875px;
+      margin-bottom: 4px;
+    }
+
+    .hero .bangla-title {
+      font-size: 22px;
+      font-weight: 600;
+      line-height: 1.27;
+      letter-spacing: -0.25px;
+      opacity: 0.7;
+      margin-bottom: var(--sp-lg);
+      font-family: 'Noto Sans Bengali', 'Inter', sans-serif;
+    }
+
+    .hero-desc {
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 1.5;
+      max-width: 600px;
+      opacity: 0.85;
+    }
+
+    .hero-stats {
+      display: flex;
+      gap: 40px;
+      margin-top: var(--sp-xxl);
+      flex-wrap: wrap;
+    }
+
+    .hero-stat-value {
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1.23;
+      letter-spacing: -0.625px;
+    }
+
+    .hero-stat-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.125px;
+      opacity: 0.55;
+      text-transform: uppercase;
+    }
+
+    /* ══════════════════════════════════════════════════
+       CONTENT
+       ══════════════════════════════════════════════════ */
+    .content {
+      max-width: 860px;
+      padding: 0 64px 80px;
+    }
+
+    /* ── Section ── */
+    .section { padding-top: 48px; }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-sm);
+      margin-bottom: var(--sp-lg);
+      padding-bottom: var(--sp-md);
+      border-bottom: 1px solid var(--hairline);
+    }
+
+    .section-num {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.125px;
+      color: var(--primary);
+      background: rgba(0, 117, 222, 0.08);
+      padding: 4px 10px;
+      border-radius: var(--rounded-full);
+      flex-shrink: 0;
+    }
+
+    .section-header h2 {
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1.23;
+      letter-spacing: -0.625px;
+    }
+
+    /* ── Subsection ── */
+    .subsection { margin-top: var(--sp-xxl); }
+
+    .subsection h3 {
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.4;
+      letter-spacing: -0.125px;
+      color: var(--ink);
+      margin-bottom: var(--sp-sm);
+    }
+
+    .subsection h4 {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.125px;
+      color: var(--ink-faint);
+      text-transform: uppercase;
+      margin-top: var(--sp-lg);
+      margin-bottom: var(--sp-xs);
+    }
+
+    /* ── Description text ── */
+    .desc {
+      font-size: 15px;
+      font-weight: 400;
+      line-height: 1.6;
+      color: var(--ink-secondary);
+      margin-bottom: var(--sp-sm);
+    }
+    .desc strong { color: var(--ink); font-weight: 600; }
+
+    /* ══════════════════════════════════════════════════
+       PRINCIPLE CARDS — feature-card style
+       ══════════════════════════════════════════════════ */
+    .principles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: var(--sp-sm);
+    }
+
+    .principle-card {
+      background: var(--surface);
+      border: 1px solid var(--hairline);
+      border-radius: var(--rounded-lg);
+      padding: var(--sp-md) var(--sp-md);
+      font-size: 14px;
+      color: var(--ink-secondary);
+      line-height: 1.43;
+      display: flex;
+      gap: var(--sp-sm);
+      align-items: flex-start;
+      transition: box-shadow 0.2s ease;
+    }
+
+    .principle-card:hover { box-shadow: var(--shadow-soft); }
+
+    .principle-icon {
+      width: 28px; height: 28px;
+      flex-shrink: 0;
+      border-radius: var(--rounded-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .principle-card strong { color: var(--ink); }
+
+    /* ══════════════════════════════════════════════════
+       NAVIGATION TABLE — data-table style
+       ══════════════════════════════════════════════════ */
+    .nav-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid var(--hairline);
+      border-radius: var(--rounded-lg);
+      overflow: hidden;
+    }
+
+    .nav-table th {
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.125px;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+      padding: var(--sp-sm) var(--sp-md);
+      background: var(--canvas-soft);
+      border-bottom: 1px solid var(--hairline);
+    }
+
+    .nav-table td {
+      padding: var(--sp-sm) var(--sp-md);
+      font-size: 15px;
+      line-height: 1.33;
+      border-bottom: 1px solid var(--hairline);
+      background: var(--surface);
+    }
+
+    .nav-table tr:last-child td { border-bottom: none; }
+    .nav-table tr:hover td { background: var(--canvas-soft); }
+
+    .nav-table td:first-child {
+      font-weight: 600;
+      color: var(--ink);
+      white-space: nowrap;
+    }
+
+    .nav-table td:last-child { color: var(--ink-secondary); }
+
+    .section-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px; height: 24px;
+      border-radius: var(--rounded-sm);
+      margin-right: 8px;
+      font-size: 13px;
+      vertical-align: middle;
+    }
+
+    /* ══════════════════════════════════════════════════
+       QUICK ACTIONS — button-primary pill style
+       ══════════════════════════════════════════════════ */
+    .quick-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-xs);
+      margin-top: var(--sp-sm);
+    }
+
+    .quick-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      background: var(--primary);
+      color: var(--on-primary);
+      border-radius: var(--rounded-full);
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1.5;
+      cursor: default;
+      transition: background 0.15s ease, transform 0.15s ease;
+    }
+
+    .quick-action:hover { background: var(--primary-active); }
+    .quick-action:active { transform: scale(0.96); }
+
+    .quick-action--secondary {
+      background: var(--surface);
+      color: var(--ink);
+      border: 1px solid var(--hairline);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .quick-action--secondary:hover {
+      background: var(--canvas-soft);
+    }
+
+    /* ══════════════════════════════════════════════════
+       SUMMARY CARDS
+       ══════════════════════════════════════════════════ */
+    .summary-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: var(--sp-sm);
+    }
+
+    .summary-card {
+      background: var(--surface);
+      border: 1px solid var(--hairline);
+      border-radius: var(--rounded-lg);
+      padding: var(--sp-lg);
+      transition: box-shadow 0.2s ease;
+    }
+
+    .summary-card:hover { box-shadow: var(--shadow-soft); }
+
+    .summary-card-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      margin-bottom: var(--sp-sm);
+    }
+
+    .summary-card-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.125px;
+      color: var(--ink-faint);
+      text-transform: uppercase;
+    }
+
+    .summary-card-value {
+      font-size: 14px;
+      color: var(--ink-secondary);
+      font-weight: 400;
+      margin-top: 2px;
+    }
+
+    /* ══════════════════════════════════════════════════
+       STYLED LISTS
+       ══════════════════════════════════════════════════ */
+    .styled-list {
+      list-style: none;
+    }
+
+    .styled-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--sp-xs);
+      font-size: 15px;
+      color: var(--ink-secondary);
+      padding: 4px 0;
+      line-height: 1.33;
+    }
+
+    .styled-list li::before {
+      content: '→';
+      color: var(--primary);
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+
+    .styled-list.check li::before { content: '✓'; color: var(--accent-green); }
+
+    .compact-list {
+      list-style: none;
+    }
+
+    .compact-list li {
+      font-size: 14px;
+      color: var(--ink-secondary);
+      padding: 3px 0;
+      padding-left: 16px;
+      position: relative;
+      line-height: 1.43;
+    }
+
+    .compact-list li::before {
+      content: '·';
+      position: absolute;
+      left: 4px;
+      color: var(--ink-faint);
+      font-weight: 700;
+    }
+
+    /* ══════════════════════════════════════════════════
+       INFO CARD — feature-card
+       ══════════════════════════════════════════════════ */
+    .info-card {
+      background: var(--surface);
+      border: 1px solid var(--hairline);
+      border-radius: var(--rounded-lg);
+      padding: var(--sp-lg);
+      margin-top: var(--sp-sm);
+    }
+
+    .info-card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: var(--sp-xs);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* ══════════════════════════════════════════════════
+       FLOW STEPS
+       ══════════════════════════════════════════════════ */
+    .flow-steps {
+      display: flex;
+      flex-direction: column;
+      margin-top: var(--sp-sm);
+      position: relative;
+      padding-left: 4px;
+    }
+
+    .flow-steps::before {
+      content: '';
+      position: absolute;
+      left: 15px;
+      top: 20px;
+      bottom: 20px;
+      width: 1px;
+      background: var(--hairline);
+    }
+
+    .flow-step {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-sm);
+      padding: 8px 0;
+      position: relative;
+    }
+
+    .flow-step-num {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1.5px solid var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--primary);
+      flex-shrink: 0;
+      z-index: 1;
+    }
+
+    .flow-step-text {
+      font-size: 15px;
+      color: var(--ink-secondary);
+      line-height: 1.33;
+    }
+
+    .flow-step-text strong { color: var(--ink); }
+
+    /* ══════════════════════════════════════════════════
+       CHIPS — badge-pill style
+       ══════════════════════════════════════════════════ */
+    .chip-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: var(--sp-xs);
+    }
+
+    .chip {
+      padding: 4px 10px;
+      border-radius: var(--rounded-full);
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.33;
+      background: var(--surface);
+      border: 1px solid var(--hairline);
+      color: var(--ink-secondary);
+    }
+
+    /* Sticker-palette decoration on chips — subtle tinted backgrounds */
+    .chip--blue   { background: rgba(0, 117, 222, 0.06); color: var(--primary); border-color: rgba(0, 117, 222, 0.15); }
+    .chip--purple { background: rgba(214, 182, 246, 0.18); color: var(--accent-purple-deep); border-color: rgba(214, 182, 246, 0.35); }
+    .chip--pink   { background: rgba(255, 100, 200, 0.08); color: #b0006e; border-color: rgba(255, 100, 200, 0.2); }
+    .chip--orange { background: rgba(221, 91, 0, 0.07); color: var(--accent-orange-deep); border-color: rgba(221, 91, 0, 0.15); }
+    .chip--teal   { background: rgba(42, 157, 153, 0.08); color: #1a7a77; border-color: rgba(42, 157, 153, 0.18); }
+    .chip--green  { background: rgba(26, 174, 57, 0.07); color: #127a28; border-color: rgba(26, 174, 57, 0.18); }
+    .chip--sky    { background: rgba(98, 174, 240, 0.1); color: #2570b5; border-color: rgba(98, 174, 240, 0.22); }
+    .chip--brown  { background: rgba(82, 52, 16, 0.06); color: var(--accent-brown); border-color: rgba(82, 52, 16, 0.12); }
+
+    .chip small { font-weight: 400; opacity: 0.7; }
+
+    /* ══════════════════════════════════════════════════
+       TWO-COLUMN LAYOUT
+       ══════════════════════════════════════════════════ */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--sp-sm);
+      margin-top: var(--sp-sm);
+    }
+
+    /* ══════════════════════════════════════════════════
+       ATTENTION BOX — canvas-soft tint with sticker dot
+       ══════════════════════════════════════════════════ */
+    .attention-box {
+      background: var(--surface);
+      border: 1px solid var(--hairline);
+      border-left: 3px solid var(--accent-orange);
+      border-radius: var(--rounded-lg);
+      padding: var(--sp-md) var(--sp-lg);
+      margin-top: var(--sp-md);
+    }
+
+    .attention-box h4 {
+      margin-top: 0;
+      color: var(--accent-orange-deep);
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: var(--sp-xs);
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    /* ══════════════════════════════════════════════════
+       SPREADSHEET — data-table
+       ══════════════════════════════════════════════════ */
+    .spreadsheet {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: var(--sp-sm);
+      border: 1px solid var(--hairline);
+      border-radius: var(--rounded-lg);
+      overflow: hidden;
+    }
+
+    .spreadsheet th {
+      background: var(--canvas-soft);
+      color: var(--ink-muted);
+      font-size: 12px;
+      font-weight: 600;
+      text-align: left;
+      padding: var(--sp-sm) var(--sp-md);
+      border-bottom: 1px solid var(--hairline);
+      letter-spacing: 0.125px;
+      text-transform: uppercase;
+    }
+
+    .spreadsheet td {
+      padding: var(--sp-sm) var(--sp-md);
+      border-bottom: 1px solid var(--hairline);
+      font-size: 15px;
+      line-height: 1.33;
+      color: var(--ink-secondary);
+    }
+
+    .spreadsheet tr:last-child td { border-bottom: none; }
+    .spreadsheet tr:hover td { background: var(--canvas-soft); }
+
+    /* ══════════════════════════════════════════════════
+       TEMPLATE BLOCK — monospace with sticker highlights
+       ══════════════════════════════════════════════════ */
+    .template-block {
+      background: var(--surface);
+      border: 1px solid var(--hairline);
+      border-radius: var(--rounded-lg);
+      padding: var(--sp-md) var(--sp-lg);
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 13px;
+      line-height: 2.2;
+      margin-top: var(--sp-sm);
+      overflow-x: auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .template-var {
+      color: var(--accent-orange-deep);
+      background: rgba(221, 91, 0, 0.07);
+      padding: 2px 8px;
+      border-radius: var(--rounded-xs);
+      border: 1px solid rgba(221, 91, 0, 0.12);
+    }
+
+    /* ══════════════════════════════════════════════════
+       THREE-COL CARD (financial model)
+       ══════════════════════════════════════════════════ */
+    .three-col-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--sp-sm);
+    }
+
+    .model-card {
+      background: var(--surface);
+      border: 1px solid var(--hairline);
+      border-radius: var(--rounded-lg);
+      padding: var(--sp-lg);
+      text-align: center;
+      transition: box-shadow 0.2s ease;
+    }
+
+    .model-card:hover { box-shadow: var(--shadow-soft); }
+
+    .model-card-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      margin: 0 auto var(--sp-xs);
+    }
+
+    .model-card strong {
+      display: block;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 2px;
+    }
+
+    .model-card span {
+      font-size: 13px;
+      color: var(--ink-muted);
+    }
+
+    /* ══════════════════════════════════════════════════
+       BUILD SEQUENCE
+       ══════════════════════════════════════════════════ */
+    .build-sequence {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-xs);
+      margin-top: var(--sp-md);
+    }
+
+    .build-step {
+      display: flex;
+      gap: var(--sp-md);
+      align-items: flex-start;
+      background: var(--surface);
+      border: 1px solid var(--hairline);
+      border-radius: var(--rounded-lg);
+      padding: var(--sp-md) var(--sp-lg);
+      transition: box-shadow 0.2s ease;
+    }
+
+    .build-step:hover { box-shadow: var(--shadow-soft); }
+
+    .build-step-phase {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--primary);
+      min-width: 32px;
+      letter-spacing: -0.25px;
+      line-height: 1.27;
+    }
+
+    .build-step-content h4 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--ink);
+      margin: 0 0 2px;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .build-step-content p {
+      font-size: 14px;
+      color: var(--ink-muted);
+      margin: 0;
+      line-height: 1.43;
+    }
+
+    /* ══════════════════════════════════════════════════
+       EXCLUSION LIST
+       ══════════════════════════════════════════════════ */
+    .exclusion-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 6px;
+      margin-top: var(--sp-sm);
+    }
+
+    .exclusion-item {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-xs);
+      padding: var(--sp-xs) var(--sp-sm);
+      background: var(--surface);
+      border: 1px solid var(--hairline);
+      border-radius: var(--rounded-md);
+      font-size: 14px;
+      color: var(--ink-muted);
+      line-height: 1.43;
+    }
+
+    .exclusion-item::before {
+      content: '✕';
+      color: var(--accent-pink);
+      font-weight: 700;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    /* ══════════════════════════════════════════════════
+       UX RULES
+       ══════════════════════════════════════════════════ */
+    .ux-rules {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 6px;
+      margin-top: var(--sp-sm);
+    }
+
+    .ux-rule {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--sp-xs);
+      padding: var(--sp-sm) var(--sp-md);
+      background: var(--surface);
+      border: 1px solid var(--hairline);
+      border-radius: var(--rounded-md);
+      font-size: 14px;
+      color: var(--ink-secondary);
+      line-height: 1.43;
+    }
+
+    .ux-rule::before {
+      content: '◆';
+      color: var(--primary);
+      flex-shrink: 0;
+      font-size: 7px;
+      margin-top: 5px;
+    }
+
+    /* ══════════════════════════════════════════════════
+       FOOTER — canvas-soft band
+       ══════════════════════════════════════════════════ */
+    .footer {
+      text-align: center;
+      padding: var(--sp-xxl) var(--sp-lg);
+      color: var(--ink-muted);
+      font-size: 14px;
+      border-top: 1px solid var(--hairline);
+      line-height: 1.43;
+    }
+
+    .footer p + p { margin-top: 4px; color: var(--ink-faint); font-size: 13px; }
+
+    /* ══════════════════════════════════════════════════
+       RESPONSIVE
+       ══════════════════════════════════════════════════ */
+    @media (max-width: 840px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-overlay.open {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.3);
+        z-index: 99;
+      }
+      .mobile-toggle { display: flex; align-items: center; justify-content: center; }
+      .main { margin-left: 0; }
+      .hero { padding: 48px 24px 40px; }
+      .hero h1 { font-size: 40px; letter-spacing: -1px; line-height: 1.1; }
+      .content { padding: 0 24px 60px; }
+      .two-col { grid-template-columns: 1fr; }
+      .three-col-cards { grid-template-columns: 1fr; }
+      .principles-grid { grid-template-columns: 1fr; }
+      .ux-rules { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 600px) {
+      .hero h1 { font-size: 32px; letter-spacing: -0.8px; }
+      .hero-stats { gap: 24px; }
+      .summary-cards { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* ── Fade-in ── */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.45s ease, transform 0.45s ease;
+    }
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ════════════ SIDEBAR ════════════ -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-logo" href="#top">
+        <div class="sidebar-logo-icon">ধ্র</div>
+        <div class="sidebar-logo-text">
+          <h1>Dhrubok Portal</h1>
+          <span>Product Structure</span>
+        </div>
+      </a>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-group-label">Overview</div>
+      <a class="nav-link" href="#definition"><span class="nav-icon">📋</span> Product Definition <span class="nav-num">01</span></a>
+      <a class="nav-link" href="#navigation"><span class="nav-icon">🧭</span> Main Navigation <span class="nav-num">02</span></a>
+
+      <div class="nav-group-label">Core</div>
+      <a class="nav-link" href="#dashboard"><span class="nav-icon">📊</span> Dashboard <span class="nav-num">03</span></a>
+      <a class="nav-link" href="#students"><span class="nav-icon">🎓</span> Students <span class="nav-num">04</span></a>
+      <a class="nav-link" href="#batches"><span class="nav-icon">📚</span> Courses &amp; Batches <span class="nav-num">05</span></a>
+      <a class="nav-link" href="#attendance"><span class="nav-icon">✅</span> Attendance <span class="nav-num">06</span></a>
+
+      <div class="nav-group-label">Financial</div>
+      <a class="nav-link" href="#payments"><span class="nav-icon">💰</span> Fees &amp; Payments <span class="nav-num">07</span></a>
+      <a class="nav-link" href="#dues"><span class="nav-icon">⏰</span> Due Management <span class="nav-num">08</span></a>
+
+      <div class="nav-group-label">Academic</div>
+      <a class="nav-link" href="#exams"><span class="nav-icon">📝</span> Exams &amp; Results <span class="nav-num">09</span></a>
+
+      <div class="nav-group-label">Communication</div>
+      <a class="nav-link" href="#messaging"><span class="nav-icon">💬</span> Messaging <span class="nav-num">10</span></a>
+
+      <div class="nav-group-label">Operations</div>
+      <a class="nav-link" href="#reports"><span class="nav-icon">📈</span> Reports <span class="nav-num">11</span></a>
+      <a class="nav-link" href="#security"><span class="nav-icon">🔒</span> Owners &amp; Security <span class="nav-num">12</span></a>
+      <a class="nav-link" href="#settings"><span class="nav-icon">⚙️</span> Settings <span class="nav-num">13</span></a>
+
+      <div class="nav-group-label">Guidelines</div>
+      <a class="nav-link" href="#ux-rules"><span class="nav-icon">🎯</span> UX Rules <span class="nav-num">14</span></a>
+      <a class="nav-link" href="#build-sequence"><span class="nav-icon">🚀</span> Build Sequence <span class="nav-num">15</span></a>
+      <a class="nav-link" href="#exclusions"><span class="nav-icon">🚫</span> Out of Scope</a>
+    </div>
+  </nav>
+
+  <!-- ════════════ MOBILE TOGGLE ════════════ -->
+  <button class="mobile-toggle" id="mobileToggle" aria-label="Toggle navigation">☰</button>
+
+  <!-- ════════════ MAIN ════════════ -->
+  <div class="main" id="top">
+
+    <!-- ──── Hero — single dark "night" band ──── -->
+    <header class="hero">
+      <div class="hero-badge">Product Specification</div>
+      <h1>Dhrubok Portal</h1>
+      <div class="bangla-title">ধ্রুবক পোর্টাল — প্রোডাক্ট স্ট্রাকচার</div>
+      <p class="hero-desc">
+        A private management system for a single coaching centre. Designed for owners to <strong>admit students</strong>, <strong>organise batches</strong>, <strong>record attendance</strong>, <strong>collect payments</strong>, <strong>follow up on dues</strong>, <strong>record exam results</strong>, and <strong>keep guardians informed via SMS</strong>.
+      </p>
+      <div class="hero-stats">
+        <div>
+          <div class="hero-stat-value">9</div>
+          <div class="hero-stat-label">Core Modules</div>
+        </div>
+        <div>
+          <div class="hero-stat-value">15</div>
+          <div class="hero-stat-label">Sections</div>
+        </div>
+        <div>
+          <div class="hero-stat-value">8</div>
+          <div class="hero-stat-label">Build Phases</div>
+        </div>
+        <div>
+          <div class="hero-stat-value">2</div>
+          <div class="hero-stat-label">Languages</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- ═══════════════════════════════════════════════ -->
+      <!-- 1. PRODUCT DEFINITION                          -->
+      <!-- ═══════════════════════════════════════════════ -->
+      <section class="section fade-in" id="definition">
+        <div class="section-header">
+          <div class="section-num">01</div>
+          <h2>Product Definition</h2>
+        </div>
+        <p class="desc">
+          Dhrubok Portal is a <strong>private management system for one coaching centre</strong>. It is built exclusively for the owners who run the centre — students, guardians, and teachers never log in.
+        </p>
+        <div class="principles-grid">
+          <div class="principle-card">
+            <div class="principle-icon" style="background:rgba(0,117,222,0.08);">👥</div>
+            <span>Multiple owners with <strong>equal access</strong></span>
+          </div>
+          <div class="principle-card">
+            <div class="principle-icon" style="background:rgba(255,100,200,0.1);">🚫</div>
+            <span>Students, guardians &amp; teachers <strong>cannot log in</strong></span>
+          </div>
+          <div class="principle-card">
+            <div class="principle-icon" style="background:rgba(26,174,57,0.08);">📂</div>
+            <span>Teachers exist only as <strong>administrative records</strong></span>
+          </div>
+          <div class="principle-card">
+            <div class="principle-icon" style="background:rgba(214,182,246,0.2);">🔗</div>
+            <span>Students may join <strong>multiple batches</strong></span>
+          </div>
+          <div class="principle-card">
+            <div class="principle-icon" style="background:rgba(221,91,0,0.08);">👨‍👩‍👦</div>
+            <span>Guardian info lives <strong>inside the student profile</strong></span>
+          </div>
+          <div class="principle-card">
+            <div class="principle-icon" style="background:rgba(42,157,153,0.1);">💵</div>
+            <span>Payments collected <strong>manually</strong> (no gateway)</span>
+          </div>
+          <div class="principle-card">
+            <div class="principle-icon" style="background:rgba(98,174,240,0.12);">📱</div>
+            <span>Confirmations, reminders &amp; results <strong>sent by SMS</strong></span>
+          </div>
+          <div class="principle-card">
+            <div class="principle-icon" style="background:rgba(82,52,16,0.08);">📝</div>
+            <span>Exams are <strong>offline</strong>; portal manages details &amp; results</span>
+          </div>
+          <div class="principle-card">
+            <div class="principle-icon" style="background:rgba(0,117,222,0.08);">🌐</div>
+            <span>Interface &amp; documents support <strong>Bangla &amp; English</strong></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════ -->
+      <!-- 2. MAIN NAVIGATION                             -->
+      <!-- ═══════════════════════════════════════════════ -->
+      <section class="section fade-in" id="navigation">
+        <div class="section-header">
+          <div class="section-num">02</div>
+          <h2>Main Navigation</h2>
+        </div>
+        <table class="nav-table">
+          <thead>
+            <tr><th>Section</th><th>Purpose</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="section-icon" style="background:rgba(0,117,222,0.08);">📊</span>Dashboard</td>
+              <td>Today's work, warnings, collections, dues &amp; shortcuts</td>
+            </tr>
+            <tr>
+              <td><span class="section-icon" style="background:rgba(26,174,57,0.08);">🎓</span>Students</td>
+              <td>Admission, profiles, enrolments, financial &amp; academic history</td>
+            </tr>
+            <tr>
+              <td><span class="section-icon" style="background:rgba(214,182,246,0.2);">📚</span>Batches</td>
+              <td>Courses, batches, teachers, routines &amp; student lists</td>
+            </tr>
+            <tr>
+              <td><span class="section-icon" style="background:rgba(42,157,153,0.1);">✅</span>Attendance</td>
+              <td>Class sessions and present/absent entry</td>
+            </tr>
+            <tr>
+              <td><span class="section-icon" style="background:rgba(221,91,0,0.08);">💰</span>Payments</td>
+              <td>Charges, collections, discounts, advances, receipts &amp; dues</td>
+            </tr>
+            <tr>
+              <td><span class="section-icon" style="background:rgba(255,100,200,0.1);">📝</span>Exams</td>
+              <td>Offline exam setup, marks entry, publishing &amp; result SMS</td>
+            </tr>
+            <tr>
+              <td><span class="section-icon" style="background:rgba(98,174,240,0.12);">💬</span>Messages</td>
+              <td>Due reminders, message history, failures &amp; templates</td>
+            </tr>
+            <tr>
+              <td><span class="section-icon" style="background:rgba(82,52,16,0.08);">📈</span>Reports</td>
+              <td>Financial, attendance, student, batch &amp; result reports</td>
+            </tr>
+            <tr>
+              <td><span class="section-icon" style="background:rgba(0,117,222,0.08);">⚙️</span>Settings</td>
+              <td>Coaching identity, owners, language, SMS, numbering &amp; defaults</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="subsection">
+          <h3>Permanent Quick Actions</h3>
+          <p class="desc">These frequently used actions should always be accessible from anywhere in the app:</p>
+          <div class="quick-actions">
+            <div class="quick-action">➕ Add Student</div>
+            <div class="quick-action">💰 Collect Payment</div>
+            <div class="quick-action">✅ Take Attendance</div>
+            <div class="quick-action">📝 Enter Results</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════ -->
+      <!-- 3. DASHBOARD                                   -->
+      <!-- ═══════════════════════════════════════════════ -->
+      <section class="section fade-in" id="dashboard">
+        <div class="section-header">
+          <div class="section-num">03</div>
+          <h2>Dashboard</h2>
+        </div>
+        <p class="desc">The dashboard answers one question: <strong>"What needs my attention today?"</strong> Every item links directly to the relevant action.</p>
+
+        <div class="subsection">
+          <h3>Summary Cards</h3>
+          <div class="summary-cards">
+            <div class="summary-card">
+              <div class="summary-card-dot" style="background:var(--accent-green);"></div>
+              <div class="summary-card-label">Active Students</div>
+              <div class="summary-card-value">Total count</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-card-dot" style="background:var(--primary);"></div>
+              <div class="summary-card-label">Today's Collection</div>
+              <div class="summary-card-value">Amount received today</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-card-dot" style="background:var(--accent-purple);"></div>
+              <div class="summary-card-label">Monthly Collection</div>
+              <div class="summary-card-value">This month total</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-card-dot" style="background:var(--accent-orange);"></div>
+              <div class="summary-card-label">Outstanding Dues</div>
+              <div class="summary-card-value">Total owed</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-card-dot" style="background:var(--accent-teal);"></div>
+              <div class="summary-card-label">Today's Classes</div>
+              <div class="summary-card-value">Scheduled count</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-card-dot" style="background:var(--accent-pink);"></div>
+              <div class="summary-card-label">Attendance Pending</div>
+              <div class="summary-card-value">Not yet recorded</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-card-dot" style="background:var(--accent-sky);"></div>
+              <div class="summary-card-label">Failed SMS</div>
+              <div class="summary-card-value">Needs retry</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <h3>Today's Classes</h3>
+          <p class="desc">Each scheduled batch class shows time, batch, subject, teacher, enrolled count, attendance status, and a <strong>Take Attendance</strong> action.</p>
+        </div>
+
+        <div class="subsection">
+          <h3>Attention List</h3>
+          <div class="attention-box">
+            <h4>⚠ Items requiring owner attention</h4>
+            <ul class="compact-list">
+              <li>Students with overdue payments</li>
+              <li>Unfinished attendance</li>
+              <li>Exams awaiting results</li>
+              <li>Results ready but not published</li>
+              <li>Failed payment/result SMS messages</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <h3>Recent Activity</h3>
+          <div class="chip-group">
+            <span class="chip chip--green">Recent admissions</span>
+            <span class="chip chip--blue">Recent payments</span>
+            <span class="chip chip--pink">Voided payments</span>
+            <span class="chip chip--purple">Published results</span>
+            <span class="chip chip--teal">Messages sent</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════ -->
+      <!-- 4. STUDENTS                                    -->
+      <!-- ═══════════════════════════════════════════════ -->
+      <section class="section fade-in" id="students">
+        <div class="section-header">
+          <div class="section-num">04</div>
+          <h2>Students</h2>
+        </div>
+
+        <div class="subsection">
+          <h3>Student List</h3>
+          <div class="two-col">
+            <div class="info-card">
+              <div class="info-card-title">🔍 Search by</div>
+              <ul class="compact-list">
+                <li>Student name</li>
+                <li>Student ID</li>
+                <li>Student phone</li>
+                <li>Guardian name</li>
+                <li>Guardian phone</li>
+              </ul>
+            </div>
+            <div class="info-card">
+              <div class="info-card-title">🎛️ Filters</div>
+              <ul class="compact-list">
+                <li>Batch</li>
+                <li>Course</li>
+                <li>Active / inactive status</li>
+                <li>Students with dues</li>
+                <li>Students without attendance</li>
+                <li>Admission date</li>
+              </ul>
+            </div>
+          </div>
+
+          <h4>Recommended Columns</h4>
+          <div class="chip-group">
+            <span class="chip chip--blue">Student ID</span>
+            <span class="chip chip--green">Name</span>
+            <span class="chip chip--teal">Guardian Phone</span>
+            <span class="chip chip--purple">Current Batches</span>
+            <span class="chip chip--sky">Attendance %</span>
+            <span class="chip chip--orange">Current Due</span>
+            <span class="chip chip--brown">Status</span>
+            <span class="chip chip--pink">Quick Actions</span>
+          </div>
+
+          <h4>Quick Actions Per Student</h4>
+          <div class="quick-actions">
+            <div class="quick-action">💰 Collect Payment</div>
+            <div class="quick-action--secondary quick-action">👁️ View Profile</div>
+            <div class="quick-action--secondary quick-action">💬 Send Message</div>
+            <div class="quick-action--secondary quick-action">🔄 Change Batch</div>
+            <div class="quick-action--secondary quick-action">⏸️ Mark Inactive</div>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <h3>Admission Flow</h3>
+          <p class="desc">One compact form with <strong>three sections</strong> instead of a long wizard.</p>
+
+          <div class="info-card" style="margin-bottom:var(--sp-sm);">
+            <div class="info-card-title">👤 Student Information</div>
+            <div class="chip-group">
+              <span class="chip chip--blue">Full name (Bangla)</span>
+              <span class="chip chip--blue">Full name (English)</span>
+              <span class="chip">Phone <small>opt</small></span>
+              <span class="chip">Date of birth <small>opt</small></span>
+              <span class="chip">Gender <small>opt</small></span>
+              <span class="chip chip--orange">School / College</span>
+              <span class="chip chip--orange">Current class</span>
+              <span class="chip">Address <small>opt</small></span>
+              <span class="chip">Photo <small>opt</small></span>
+            </div>
+          </div>
+
+          <div class="info-card" style="margin-bottom:var(--sp-sm);">
+            <div class="info-card-title">👨‍👩‍👦 Guardian Information</div>
+            <div class="chip-group">
+              <span class="chip chip--purple">Guardian name</span>
+              <span class="chip chip--purple">Guardian phone</span>
+              <span class="chip chip--purple">Relationship</span>
+              <span class="chip">Alt phone <small>opt</small></span>
+              <span class="chip chip--teal">Preferred message language</span>
+            </div>
+            <p style="margin-top:var(--sp-xs); font-size:13px; color:var(--ink-faint);">No separate guardian record or account.</p>
+          </div>
+
+          <div class="info-card">
+            <div class="info-card-title">📚 Enrolment &amp; Fees</div>
+            <div class="chip-group">
+              <span class="chip chip--blue">Course</span>
+              <span class="chip chip--blue">Batch</span>
+              <span class="chip chip--blue">Admission date</span>
+              <span class="chip chip--orange">Monthly / course fee</span>
+              <span class="chip chip--orange">Admission fee</span>
+              <span class="chip chip--pink">Discount</span>
+              <span class="chip chip--green">Initial payment</span>
+              <span class="chip">Custom notes</span>
+            </div>
+          </div>
+
+          <h4>After Saving</h4>
+          <div class="flow-steps">
+            <div class="flow-step"><div class="flow-step-num">1</div><div class="flow-step-text">Student ID generated</div></div>
+            <div class="flow-step"><div class="flow-step-num">2</div><div class="flow-step-text">Successful enrolment confirmation</div></div>
+            <div class="flow-step"><div class="flow-step-num">3</div><div class="flow-step-text">Initial payment receipt (if applicable)</div></div>
+            <div class="flow-step"><div class="flow-step-num">4</div><div class="flow-step-text">SMS delivery status</div></div>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <h3>Student Profile</h3>
+          <div class="two-col">
+            <div class="info-card">
+              <div class="info-card-title">📋 Header Displays</div>
+              <ul class="compact-list">
+                <li>Student name &amp; ID</li>
+                <li>Active status</li>
+                <li>Guardian name &amp; number</li>
+                <li>Current due</li>
+                <li>Attendance percentage</li>
+                <li>Current batches</li>
+              </ul>
+            </div>
+            <div class="info-card">
+              <div class="info-card-title">⚡ Primary Actions</div>
+              <ul class="compact-list">
+                <li>Collect payment</li>
+                <li>Add to batch</li>
+                <li>Send SMS</li>
+                <li>Print statement</li>
+                <li>Edit student</li>
+              </ul>
+            </div>
+          </div>
+
+          <h4>Profile Tabs</h4>
+          <div class="chip-group">
+            <span class="chip chip--blue">Overview</span>
+            <span class="chip chip--purple">Batches</span>
+            <span class="chip chip--orange">Payments</span>
+            <span class="chip chip--teal">Attendance</span>
+            <span class="chip chip--green">Results</span>
+            <span class="chip chip--pink">Messages</span>
+            <span class="chip chip--sky">Activity History</span>
+          </div>
+          <p style="margin-top:var(--sp-xs); font-size:13px; color:var(--ink-faint);">Activity history combines admission, batch changes, payments, cancellations, result publication &amp; profile changes.</p>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════ -->
+      <!-- 5. COURSES & BATCHES                           -->
+      <!-- ═══════════════════════════════════════════════ -->
+      <section class="section fade-in" id="batches">
+        <div class="section-header">
+          <div class="section-num">05</div>
+          <h2>Courses &amp; Batches</h2>
+        </div>
+
+        <div class="subsection">
+          <h3>Course</h3>
+          <p class="desc">A course describes <strong>what is being taught</strong>. Examples: HSC 2027 Physics, SSC English, University Admission Mathematics.</p>
+          <div class="info-card">
+            <div class="info-card-title">📖 Course Fields</div>
+            <div class="chip-group">
+              <span class="chip chip--blue">Name (Bangla &amp; English)</span>
+              <span class="chip chip--purple">Description</span>
+              <span class="chip chip--orange">Academic session</span>
+              <span class="chip chip--teal">Default duration</span>
+              <span class="chip chip--green">Default fee structure</span>
+              <span class="chip chip--sky">Active / Archive status</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <h3>Batch</h3>
+          <p class="desc">A batch is the <strong>actual student group</strong> taking a course. A student has one enrolment record per batch.</p>
+          <div class="info-card">
+            <div class="info-card-title">📦 Batch Fields</div>
+            <div class="chip-group">
+              <span class="chip chip--blue">Batch name</span>
+              <span class="chip chip--purple">Course</span>
+              <span class="chip chip--orange">Assigned teacher</span>
+              <span class="chip chip--teal">Start &amp; end dates</span>
+              <span class="chip chip--green">Weekly routine</span>
+              <span class="chip chip--pink">Room</span>
+              <span class="chip">Student capacity <small>opt</small></span>
+              <span class="chip chip--orange">Default fee</span>
+              <span class="chip chip--sky">Active / Completed / Archive</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <h3>Batch Page</h3>
+          <ul class="styled-list">
+            <li>Batch details and routine</li>
+            <li>Student roster</li>
+            <li>Today/upcoming classes</li>
+            <li>Attendance history</li>
+            <li>Fee collection summary</li>
+            <li>Exams and results</li>
+            <li>Add/remove student actions</li>
+          </ul>
+          <div class="attention-box">
+            <h4>⚠ Important Rule</h4>
+            <p style="font-size:14px; color:var(--ink-secondary);">Removing a student from a batch ends their enrolment but <strong>must not</strong> delete historical attendance, payments, or results.</p>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <h3>Teacher Records</h3>
+          <p class="desc">Teachers have <strong>no accounts</strong>. Store only administrative information.</p>
+          <div class="chip-group">
+            <span class="chip chip--blue">Name</span>
+            <span class="chip chip--purple">Phone</span>
+            <span class="chip chip--orange">Subject</span>
+            <span class="chip chip--teal">Assigned batches</span>
+            <span class="chip">Notes</span>
+            <span class="chip chip--green">Active / Inactive</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════ -->
+      <!-- 6. ATTENDANCE                                  -->
+      <!-- ═══════════════════════════════════════════════ -->
+      <section class="section fade-in" id="attendance">
+        <div class="section-header">
+          <div class="section-num">06</div>
+          <h2>Attendance</h2>
+        </div>
+        <p class="desc">Attendance is recorded <strong>once for each batch class</strong>. Only two states: Present and Absent.</p>
+
+        <div class="subsection">
+          <h3>Class Session</h3>
+          <div class="chip-group">
+            <span class="chip chip--blue">Batch</span>
+            <span class="chip chip--purple">Date</span>
+            <span class="chip chip--orange">Start time</span>
+            <span class="chip">Subject / Topic <small>opt</small></span>
+            <span class="chip chip--green">Teacher</span>
+            <span class="chip chip--teal">Session status</span>
+          </div>
+          <p style="margin-top:var(--sp-xs); font-size:13px; color:var(--ink-faint);">Sessions come from the weekly routine or can be created manually for extra classes.</p>
+        </div>
+
+        <div class="subsection">
+          <h3>Fastest Safe Workflow</h3>
+          <div class="flow-steps">
+            <div class="flow-step"><div class="flow-step-num">1</div><div class="flow-step-text">Open today's batch</div></div>
+            <div class="flow-step"><div class="flow-step-num">2</div><div class="flow-step-text">Press <strong>Mark all present</strong></div></div>
+            <div class="flow-step"><div class="flow-step-num">3</div><div class="flow-step-text">Tap the absent students</div></div>
+            <div class="flow-step"><div class="flow-step-num">4</div><div class="flow-step-text">Review the count</div></div>
+            <div class="flow-step"><div class="flow-step-num">5</div><div class="flow-step-text">Save attendance</div></div>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <h3>Rules</h3>
+          <ul class="styled-list check">
+            <li>Show student name, ID, and photo (if available)</li>
+            <li>Works comfortably on both phone and desktop</li>
+            <li>Prevents duplicate attendance records for same student + session</li>
+            <li>Corrections allowed, but system records who changed and when</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════ -->
+      <!-- 7. FEES & PAYMENTS                             -->
+      <!-- ═══════════════════════════════════════════════ -->
+      <section class="section fade-in" id="payments">
+        <div class="section-header">
+          <div class="section-num">07</div>
+          <h2>Fees &amp; Payments</h2>
+        </div>
+        <p class="desc">The financial model distinguishes three things:</p>
+
+        <div class="three-col-cards">
+          <div class="model-card">
+            <div class="model-card-dot" style="background:var(--accent-orange);"></div>
+            <strong>Charge / Invoice</strong>
+            <span>Money the student owes</span>
+          </div>
+          <div class="model-card">
+            <div class="model-card-dot" style="background:var(--accent-green);"></div>
+            <strong>Payment</strong>
+            <span>Money manually received</span>
+          </div>
+          <div class="model-card">
+            <div class="model-card-dot" style="background:var(--primary);"></div>
+            <strong>Receipt</strong>
+            <span>Confirmation of received money</span>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <h3>Supported Charges</h3>
+          <div class="chip-group">
+            <span class="chip chip--blue">Admission fee</span>
+            <span class="chip chip--purple">Monthly fee</span>
+            <span class="chip chip--orange">Full course fee</span>
+            <span class="chip chip--teal">Exam fee</span>
+            <span class="chip chip--green">Material / other fee</span>
+            <span class="chip chip--pink">Custom one-time charge</span>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <h3>Discounts</h3>
+          <div class="two-col">
+            <div class="info-card">
+              <div class="info-card-title">💲 Types</div>
+              <ul class="compact-list">
+                <li>Fixed amount discount</li>
+                <li>Percentage discount</li>
+              </ul>
+            </div>
+            <div class="info-card">
+              <div class="info-card-title">🎯 Applies to</div>
+              <ul class="compact-list">
+                <li>Admission</li>
+                <li>A particular charge</li>
+                <li>Monthly fees</li>
+                <li>Entire course enrolment</li>
+              </ul>
+            </div>
+          </div>
+          <p style="margin-top:var(--sp-xs); font-size:13px; color:var(--ink-faint);">Every discount must have a reason.</p>
+        </div>
+
+        <div class="subsection">
+          <h3>Payment Collection Flow</h3>
+          <div class="flow-steps">
+            <div class="flow-step"><div class="flow-step-num">1</div><div class="flow-step-text">Search for the student</div></div>
+            <div class="flow-step"><div class="flow-step-num">2</div><div class="flow-step-text">See outstanding charges &amp; available advance credit</div></div>
+            <div class="flow-step"><div class="flow-step-num">3</div><div class="flow-step-text">Select charges or accept automatic oldest-due allocation</div></div>
+            <div class="flow-step"><div class="flow-step-num">4</div><div class="flow-step-text">Enter received amount</div></div>
+            <div class="flow-step"><div class="flow-step-num">5</div><div class="flow-step-text">Select manual payment method</div></div>
+            <div class="flow-step"><div class="flow-step-num">6</div><div class="flow-step-text">Confirm collection</div></div>
+          </div>
+
+          <h4>Payment Methods</h4>
+          <div class="chip-group">
+            <span class="chip chip--green">Cash</span>
+            <span class="chip chip--pink">bKash</span>
+            <span class="chip chip--orange">Nagad</span>
+            <span class="chip chip--blue">Bank transfer</span>
+            <span class="chip chip--purple">Cheque</span>
+            <span class="chip">Other</span>
+          </div>
+          <p style="margin-top:var(--sp-xs); font-size:13px; color:var(--ink-faint);">Non-cash methods support an optional transaction/reference number. No payment gateway integration.</p>
+        </div>
+
+        <div class="subsection">
+          <h3>Partial &amp; Advance Payments</h3>
+          <ul class="styled-list">
+            <li>Payment lower than charge → charge becomes <strong>partially paid</strong></li>
+            <li>Payment exceeds dues → remaining becomes <strong>student credit</strong></li>
+            <li>Future charges <strong>auto-use</strong> available credit</li>
+            <li>Profile shows <strong>due and advance</strong> balances separately</li>
+          </ul>
+        </div>
+
+        <div class="subsection">
+          <h3>After Saving a Payment</h3>
+          <div class="flow-steps">
+            <div class="flow-step"><div class="flow-step-num">1</div><div class="flow-step-text">Create a unique receipt number</div></div>
+            <div class="flow-step"><div class="flow-step-num">2</div><div class="flow-step-text">Save the payment permanently</div></div>
+            <div class="flow-step"><div class="flow-step-num">3</div><div class="flow-step-text">Queue the guardian SMS</div></div>
+            <div class="flow-step"><div class="flow-step-num">4</div><div class="flow-step-text">Open printable receipt</div></div>
+            <div class="flow-step"><div class="flow-step-num">5</div><div class="flow-step-text">Show SMS delivery status</div></div>
+          </div>
+          <div class="attention-box">
+            <h4>⚠ Critical Rule</h4>
+            <p style="font-size:14px; color:var(--ink-secondary);">A failed SMS must <strong>never reverse or invalidate</strong> the payment. It appears in a retry queue.</p>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <h3>Printed Receipt</h3>
+          <div class="info-card">
+            <div class="info-card-title">🧾 Receipt Contents</div>
+            <div class="chip-group">
+              <span class="chip chip--blue">Logo &amp; info</span>
+              <span class="chip chip--purple">Receipt # &amp; date</span>
+              <span class="chip chip--orange">Student name &amp; ID</span>
+              <span class="chip chip--teal">Guardian phone</span>
+              <span class="chip chip--green">Batch(es)</span>
+              <span class="chip chip--pink">Payment method</span>
+              <span class="chip chip--sky">Charges covered</span>
+              <span class="chip chip--brown">Previous due</span>
+              <span class="chip chip--blue">Amount received</span>
+              <span class="chip chip--orange">Discount</span>
+              <span class="chip chip--purple">Advance credit</span>
+              <span class="chip chip--teal">Remaining due</span>
+              <span class="chip">Collected by</span>
+              <span class="chip">Signature area</span>
+              <span class="chip chip--green">Bangla / English switch</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <h3>Corrections</h3>
+          <p class="desc">Completed payments <strong>cannot be silently edited or deleted</strong>. An owner can <strong>void</strong> a payment by entering a reason. The system reverses allocations, updates balances, and keeps both original and cancellation history.</p>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════ -->
+      <!-- 8. DUE MANAGEMENT                              -->
+      <!-- ═══════════════════════════════════════════════ -->
+      <section class="section fade-in" id="dues">
+        <div class="section-header">
+          <div class="section-num">08</div>
+          <h2>Due Management</h2>
+        </div>
+
+        <div class="subsection">
+          <h3>Due Page Overview</h3>
+          <div class="summary-cards">
+            <div class="summary-card">
+              <div class="summary-card-dot" style="background:var(--accent-orange);"></div>
+              <div class="summary-card-label">Total Outstanding</div>
+              <div class="summary-card-value">Full amount</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-card-dot" style="background:var(--accent-pink);"></div>
+              <div class="summary-card-label">Students with Dues</div>
+              <div class="summary-card-value">Head count</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-card-dot" style="background:var(--accent-purple);"></div>
+              <div class="summary-card-label">Overdue Monthly</div>
+              <div class="summary-card-value">Late fees</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-card-dot" style="background:var(--accent-teal);"></div>
+              <div class="summary-card-label">Partial Payments</div>
+              <div class="summary-card-value">Incomplete</div>
+            </div>
+          </div>
+          <p class="desc" style="margin-top:var(--sp-md);">Also shows: <strong>due amount by batch</strong> and <strong>due ageing</strong>.</p>
+        </div>
+
+        <div class="subsection">
+          <h3>Filters</h3>
+          <div class="chip-group">
+            <span class="chip chip--blue">Batch</span>
+            <span class="chip chip--purple">Fee month</span>
+            <span class="chip chip--orange">Due date</span>
+            <span class="chip chip--teal">Amount range</span>
+            <span class="chip chip--green">Message status</span>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <h3>Sending Due Reminders</h3>
+          <p class="desc">Owners select students and send reminders. Before sending, the system shows:</p>
+          <ul class="styled-list check">
+            <li>Number of recipients</li>
+            <li>Total SMS count</li>
+            <li>Message preview</li>
+            <li>Students without valid guardian numbers</li>
+          </ul>
+          <p style="margin-top:var(--sp-xs); font-size:13px; color:var(--ink-faint);"><strong>Due SMS</strong> = manual by owner. <strong>Payment confirmation SMS</strong> = automatic.</p>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════ -->
+      <!-- 9. EXAMS & RESULTS                             -->
+      <!-- ═══════════════════════════════════════════════ -->
+      <section class="section fade-in" id="exams">
+        <div class="section-header">
+          <div class="section-num">09</div>
+          <h2>Exams &amp; Results</h2>
+        </div>
+        <p class="desc">"Manual exam" means the exam happens <strong>outside the system</strong>. No online question paper, exam-taking interface, or student portal.</p>
+
+        <div class="subsection">
+          <h3>Exam Setup</h3>
+          <div class="chip-group">
+            <span class="chip chip--blue">Exam name</span>
+            <span class="chip chip--purple">Batch</span>
+            <span class="chip chip--orange">Subject</span>
+            <span class="chip chip--teal">Exam date</span>
+            <span class="chip chip--green">Full marks</span>
+            <span class="chip chip--pink">Pass marks</span>
+            <span class="chip">Description <small>opt</small></span>
+          </div>
+          <p style="margin-top:var(--sp-xs); font-size:13px; color:var(--ink-faint);">Exams start in <strong>draft</strong> status.</p>
+        </div>
+
+        <div class="subsection">
+          <h3>Result Entry</h3>
+          <p class="desc">Spreadsheet-style table for fast marks entry:</p>
+          <table class="spreadsheet">
+            <thead>
+              <tr><th>Student</th><th>Marks</th><th>Status</th><th>Comment</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Student name</td><td style="text-align:right;">Numeric input</td><td>Pass / Fail / Absent</td><td style="color:var(--ink-faint);">Optional</td></tr>
+            </tbody>
+          </table>
+          <h4>Features</h4>
+          <ul class="styled-list check">
+            <li>Keyboard-friendly entry</li>
+            <li>Validation against full marks</li>
+            <li>Save draft</li>
+            <li>Show missing results</li>
+            <li>Automatic pass/fail calculation</li>
+            <li>Bulk result entry</li>
+          </ul>
+        </div>
+
+        <div class="subsection">
+          <h3>Publishing</h3>
+          <p class="desc">Entering marks does <strong>not</strong> send messages. The owner must press <strong>Publish Results</strong>.</p>
+          <div class="flow-steps">
+            <div class="flow-step"><div class="flow-step-num">1</div><div class="flow-step-text">Locks the result snapshot</div></div>
+            <div class="flow-step"><div class="flow-step-num">2</div><div class="flow-step-text">Calculates pass/fail</div></div>
+            <div class="flow-step"><div class="flow-step-num">3</div><div class="flow-step-text">Queues one SMS per student</div></div>
+            <div class="flow-step"><div class="flow-step-num">4</div><div class="flow-step-text">Records publication time</div></div>
+            <div class="flow-step"><div class="flow-step-num">5</div><div class="flow-step-text">Shows delivery results</div></div>
+          </div>
+          <p style="margin-top:var(--sp-sm); font-size:13px; color:var(--ink-faint);">SMS includes: student name, exam, marks, full marks, and pass/fail. Corrections offer <strong>"Save correction and resend SMS"</strong>.</p>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════ -->
+      <!-- 10. MESSAGING                                  -->
+      <!-- ═══════════════════════════════════════════════ -->
+      <section class="section fade-in" id="messaging">
+        <div class="section-header">
+          <div class="section-num">10</div>
+          <h2>Messaging</h2>
+        </div>
+        <p class="desc">Messages are <strong>event-based</strong>, not a general chat system.</p>
+
+        <div class="subsection">
+          <h3>Message Types</h3>
+          <div class="chip-group">
+            <span class="chip chip--green">Payment confirmation</span>
+            <span class="chip chip--orange">Due reminder</span>
+            <span class="chip chip--purple">Published exam result</span>
+            <span class="chip chip--teal">Custom administrative</span>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <h3>Template Variables</h3>
+          <div class="template-block">
+            <span class="template-var">{studentName}</span>
+            <span class="template-var">{guardianName}</span>
+            <span class="template-var">{batchName}</span>
+            <span class="template-var">{amountPaid}</span>
+            <span class="template-var">{remainingDue}</span>
+            <span class="template-var">{receiptNumber}</span>
+            <span class="template-var">{examName}</span>
+            <span class="template-var">{marks}</span>
+            <span class="template-var">{fullMarks}</span>
+          </div>
+          <p style="margin-top:var(--sp-xs); font-size:13px; color:var(--ink-faint);">Templates support Bangla &amp; English. Each student has a preferred language; owners can override before sending.</p>
+        </div>
+
+        <div class="subsection">
+          <h3>Delivery States</h3>
+          <div class="chip-group">
+            <span class="chip chip--blue">Queued</span>
+            <span class="chip chip--orange">Sent to provider</span>
+            <span class="chip chip--green">Delivered</span>
+            <span class="chip chip--pink">Failed</span>
+            <span class="chip chip--purple">Retrying</span>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <h3>Message History</h3>
+          <ul class="styled-list">
+            <li>Recipient number</li>
+            <li>Message text</li>
+            <li>Related student</li>
+            <li>Related payment/exam</li>
+            <li>Sending owner</li>
+            <li>Delivery status &amp; provider response</li>
+            <li>SMS cost (if available)</li>
+          </ul>
+          <div class="attention-box">
+            <h4>⚠ Duplicate Protection</h4>
+            <p style="font-size:14px; color:var(--ink-secondary);">Refreshing the page or retrying an operation must <strong>not</strong> send the same confirmation twice.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════ -->
+      <!-- 11. REPORTS                                    -->
+      <!-- ═══════════════════════════════════════════════ -->
+      <section class="section fade-in" id="reports">
+        <div class="section-header">
+          <div class="section-num">11</div>
+          <h2>Reports</h2>
+        </div>
+        <p class="desc">Every report supports <strong>print</strong> and <strong>CSV/Excel export</strong> where appropriate.</p>
+
+        <div class="two-col" style="margin-top:var(--sp-md);">
+          <div class="info-card">
+            <div class="info-card-title">💰 Financial</div>
+            <ul class="compact-list">
+              <li>Daily collection</li>
+              <li>Collection by date range</li>
+              <li>Collection by payment method</li>
+              <li>Monthly fee collection</li>
+              <li>Student dues</li>
+              <li>Batch-wise dues</li>
+              <li>Discounts granted</li>
+              <li>Advance balances</li>
+              <li>Voided payments</li>
+              <li>Individual student statement</li>
+            </ul>
+          </div>
+          <div class="info-card">
+            <div class="info-card-title">✅ Attendance</div>
+            <ul class="compact-list">
+              <li>Daily attendance</li>
+              <li>Batch attendance</li>
+              <li>Student attendance history</li>
+              <li>Attendance percentage</li>
+              <li>Frequently absent students</li>
+              <li>Classes with missing attendance</li>
+            </ul>
+          </div>
+          <div class="info-card">
+            <div class="info-card-title">📝 Academic</div>
+            <ul class="compact-list">
+              <li>Exam result sheet</li>
+              <li>Batch result summary</li>
+              <li>Pass/fail summary</li>
+              <li>Individual student result history</li>
+            </ul>
+          </div>
+          <div class="info-card">
+            <div class="info-card-title">⚙️ Operational</div>
+            <ul class="compact-list">
+              <li>Active students</li>
+              <li>Admissions by date</li>
+              <li>Students by batch</li>
+              <li>Batch capacity</li>
+              <li>Students without valid guardian numbers</li>
+              <li>SMS delivery &amp; failure report</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════ -->
+      <!-- 12. OWNERS & SECURITY                          -->
+      <!-- ═══════════════════════════════════════════════ -->
+      <section class="section fade-in" id="security">
+        <div class="section-header">
+          <div class="section-num">12</div>
+          <h2>Owners &amp; Security</h2>
+        </div>
+        <p class="desc">Multiple owners with <strong>equal access</strong>. The final active owner cannot remove themselves.</p>
+
+        <div class="subsection">
+          <h3>Owner Management</h3>
+          <div class="chip-group">
+            <span class="chip chip--green">Invite owner</span>
+            <span class="chip chip--blue">View active owners</span>
+            <span class="chip chip--orange">Disable owner</span>
+            <span class="chip chip--pink">Remove owner</span>
+            <span class="chip chip--teal">View last activity</span>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <h3>Audit Trail</h3>
+          <p class="desc">Every sensitive action records the responsible owner:</p>
+          <div class="chip-group">
+            <span class="chip chip--blue">Payment collection</span>
+            <span class="chip chip--pink">Payment cancellation</span>
+            <span class="chip chip--orange">Discount</span>
+            <span class="chip chip--teal">Attendance correction</span>
+            <span class="chip chip--purple">Result publication</span>
+            <span class="chip chip--brown">Student deletion/archive</span>
+            <span class="chip chip--green">Owner changes</span>
+            <span class="chip chip--sky">Settings changes</span>
+          </div>
+          <p style="margin-top:var(--sp-sm); font-size:13px; color:var(--ink-faint);">Use <strong>archive/inactive</strong> states instead of destructive deletion for students, batches, and teachers.</p>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════ -->
+      <!-- 13. SETTINGS                                   -->
+      <!-- ═══════════════════════════════════════════════ -->
+      <section class="section fade-in" id="settings">
+        <div class="section-header">
+          <div class="section-num">13</div>
+          <h2>Settings</h2>
+        </div>
+
+        <div class="chip-group">
+          <span class="chip chip--blue">Coaching profile</span>
+          <span class="chip chip--purple">Academic sessions</span>
+          <span class="chip chip--orange">Owners</span>
+          <span class="chip chip--teal">Courses &amp; fee defaults</span>
+          <span class="chip chip--green">Payment methods</span>
+          <span class="chip chip--pink">Receipt numbering</span>
+          <span class="chip chip--sky">Languages</span>
+          <span class="chip chip--brown">SMS provider</span>
+          <span class="chip chip--blue">Message templates</span>
+          <span class="chip chip--orange">Data import/export</span>
+          <span class="chip chip--purple">Audit history</span>
+        </div>
+
+        <div class="info-card" style="margin-top:var(--sp-md);">
+          <div class="info-card-title">🏢 Coaching Profile</div>
+          <p style="font-size:14px; color:var(--ink-secondary);">Names in both languages, logo, address, phone number, receipt footer, and default language.</p>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════ -->
+      <!-- 14. UX RULES                                   -->
+      <!-- ═══════════════════════════════════════════════ -->
+      <section class="section fade-in" id="ux-rules">
+        <div class="section-header">
+          <div class="section-num">14</div>
+          <h2>Frictionless Interaction Rules</h2>
+        </div>
+        <p class="desc">These rules should guide <strong>every screen</strong> in the application:</p>
+
+        <div class="ux-rules">
+          <div class="ux-rule">Global search is always available</div>
+          <div class="ux-rule">Common actions take no more than 1–2 page transitions</div>
+          <div class="ux-rule">Search accepts partial names and phone-number fragments</div>
+          <div class="ux-rule">Forms remember safe defaults (date, batch, payment method)</div>
+          <div class="ux-rule">Tables provide bulk actions</div>
+          <div class="ux-rule">Desktop screens are keyboard-friendly</div>
+          <div class="ux-rule">Attendance and collection work on mobile</div>
+          <div class="ux-rule">Save buttons remain visible on long forms</div>
+          <div class="ux-rule">Validation appears beside the relevant field</div>
+          <div class="ux-rule">Completed actions show receipt and SMS status</div>
+          <div class="ux-rule">Lists preserve filters when returning from a profile</div>
+          <div class="ux-rule">Printed content has dedicated layouts without navigation</div>
+          <div class="ux-rule">Bangla and English stored separately where exact spelling matters</div>
+          <div class="ux-rule">Financial and published result actions require explicit confirmation</div>
+          <div class="ux-rule">Routine edits don't produce unnecessary confirmation dialogs</div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════ -->
+      <!-- 15. BUILD SEQUENCE                             -->
+      <!-- ═══════════════════════════════════════════════ -->
+      <section class="section fade-in" id="build-sequence">
+        <div class="section-header">
+          <div class="section-num">15</div>
+          <h2>Recommended Build Sequence</h2>
+        </div>
+
+        <div class="build-sequence">
+          <div class="build-step">
+            <div class="build-step-phase">01</div>
+            <div class="build-step-content">
+              <h4>Foundation</h4>
+              <p>Authentication, multiple owners, coaching settings</p>
+            </div>
+          </div>
+          <div class="build-step">
+            <div class="build-step-phase">02</div>
+            <div class="build-step-content">
+              <h4>Academic Structure</h4>
+              <p>Courses, batches, teachers, and routines</p>
+            </div>
+          </div>
+          <div class="build-step">
+            <div class="build-step-phase">03</div>
+            <div class="build-step-content">
+              <h4>Student Management</h4>
+              <p>Students, guardian details, and multiple enrolments</p>
+            </div>
+          </div>
+          <div class="build-step">
+            <div class="build-step-phase">04</div>
+            <div class="build-step-content">
+              <h4>Financial System</h4>
+              <p>Charges, discounts, manual payments, advances, and receipts</p>
+            </div>
+          </div>
+          <div class="build-step">
+            <div class="build-step-phase">05</div>
+            <div class="build-step-content">
+              <h4>Communication</h4>
+              <p>Automatic payment SMS and due reminders</p>
+            </div>
+          </div>
+          <div class="build-step">
+            <div class="build-step-phase">06</div>
+            <div class="build-step-content">
+              <h4>Attendance</h4>
+              <p>Class sessions and attendance recording</p>
+            </div>
+          </div>
+          <div class="build-step">
+            <div class="build-step-phase">07</div>
+            <div class="build-step-content">
+              <h4>Examinations</h4>
+              <p>Offline exams, marks entry, result publishing, and result SMS</p>
+            </div>
+          </div>
+          <div class="build-step">
+            <div class="build-step-phase">08</div>
+            <div class="build-step-content">
+              <h4>Polish &amp; Reporting</h4>
+              <p>Reports, exports, audit history, and bilingual polish</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════ -->
+      <!-- EXCLUSIONS                                     -->
+      <!-- ═══════════════════════════════════════════════ -->
+      <section class="section fade-in" id="exclusions">
+        <div class="section-header">
+          <div class="section-num">—</div>
+          <h2>Explicitly Outside the Product</h2>
+        </div>
+        <p class="desc">These features are <strong>not</strong> part of Dhrubok Portal's current scope:</p>
+        <div class="exclusion-grid">
+          <div class="exclusion-item">Student portal or login</div>
+          <div class="exclusion-item">Guardian portal or login</div>
+          <div class="exclusion-item">Teacher login</div>
+          <div class="exclusion-item">Online classes</div>
+          <div class="exclusion-item">Online examinations</div>
+          <div class="exclusion-item">Payment gateway</div>
+          <div class="exclusion-item">Payroll &amp; full accounting</div>
+          <div class="exclusion-item">Library, hostel, transport, inventory</div>
+          <div class="exclusion-item">Public coaching website</div>
+          <div class="exclusion-item">Internal chat system</div>
+        </div>
+      </section>
+
+      <!-- ──── Footer ──── -->
+      <footer class="footer" style="margin-top:48px;">
+        <p>Dhrubok Portal — ধ্রুবক পোর্টাল — Product Structure Document</p>
+        <p>Built with focus on the owner's operating loop: admit → organise → attend → collect → follow up → record → inform</p>
+      </footer>
+
+    </div>
+  </div>
+
+  <script>
+    // ── Mobile sidebar toggle ──
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const toggle  = document.getElementById('mobileToggle');
+
+    toggle.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('open');
+    });
+
+    overlay.addEventListener('click', () => {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('open');
+    });
+
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', () => {
+        if (window.innerWidth <= 840) {
+          sidebar.classList.remove('open');
+          overlay.classList.remove('open');
+        }
+      });
+    });
+
+    // ── Active nav link tracking ──
+    const sections = document.querySelectorAll('.section');
+    const navLinks = document.querySelectorAll('.nav-link');
+
+    const navObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const id = entry.target.id;
+          navLinks.forEach(link => {
+            link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+          });
+        }
+      });
+    }, { rootMargin: '-20% 0px -70% 0px' });
+
+    sections.forEach(s => navObserver.observe(s));
+
+    // ── Fade-in animation ──
+    const fadeObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, { threshold: 0.08 });
+
+    document.querySelectorAll('.fade-in').forEach(el => fadeObserver.observe(el));
+  </script>
+</body>
+</html>
