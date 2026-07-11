@@ -1,118 +1,148 @@
 ---
-version: alpha
-name: MiniMax-design-analysis
-description: MiniMax presents itself as a premium AI infrastructure brand through a striking duality — bold black-pill CTAs and stark white canvas for marketing, paired with vibrant gradient product cards (orange-red, magenta-pink, purple, blue) that turn each model release into a distinctive visual identity. The system uses DM Sans across all surfaces, employs an oversized 80px hero display, anchors major actions in deep near-black pills, and layers content density via a 3-column documentation grid with sidebar nav, prose body, and TOC. Coverage spans the marketing homepage, model showcase pages, developer documentation, and platform pricing surfaces.
+version: "1.0"
+name: dhrubok-design-system
+description: >
+  Design system for Dhrubok Portal — a bilingual (Bangla / English) coaching
+  management platform. Clean, operational aesthetic for dense data tables,
+  financial clarity, rapid attendance entry, and printable receipts.
 
 colors:
-  primary: "#0a0a0a"
-  on-primary: "#ffffff"
-  primary-soft: "#181e25"
-  brand-coral: "#ff5530"
-  brand-magenta: "#ea5ec1"
-  brand-blue: "#1456f0"
-  brand-blue-mid: "#3b82f6"
-  brand-blue-deep: "#1d4ed8"
-  brand-blue-700: "#17437d"
-  brand-cyan: "#3daeff"
-  brand-blue-200: "#bfdbfe"
-  brand-purple: "#a855f7"
-  canvas: "#ffffff"
-  surface: "#f7f8fa"
-  surface-soft: "#f2f3f5"
-  hairline: "#e5e7eb"
-  hairline-soft: "#eaecf0"
-  ink: "#0a0a0a"
-  ink-strong: "#000000"
-  charcoal: "#222222"
-  slate: "#45515e"
-  steel: "#5f5f5f"
-  stone: "#8e8e93"
-  muted: "#a8aab2"
-  success-bg: "#e8ffea"
-  success-text: "#1ba673"
-  on-dark: "#ffffff"
-  footer-bg: "#0a0a0a"
+  # ── Brand ──────────────────────────────────────────────────────────────
+  brand:          "#3ecf8e"
+  brand-deep:     "#24b47e"
+  brand-soft:     "#a7f3d0"
+  brand-muted:    "#ecfdf5"
+
+  # ── Semantic ───────────────────────────────────────────────────────────
+  success:        "#16a34a"
+  success-deep:   "#15803d"
+  success-soft:   "#dcfce7"
+  success-muted:  "#f0fdf4"
+  warning:        "#d97706"
+  warning-deep:   "#b45309"
+  warning-soft:   "#fef3c7"
+  warning-muted:  "#fffbeb"
+  danger:         "#dc2626"
+  danger-deep:    "#b91c1c"
+  danger-soft:    "#fee2e2"
+  danger-muted:   "#fef2f2"
+  info:           "#2563eb"
+  info-deep:      "#1d4ed8"
+  info-soft:      "#dbeafe"
+  info-muted:     "#eff6ff"
+
+  # ── Text ───────────────────────────────────────────────────────────────
+  ink:            "#171717"
+  ink-secondary:  "#404040"
+  ink-mute:       "#737373"
+  ink-faint:      "#a3a3a3"
+  ink-disabled:   "#d4d4d4"
+  on-brand:       "#171717"
+  on-dark:        "#fafafa"
+  on-success:     "#ffffff"
+  on-warning:     "#171717"
+  on-danger:      "#ffffff"
+  on-info:        "#ffffff"
+
+  # ── Surface ────────────────────────────────────────────────────────────
+  canvas:         "#ffffff"
+  canvas-soft:    "#fafafa"
+  canvas-subtle:  "#f5f5f5"
+  canvas-dark:    "#171717"
+  canvas-dark-soft: "#262626"
+
+  # ── Border ─────────────────────────────────────────────────────────────
+  border:         "#e5e5e5"
+  border-strong:  "#d4d4d4"
+  border-muted:   "#f0f0f0"
+  border-focus:   "#3ecf8e"
+  border-danger:  "#dc2626"
 
 typography:
-  hero-display:
-    fontFamily: DM Sans
-    fontSize: 80px
-    fontWeight: 600
-    lineHeight: 1.10
-    letterSpacing: -2px
-  display-lg:
-    fontFamily: DM Sans
+  display-xxl:
+    fontFamily: "Inter, 'Noto Sans Bengali', sans-serif"
     fontSize: 56px
     fontWeight: 600
-    lineHeight: 1.10
-    letterSpacing: -1.5px
-  heading-lg:
-    fontFamily: DM Sans
-    fontSize: 40px
+    lineHeight: 1.1
+    letterSpacing: -1.4px
+  display-xl:
+    fontFamily: "Inter, 'Noto Sans Bengali', sans-serif"
+    fontSize: 42px
     fontWeight: 600
-    lineHeight: 1.20
-    letterSpacing: -1px
-  heading-md:
-    fontFamily: DM Sans
+    lineHeight: 1.15
+    letterSpacing: -1.05px
+  display-lg:
+    fontFamily: "Inter, 'Noto Sans Bengali', sans-serif"
     fontSize: 32px
     fontWeight: 600
-    lineHeight: 1.25
-    letterSpacing: -0.5px
-  heading-sm:
-    fontFamily: DM Sans
+    lineHeight: 1.2
+    letterSpacing: -0.64px
+  display-md:
+    fontFamily: "Inter, 'Noto Sans Bengali', sans-serif"
     fontSize: 24px
     fontWeight: 600
-    lineHeight: 1.30
-  card-title:
-    fontFamily: DM Sans
+    lineHeight: 1.25
+    letterSpacing: -0.36px
+  heading-lg:
+    fontFamily: "Inter, 'Noto Sans Bengali', sans-serif"
     fontSize: 20px
     fontWeight: 600
-    lineHeight: 1.40
-  subtitle:
-    fontFamily: DM Sans
-    fontSize: 18px
-    fontWeight: 500
-    lineHeight: 1.50
-  body-md:
-    fontFamily: DM Sans
+    lineHeight: 1.3
+    letterSpacing: 0
+  heading-md:
+    fontFamily: "Inter, 'Noto Sans Bengali', sans-serif"
     fontSize: 16px
-    fontWeight: 400
-    lineHeight: 1.50
-  body-md-bold:
-    fontFamily: DM Sans
-    fontSize: 16px
-    fontWeight: 700
-    lineHeight: 1.50
-  body-sm:
-    fontFamily: DM Sans
-    fontSize: 14px
-    fontWeight: 400
-    lineHeight: 1.50
-  body-sm-medium:
-    fontFamily: DM Sans
-    fontSize: 14px
-    fontWeight: 500
-    lineHeight: 1.50
-  caption:
-    fontFamily: DM Sans
-    fontSize: 13px
-    fontWeight: 400
-    lineHeight: 1.70
-  caption-bold:
-    fontFamily: DM Sans
-    fontSize: 13px
     fontWeight: 600
-    lineHeight: 1.50
-  micro:
-    fontFamily: DM Sans
+    lineHeight: 1.4
+    letterSpacing: 0
+  body-lg:
+    fontFamily: "Inter, 'Noto Sans Bengali', sans-serif"
+    fontSize: 16px
+    fontWeight: 400
+    lineHeight: 1.6
+    letterSpacing: 0
+  body-md:
+    fontFamily: "Inter, 'Noto Sans Bengali', sans-serif"
+    fontSize: 14px
+    fontWeight: 400
+    lineHeight: 1.6
+    letterSpacing: 0
+  body-sm:
+    fontFamily: "Inter, 'Noto Sans Bengali', sans-serif"
+    fontSize: 13px
+    fontWeight: 400
+    lineHeight: 1.6
+    letterSpacing: 0
+  label-md:
+    fontFamily: "Inter, 'Noto Sans Bengali', sans-serif"
+    fontSize: 14px
+    fontWeight: 500
+    lineHeight: 1.4
+    letterSpacing: 0
+  label-sm:
+    fontFamily: "Inter, 'Noto Sans Bengali', sans-serif"
+    fontSize: 12px
+    fontWeight: 500
+    lineHeight: 1.4
+    letterSpacing: 0
+  caption:
+    fontFamily: "Inter, 'Noto Sans Bengali', sans-serif"
     fontSize: 12px
     fontWeight: 400
-    lineHeight: 1.50
-  button-md:
-    fontFamily: DM Sans
+    lineHeight: 1.5
+    letterSpacing: 0
+  mono:
+    fontFamily: "ui-monospace, 'Cascadia Code', Consolas, monospace"
     fontSize: 14px
-    fontWeight: 600
-    lineHeight: 1.40
+    fontWeight: 400
+    lineHeight: 1.5
+    letterSpacing: 0
+  mono-sm:
+    fontFamily: "ui-monospace, 'Cascadia Code', Consolas, monospace"
+    fontSize: 12px
+    fontWeight: 400
+    lineHeight: 1.5
+    letterSpacing: 0
 
 rounded:
   xs: 4px
@@ -120,686 +150,956 @@ rounded:
   md: 8px
   lg: 12px
   xl: 16px
-  xxl: 20px
-  xxxl: 24px
-  hero: 32px
   full: 9999px
 
 spacing:
-  xxs: 4px
-  xs: 8px
-  sm: 12px
-  md: 16px
-  lg: 20px
+  xxs: 2px
+  xs: 4px
+  sm: 8px
+  md: 12px
+  lg: 16px
   xl: 24px
-  xxl: 32px
-  xxxl: 40px
-  section-sm: 48px
-  section: 64px
-  section-lg: 80px
-  hero: 96px
+  2xl: 32px
+  3xl: 48px
+  4xl: 64px
 
-components:
-  button-primary:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.on-primary}"
-    typography: "{typography.button-md}"
-    rounded: "{rounded.full}"
-    padding: "11px 24px"
-  button-primary-pressed:
-    backgroundColor: "{colors.charcoal}"
-    textColor: "{colors.on-primary}"
-  button-primary-disabled:
-    backgroundColor: "{colors.hairline}"
-    textColor: "{colors.muted}"
-  button-secondary:
-    backgroundColor: "transparent"
-    textColor: "{colors.ink}"
-    typography: "{typography.button-md}"
-    rounded: "{rounded.full}"
-    padding: "11px 24px"
-    border: "1px solid {colors.ink}"
-  button-tertiary:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
-    typography: "{typography.button-md}"
-    rounded: "{rounded.full}"
-    padding: "11px 24px"
-    border: "1px solid {colors.hairline}"
-  button-link:
-    backgroundColor: "transparent"
-    textColor: "{colors.ink}"
-    typography: "{typography.body-sm-medium}"
-    padding: "8px 0"
-  button-icon-circular:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.full}"
-    size: 36px
-    border: "1px solid {colors.hairline}"
-  product-card-coral:
-    backgroundColor: "{colors.brand-coral}"
-    textColor: "{colors.on-dark}"
-    rounded: "{rounded.hero}"
-    padding: "{spacing.xxl}"
-  product-card-magenta:
-    backgroundColor: "{colors.brand-magenta}"
-    textColor: "{colors.on-dark}"
-    rounded: "{rounded.hero}"
-    padding: "{spacing.xxl}"
-  product-card-blue:
-    backgroundColor: "{colors.brand-blue}"
-    textColor: "{colors.on-dark}"
-    rounded: "{rounded.hero}"
-    padding: "{spacing.xxl}"
-  product-card-purple:
-    backgroundColor: "{colors.brand-purple}"
-    textColor: "{colors.on-dark}"
-    rounded: "{rounded.hero}"
-    padding: "{spacing.xxl}"
-  product-card-photo:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.on-dark}"
-    rounded: "{rounded.hero}"
-    padding: "{spacing.xxl}"
-  card-base:
-    backgroundColor: "{colors.canvas}"
-    rounded: "{rounded.xl}"
-    padding: "{spacing.xl}"
-    border: "1px solid {colors.hairline}"
-  card-feature:
-    backgroundColor: "{colors.surface}"
-    rounded: "{rounded.xl}"
-    padding: "{spacing.xxl}"
-  card-recommendation:
-    backgroundColor: "{colors.canvas}"
-    rounded: "{rounded.lg}"
-    padding: "{spacing.lg}"
-    border: "1px solid {colors.hairline}"
-  promo-cta-card:
-    backgroundColor: "{colors.brand-coral}"
-    textColor: "{colors.on-dark}"
-    rounded: "{rounded.hero}"
-    padding: "{spacing.section}"
-  text-input:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
-    typography: "{typography.body-md}"
-    rounded: "{rounded.md}"
-    padding: "{spacing.sm} {spacing.md}"
-    border: "1px solid {colors.hairline}"
-    height: 40px
-  text-input-focused:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
-    border: "2px solid {colors.brand-blue-deep}"
-  text-input-error:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
-    border: "1px solid #d45656"
-  search-pill:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.steel}"
-    typography: "{typography.body-sm}"
-    rounded: "{rounded.md}"
-    padding: "{spacing.xs} {spacing.md}"
-    height: 36px
-    border: "1px solid {colors.hairline}"
-  segmented-tab:
-    backgroundColor: "transparent"
-    textColor: "{colors.steel}"
-    typography: "{typography.button-md}"
-    rounded: "0"
-    padding: "{spacing.md} {spacing.lg}"
-    border: "0 0 2px transparent solid"
-  segmented-tab-active:
-    backgroundColor: "transparent"
-    textColor: "{colors.ink}"
-    typography: "{typography.button-md}"
-    border: "0 0 2px {colors.ink} solid"
-  pill-tab:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.steel}"
-    typography: "{typography.body-sm-medium}"
-    rounded: "{rounded.full}"
-    padding: "{spacing.xs} {spacing.md}"
-    border: "1px solid {colors.hairline}"
-  pill-tab-active:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.on-primary}"
-    rounded: "{rounded.full}"
-    border: "1px solid {colors.primary}"
-  badge-success:
-    backgroundColor: "{colors.success-bg}"
-    textColor: "{colors.success-text}"
-    typography: "{typography.caption-bold}"
-    rounded: "{rounded.full}"
-    padding: "4px 10px"
-  badge-new:
-    backgroundColor: "{colors.brand-coral}"
-    textColor: "{colors.on-dark}"
-    typography: "{typography.caption-bold}"
-    rounded: "{rounded.full}"
-    padding: "4px 10px"
-  badge-beta:
-    backgroundColor: "{colors.brand-blue-200}"
-    textColor: "{colors.brand-blue-deep}"
-    typography: "{typography.caption-bold}"
-    rounded: "{rounded.full}"
-    padding: "4px 10px"
-  badge-code:
-    backgroundColor: "{colors.brand-blue-200}"
-    textColor: "{colors.brand-blue-deep}"
-    typography: "{typography.caption-bold}"
-    rounded: "{rounded.sm}"
-    padding: "2px 6px"
-  promo-banner:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.on-primary}"
-    typography: "{typography.body-sm-medium}"
-    padding: "{spacing.sm} {spacing.lg}"
-  data-table:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
-    typography: "{typography.body-sm}"
-    rounded: "{rounded.md}"
-    border: "1px solid {colors.hairline}"
-  data-table-header:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.steel}"
-    typography: "{typography.caption-bold}"
-    padding: "{spacing.sm} {spacing.md}"
-  data-table-row:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
-    typography: "{typography.body-sm}"
-    padding: "{spacing.md}"
-    border: "0 0 1px {colors.hairline-soft} solid"
-  sidebar-nav-item:
-    backgroundColor: "transparent"
-    textColor: "{colors.charcoal}"
-    typography: "{typography.body-sm}"
-    rounded: "{rounded.sm}"
-    padding: "{spacing.xs} {spacing.md}"
-  sidebar-nav-item-active:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
-    typography: "{typography.body-sm-medium}"
-  doc-toc-item:
-    backgroundColor: "transparent"
-    textColor: "{colors.steel}"
-    typography: "{typography.body-sm}"
-    padding: "{spacing.xs} 0"
-  ai-product-tile:
-    backgroundColor: "{colors.canvas}"
-    rounded: "{rounded.xxxl}"
-    padding: "{spacing.xl}"
-    border: "1px solid {colors.hairline}"
-  footer-region:
-    backgroundColor: "{colors.footer-bg}"
-    textColor: "{colors.on-dark}"
-    typography: "{typography.body-sm}"
-    padding: "{spacing.section} {spacing.xxl}"
-  footer-link:
-    backgroundColor: "transparent"
-    textColor: "{colors.muted}"
-    typography: "{typography.body-sm}"
-    padding: "{spacing.xxs} 0"
-  hero-band-marketing:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
-    typography: "{typography.hero-display}"
-    rounded: "{rounded.lg}"
-    padding: "{spacing.hero}"
-  product-matrix-grid:
-    backgroundColor: "{colors.canvas}"
-    rounded: "{rounded.hero}"
-    padding: "{spacing.xxl}"
-  ai-product-matrix:
-    backgroundColor: "{colors.canvas}"
-    rounded: "{rounded.xxxl}"
-    padding: "{spacing.xl}"
-    border: "1px solid {colors.hairline}"
-  docs-prose-block:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.charcoal}"
-    typography: "{typography.body-md}"
-    padding: "{spacing.xxl}"
-  models-comparison-table:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
-    typography: "{typography.body-sm}"
-    rounded: "{rounded.md}"
-    border: "1px solid {colors.hairline}"
-  testimonial-stat-row:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
-    typography: "{typography.heading-lg}"
-    padding: "{spacing.xl}"
+elevation:
+  0: "none"
+  1: "0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)"
+  2: "0 4px 12px rgba(0,0,0,0.08)"
+  3: "0 12px 32px rgba(0,0,0,0.12)"
+
+breakpoints:
+  sm: 640px
+  md: 768px
+  lg: 1024px
+  xl: 1280px
 ---
 
 ## Overview
 
-MiniMax stages itself as a Chinese AI infrastructure brand with a sophisticated dual identity. Marketing surfaces and platform pages anchor in stark white canvas with deep-black typographic emphasis — the brand voice is confident, technical, almost editorial. But each model release gets its own vibrant gradient identity card: M2.7 in volcanic coral-red, Music 2.6 in magenta-pink, Hailuo in deep blue, Speech 2.8 in saturated orange-purple. Together these vibrant tiles read like album covers laid out on the homepage — each one declaring its own product personality.
+Dhrubok Portal is a bilingual coaching management system serving one coaching
+centre. The design system prioritises **operational clarity**, **financial
+precision**, **rapid data entry**, and **bilingual readability** (Bangla and
+English). The aesthetic is clean and restrained — white canvas, near-black
+typography, minimal chrome — with colour reserved for semantic meaning: status
+indicators, financial states, and actionable CTAs. The interface must feel
+reliable, modern, and fast. It must never feel decorative or ambiguous.
 
-DM Sans anchors every surface from oversized 80px hero displays down to 12px micro labels. The geometric, slightly humanist character of the face suits both the dense documentation surfaces (where 14px body type carries 1.5 line-height for long-form prose) and the high-impact marketing displays (where -2px letter-spacing tightens 80px headlines). Buttons are universally pill-shaped (`rounded-full`) with a sharp two-tier system: black-pill primary (the dominant CTA) and outline-pill secondary. Cards split into two distinct families: vibrant gradient product showcases (32px corner softening) and quiet white documentation cards (16px corner softening).
+The system serves four distinct product surfaces that share the same tokens but
+apply them at different densities:
 
-**Key Characteristics:**
+- **Public website** — spacious, editorial, emerald CTAs, real portal
+  screenshots as social proof.
+- **Owner portal** — compact data tables, financial dashboards, strong global
+  search, rich filtering.
+- **Teacher portal** — session-oriented, quick attendance and marks entry,
+  focused on assigned batches.
+- **Student portal** — calmer, card-based, personal schedule, attendance, fees,
+  results.
+- **Print surfaces** — monochrome, A4-optimised, deterministic layout.
 
-- Stark monochrome palette — black ({colors.primary}) and white ({colors.canvas}) — broken open by saturated brand-color gradient cards
-- Distinct product-color encoding: each model line has its own vibrant brand color (coral M2.7, magenta Music 2.6, blue Hailuo, orange Speech 2.8)
-- DM Sans across the entire system; Inter as fallback
-- Pill-shaped buttons ({rounded.full}) and pill-shaped tabs everywhere; rectangular forms only inside data tables and dense docs
-- Hero typography uses tight 1.10 line-height with -2px letter-spacing for impact
-- Documentation surfaces use a 3-column layout: left sidebar nav, center prose body, right table-of-contents
-- Black promo banners ({colors.primary}) above the nav for time-bound brand moments
+---
 
-## Colors
+## Design Principles
 
-> Source pages: minimax.io/ (homepage), /models/text/m27 (product showcase), platform.minimax.io/docs/guides/models-intro (documentation), /subscribe/token-plan (pricing). Token coverage was identical across all four pages.
+1. **Semantic colour over decorative colour.** Every non-greyscale colour
+   communicates a specific meaning: success, warning, danger, info, or brand
+   action. Never use colour for decoration in operational flows.
 
-### Brand & Accent
+2. **Bangla-first, bilingual-always.** Bangla is the default locale. Typography,
+   line-heights, and vertical spacing must be tested in Bangla first. English
+   layout must not break when Bangla text is substituted and vice versa.
 
-- **Brand Coral** ({colors.brand-coral}): Signature high-impact accent. Used on M2.7 product card, "Token Plan" hero band, promo CTA strips, and "NEW" badges. Carries the brand's most attention-grabbing energy.
-- **Brand Magenta** ({colors.brand-magenta}): Secondary product-card identity (Music 2.6); used for music/audio product encoding.
-- **Brand Blue** ({colors.brand-blue}): Hailuo video product identity; primary blue accent across the system.
-- **Brand Blue Deep** ({colors.brand-blue-deep}): Form-control activation, link emphasis.
-- **Brand Blue 700** ({colors.brand-blue-700}): Documentation tag and reference text color.
-- **Brand Cyan** ({colors.brand-cyan}): Atmospheric blue for product gradients and decorative wash.
-- **Brand Blue 200** ({colors.brand-blue-200}): Code badges, info-tag backgrounds.
-- **Brand Purple** ({colors.brand-purple}): Speech 2.8 and minor purple-product identity; gradient mate for magenta cards.
+3. **One-action clarity.** Every screen has a clear primary action. Avoid
+   competing primary buttons within the same panel or decision point. Secondary
+   and tertiary actions are visually subordinate.
 
-### Surface
+4. **Data density without clutter.** Portal screens show data-dense tables,
+   summaries, and forms. Use whitespace and hairline borders to separate
+   content — never background fills, gradients, or decorative dividers.
 
-- **Canvas White** ({colors.canvas}): Primary page background and card surface.
-- **Surface** ({colors.surface}): Subtle section backgrounds, search-pill rest, sidebar-nav active state.
-- **Surface Soft** ({colors.surface-soft}): Quieter section divisions.
-- **Hairline** ({colors.hairline}): 1px input border and primary divider.
-- **Hairline Soft** ({colors.hairline-soft}): Quieter table-row divider and secondary section break.
+5. **Irreversible actions feel irreversible.** Attendance submission, payment
+   posting, and result publication use visually stronger confirmation than
+   ordinary saves. The confirmation must state what happens, what cannot be
+   undone, and any side-effects (SMS, financial changes).
 
-### Text
+6. **Touch-ready everywhere.** All interactive elements must meet 44×44 CSS
+   pixel minimum on mobile. Attendance marking and payment entry are phone-first
+   workflows.
 
-- **Ink** ({colors.ink}): Primary headline and CTA text — the brand's near-black anchor.
-- **Ink Strong** ({colors.ink-strong}): Pure black used in promo banners and hero displays for maximum contrast.
-- **Charcoal** ({colors.charcoal}): Body text on light surfaces.
-- **Slate** ({colors.slate}): Secondary text, metadata.
-- **Steel** ({colors.steel}): Tertiary text, table headers, sidebar inactive items.
-- **Stone** ({colors.stone}): Muted captions and tab inactive labels.
-- **Muted** ({colors.muted}): Footer link text and de-emphasized labels.
+7. **Print is a first-class surface.** Receipts and reports must produce clean
+   A4 output with no dependency on screen styles, colour, or interactive
+   elements.
+
+8. **No decorative animation.** Transitions may be used for state changes
+   (loading → success) and micro-feedback (hover, focus), but never for
+   aesthetic flair in operational flows.
+
+---
+
+## Colours
+
+### Brand
+
+`{colors.brand}` (#3ecf8e) is Dhrubok's signature emerald. It appears on
+primary CTAs, the logo accent, and active navigation indicators. It is **not**
+used for success/status indication — that role belongs to `{colors.success}`.
+
+| Token | Hex | Use |
+|---|---|---|
+| `brand` | #3ecf8e | Primary CTA fill, logo accent, active nav indicator |
+| `brand-deep` | #24b47e | CTA hover / pressed state |
+| `brand-soft` | #a7f3d0 | Light brand tint on selected rows, active tab bg |
+| `brand-muted` | #ecfdf5 | Subtle brand wash on highlighted cards |
 
 ### Semantic
 
-- **Success Background** ({colors.success-bg}): Pale-green wash for success badges and confirmations.
-- **Success Text** ({colors.success-text}): Deep-green ink for success badge labels.
-- Error tones derive from a `#d45656` red used in input border error states (not extracted as a top-level system token).
+Semantic colours communicate operational state. They are system colours — they
+never appear merely as decoration.
+
+| Token | Hex | States |
+|---|---|---|
+| `success` / `success-deep` | #16a34a / #15803d | Present, paid, active, accepted, delivered |
+| `success-soft` / `success-muted` | #dcfce7 / #f0fdf4 | Badge bg, row highlight, soft indicator |
+| `warning` / `warning-deep` | #d97706 / #b45309 | Late, due soon, pending review, under review |
+| `warning-soft` / `warning-muted` | #fef3c7 / #fffbeb | Badge bg, row highlight |
+| `danger` / `danger-deep` | #dc2626 / #b91c1c | Absent, overdue, failed, rejected, voided, destructive action |
+| `danger-soft` / `danger-muted` | #fee2e2 / #fef2f2 | Badge bg, row highlight |
+| `info` / `info-deep` | #2563eb / #1d4ed8 | Published, informational, new, queued |
+| `info-soft` / `info-muted` | #dbeafe / #eff6ff | Badge bg, row highlight |
+
+### Semantic mapping for Dhrubok domain states
+
+| Domain | State | Colour |
+|---|---|---|
+| Attendance | Present | `success` |
+| Attendance | Late | `warning` |
+| Attendance | Absent | `danger` |
+| Finance | Paid | `success` |
+| Finance | Partially paid | `warning` |
+| Finance | Due / Upcoming | `ink-mute` (neutral) |
+| Finance | Overdue | `danger` |
+| Finance | Voided | `ink-faint` + strikethrough |
+| Admission | New | `info` |
+| Admission | Under review | `warning` |
+| Admission | Accepted | `success` |
+| Admission | Rejected | `danger` |
+| Admission | Withdrawn | `ink-mute` (neutral) |
+| Exam | Draft | `ink-mute` (neutral) |
+| Exam | Ready for review | `warning` |
+| Exam | Published | `info` |
+| Student | Active | `success` |
+| Student | Paused | `warning` |
+| Student | Completed | `info` |
+| Student | Left / Archived | `ink-mute` (neutral) |
+| SMS | Queued | `info` |
+| SMS | Sending | `info` |
+| SMS | Accepted / Sent | `info` |
+| SMS | Delivered | `success` |
+| SMS | Failed | `danger` |
+| SMS | Retrying | `warning` |
+| Enrolment | Active | `success` |
+| Enrolment | Completed | `info` |
+| Enrolment | Withdrawn | `danger` |
+| Account | Active | `success` |
+| Account | Reserved | `warning` |
+| Account | Suspended | `danger` |
+
+### Text
+
+| Token | Hex | Use |
+|---|---|---|
+| `ink` | #171717 | Primary body text — near-black, never pure black |
+| `ink-secondary` | #404040 | Secondary emphasis, subheadings within cards |
+| `ink-mute` | #737373 | Labels, helper text, timestamps |
+| `ink-faint` | #a3a3a3 | Placeholder text, disabled labels |
+| `ink-disabled` | #d4d4d4 | Disabled interactive element text |
+| `on-brand` | #171717 | Text on `brand` fill — dark on green, not white |
+| `on-dark` | #fafafa | Text on `canvas-dark` surfaces |
+| `on-success` | #ffffff | Text on `success` fill |
+| `on-warning` | #171717 | Text on `warning` fill — dark on amber |
+| `on-danger` | #ffffff | Text on `danger` fill |
+| `on-info` | #ffffff | Text on `info` fill |
+
+### Surface
+
+| Token | Hex | Use |
+|---|---|---|
+| `canvas` | #ffffff | Primary page background |
+| `canvas-soft` | #fafafa | Sidebar, alternating table rows, inset panels |
+| `canvas-subtle` | #f5f5f5 | Input disabled bg, skeleton loading bg |
+| `canvas-dark` | #171717 | Inverted panels (future dark mode base) |
+| `canvas-dark-soft` | #262626 | Nested chrome on dark panels |
+
+### Border
+
+| Token | Hex | Use |
+|---|---|---|
+| `border` | #e5e5e5 | Default card/table/input borders |
+| `border-strong` | #d4d4d4 | Emphasised borders, table header bottom |
+| `border-muted` | #f0f0f0 | Subtle separators within cards |
+| `border-focus` | #3ecf8e | Focus ring colour (brand emerald) |
+| `border-danger` | #dc2626 | Error state input borders |
+
+---
 
 ## Typography
 
-### Font Family
+### Font Stack
 
-**DM Sans** (primary): Geometric variable sans-serif. Used across every surface, every role. Fallbacks: Inter, Helvetica Neue, Helvetica, Arial.
+**Primary:** Inter (Google Fonts, weight 400–600).
 
-DM Sans was chosen for its dual fluency: it scales cleanly from 80px hero displays (where -2px letter-spacing creates magazine-grade tightness) down to 12px micro labels (where the slightly humanist counters maintain legibility). The face has no italic variant in the brand's deployment — emphasis comes from weight (500/600/700) instead.
+**Bangla:** Noto Sans Bengali (Google Fonts, weight 400–600).
+
+**Monospace:** System monospace (`ui-monospace`, Cascadia Code, Consolas).
+
+The CSS `font-family` stack is always `Inter, 'Noto Sans Bengali', sans-serif`.
+The browser automatically selects Noto Sans Bengali for Bengali glyphs and Inter
+for Latin glyphs. Both fonts must be loaded at weights 400, 500, and 600.
 
 ### Hierarchy
 
-| Token | Size | Weight | Line Height | Letter Spacing | Use |
+| Token | Size | Weight | Line-height | Letter-spacing | Use |
 |---|---|---|---|---|---|
-| `{typography.hero-display}` | 80px | 600 | 1.10 | -2px | Homepage hero ("MiniMax Music 2.6") |
-| `{typography.display-lg}` | 56px | 600 | 1.10 | -1.5px | Section openers, major page heroes |
-| `{typography.heading-lg}` | 40px | 600 | 1.20 | -1px | Sub-page headlines ("Token Plan", "Models Overview") |
-| `{typography.heading-md}` | 32px | 600 | 1.25 | -0.5px | Subsection headers ("Full-Stack Model Matrix") |
-| `{typography.heading-sm}` | 24px | 600 | 1.30 | 0 | Card titles, feature headers |
-| `{typography.card-title}` | 20px | 600 | 1.40 | 0 | Product-card titles, feature-tile headers |
-| `{typography.subtitle}` | 18px | 500 | 1.50 | 0 | Section subtitles, lead body |
-| `{typography.body-md}` | 16px | 400 | 1.50 | 0 | Primary body text |
-| `{typography.body-md-bold}` | 16px | 700 | 1.50 | 0 | Body emphasis |
-| `{typography.body-sm}` | 14px | 400 | 1.50 | 0 | Secondary body, table cells, navigation |
-| `{typography.body-sm-medium}` | 14px | 500 | 1.50 | 0 | Active sidebar nav, button labels |
-| `{typography.caption}` | 13px | 400 | 1.70 | 0 | Documentation captions, fine print |
-| `{typography.caption-bold}` | 13px | 600 | 1.50 | 0 | Badge labels, table-header text |
-| `{typography.micro}` | 12px | 400 | 1.50 | 0 | Footer microcopy, chip labels |
-| `{typography.button-md}` | 14px | 600 | 1.40 | 0 | Pill button labels |
+| `display-xxl` | 56px | 600 | 1.1 | -1.4px | Public hero headline |
+| `display-xl` | 42px | 600 | 1.15 | -1.05px | Public section opener |
+| `display-lg` | 32px | 600 | 1.2 | -0.64px | Page title (portal) |
+| `display-md` | 24px | 600 | 1.25 | -0.36px | Card title, dialog title |
+| `heading-lg` | 20px | 600 | 1.3 | 0 | Section heading |
+| `heading-md` | 16px | 600 | 1.4 | 0 | Sub-section, table group |
+| `body-lg` | 16px | 400 | 1.6 | 0 | Public body lead, form descriptions |
+| `body-md` | 14px | 400 | 1.5 | 0 | Default portal body |
+| `body-sm` | 13px | 400 | 1.5 | 0 | Compact body, table help text |
+| `label-md` | 14px | 500 | 1.0 | 0 | Form labels, button text |
+| `label-sm` | 12px | 500 | 1.0 | 0 | Small labels, column headers |
+| `caption` | 12px | 400 | 1.5 | 0 | Helper text, timestamps, footnotes |
+| `mono` | 14px | 400 | 1.5 | 0 | Monetary values, IDs, codes |
+| `mono-sm` | 12px | 400 | 1.5 | 0 | Compact monetary, receipt line items |
 
-### Principles
+### Bangla Typography Rules
 
-- **Tight hero leading** (1.10) and aggressive negative letter-spacing on display sizes create a magazine-quality typographic display unique to MiniMax.
-- **Generous body leading** (1.50) keeps long-form documentation comfortable; captions push to 1.70 for scientific-paper-grade clarity.
-- **Weight discipline:** 400 (body), 500 (medium emphasis), 600 (headings/buttons), 700 (strong inline emphasis). Heavier weights are not used.
-- **Single typeface** strategy — never mix DM Sans with another sans-serif. Code samples (when shown) use a system monospace fallback, but no second typeface enters the brand canvas.
+Bengali glyphs render taller than Latin glyphs at the same font size. Complex
+conjunct characters (যুক্তবর্ণ) require additional vertical space.
 
-## Layout
+- **Line-height for Bangla body text:** use at least 1.6 (the `body-lg` and
+  `body-md` tokens already accommodate this). Never go below 1.5 for any text
+  that may contain Bangla.
+- **Table cells with Bangla content:** add 4px extra vertical padding compared
+  to English-only tables (use `{spacing.md}` 12px vertical padding instead of
+  `{spacing.sm}` 8px).
+- **Form labels in Bangla:** test that labels do not clip descenders. Noto Sans
+  Bengali at 14px needs at least 20px label height.
+- **Display text in Bangla:** display tiers (`display-xxl` through `display-md`)
+  can use the same line-heights as English at large sizes, but always test
+  visually.
+- **Negative letter-spacing and Bangla:** the negative tracking on display tiers
+  (-1.4px to -0.36px) is designed for Latin glyphs. When rendering Bangla
+  display text, set `letter-spacing: 0` to preserve conjunct readability. Use
+  a CSS class or locale-aware rule to disable tracking for Bangla headings.
+- **Mixed-language content:** when Bangla and English appear in the same line
+  (common in student names, course names), the taller Bangla glyphs determine
+  the line height. Never force a fixed height that clips Bangla.
+- **Print:** Noto Sans Bengali must be embedded or loaded for print stylesheets.
+  System Bengali fonts are unreliable across devices.
 
-### Spacing System
+### Monetary Typography
 
-- **Base unit**: 4px (8px primary increment).
-- **Tokens**: `{spacing.xxs}` (4px) · `{spacing.xs}` (8px) · `{spacing.sm}` (12px) · `{spacing.md}` (16px) · `{spacing.lg}` (20px) · `{spacing.xl}` (24px) · `{spacing.xxl}` (32px) · `{spacing.xxxl}` (40px) · `{spacing.section-sm}` (48px) · `{spacing.section}` (64px) · `{spacing.section-lg}` (80px) · `{spacing.hero}` (96px).
-- **Section rhythm**: Marketing pages separate at `{spacing.hero}` (96px) above-fold, then `{spacing.section-lg}` (80px) below; documentation tightens to `{spacing.section}` (64px); table rows compress to `{spacing.md}` (16px).
-- **Card internal padding**: Vibrant product cards use `{spacing.xxl}` (32px); documentation cards use `{spacing.lg}–{spacing.xl}` (20–24px); promo strips expand to `{spacing.section}` (64px).
+All monetary values use `{typography.mono}` or `{typography.mono-sm}`. This
+ensures digit alignment in columns. The Bangladeshi Taka symbol (৳) is placed
+before the amount with a thin space: `৳ 1,500`. Amounts are always
+right-aligned in table columns.
 
-### Grid & Container
+---
 
-- Marketing pages use a 1280px max-width with 32px gutters.
-- Homepage product matrix renders as a 4-column row of 32px-rounded gradient cards, each ~280–320px wide.
-- AI Product Matrix below uses a 4-column grid with 16px-rounded white cards.
-- Documentation surfaces use a 3-column layout: left sidebar nav (~220px), center prose body (~720px max-width), right TOC (~180px). Sidebar persists on desktop; collapses to drawer below 1024px.
-- Token Plan / pricing pages use 2-column tabs above a 3-column tier card grid.
+## Layout and Spacing
+
+### Spacing Scale
+
+Base unit is 8px with sub-tokens for fine work:
+
+| Token | Value | Common use |
+|---|---|---|
+| `xxs` | 2px | Hairline gaps, icon–text micro spacing |
+| `xs` | 4px | Tight padding inside pills and badges |
+| `sm` | 8px | Default inner padding, compact gaps |
+| `md` | 12px | Table cell padding, form field gap |
+| `lg` | 16px | Card padding, section gap in compact views |
+| `xl` | 24px | Section padding, comfortable card body |
+| `2xl` | 32px | Card padding on public pages, modal body |
+| `3xl` | 48px | Page section gap |
+| `4xl` | 64px | Public page section padding |
+
+### Container and Grid
+
+- Portal pages use a fluid layout within a sidebar. Content area has 16–24px
+  horizontal padding.
+- Public pages center content in a 1200px max-width container with 24px
+  edge padding.
+- Data tables stretch to full container width and scroll horizontally on narrow
+  screens.
 
 ### Whitespace Philosophy
 
-Marketing pages give product photography and color cards generous breathing room — `{spacing.hero}` (96px) above-the-fold creates visual oxygen for the 80px hero display. Inside documentation, whitespace tightens dramatically: section gaps drop to `{spacing.xxl}` (32px), table rows pack down to `{spacing.md}` (16px), and the sidebar nav uses `{spacing.xs}` (8px) vertical rhythm.
+Use whitespace and hairline borders to create hierarchy — never coloured
+section bands, decorative dividers, or gradient fills. The white canvas is
+the design.
 
-## Elevation & Depth
+---
 
-The system runs predominantly flat. Elevation is reserved for sticky panels, dropdowns, and the rare floating CTA.
+## Elevation and Depth
 
 | Level | Treatment | Use |
 |---|---|---|
-| 0 (flat) | No shadow; `{colors.hairline}` border | Default cards, table rows, form inputs |
-| 1 (subtle) | `rgba(0, 0, 0, 0.04) 0px 1px 2px 0px` | Card-recommendation, hover-elevated tiles |
-| 2 (card) | `rgba(0, 0, 0, 0.08) 0px 4px 6px 0px` | Standard feature cards, dropdowns |
-| 3 (atmospheric) | `rgba(0, 0, 0, 0.08) 0px 0px 22px 0px` | Diffuse glow on featured product cards |
-| 4 (modal) | `rgba(36, 36, 36, 0.08) 0px 12px 16px -4px` | Modals, confirmation dialogs, sticky panels |
+| 0 | Flat, 1px `{colors.border}` | Default cards, table containers |
+| 1 | `{elevation.1}` | Subtle card lift on hover, dropdowns |
+| 2 | `{elevation.2}` | Floating elements, popovers, search results |
+| 3 | `{elevation.3}` | Modals, drawers, command palette |
 
-### Decorative Depth
+Elevation is used sparingly. Most portal content sits at Level 0. Only floating
+and overlay elements use shadows.
 
-- The vibrant gradient product cards carry their own atmospheric depth via internal radial gradients and silhouette imagery — no shadow needed; the color does the work.
-- Brand-tinted shadows (`rgba(44, 30, 116, 0.16) 0px 0px 15px`) appear under purple-themed cards for subtle ambient lift.
-- Dotted/grain textures occasionally appear inside product cards as photographic-content decoration; these are not formalized as system tokens.
+---
 
-## Shapes
+## Shapes and Borders
 
 ### Border Radius Scale
 
 | Token | Value | Use |
 |---|---|---|
-| `{rounded.xs}` | 4px | Code chips, micro-controls |
-| `{rounded.sm}` | 6px | Compact controls, table cells |
-| `{rounded.md}` | 8px | Inputs, secondary buttons, search pill |
-| `{rounded.lg}` | 12px | Documentation cards, recommendation tiles |
-| `{rounded.xl}` | 16px | Standard feature cards, AI product tiles |
-| `{rounded.xxl}` | 20px | Larger feature panels |
-| `{rounded.xxxl}` | 24px | AI product tile feature variants |
-| `{rounded.hero}` | 32px | Vibrant gradient product cards, promo CTA strip |
-| `{rounded.full}` | 9999px | All buttons, all pill tabs, badges |
-
-### Photography Geometry
-
-- Vibrant product cards use 32px corner softening — distinct from the 16px used on quiet white cards. The doubled radius is the visual signature of "this is a featured product moment."
-- Product imagery inside cards is treated as photographic content (silhouettes, dark portrait studio lighting) without rounded internal frames.
-- Avatar circles (rare, in testimonials) are `{rounded.full}` — perfect circles.
-
-## Components
-
-> Per the no-hover policy, hover states are NOT documented. Default and pressed/active states only.
-
-### Buttons
-
-**`button-primary`** — Black pill primary CTA, the dominant action across all surfaces.
-
-- Background `{colors.primary}`, text `{colors.on-primary}`, typography `{typography.button-md}`, padding `11px 24px`, rounded `{rounded.full}`.
-- Pressed state `button-primary-pressed` lifts to `{colors.charcoal}`.
-- Disabled state `button-primary-disabled` uses `{colors.hairline}` background and `{colors.muted}` text.
-
-**`button-secondary`** — Outlined pill secondary action, paired with primary in dual-CTA hero patterns.
-
-- Background transparent, text `{colors.ink}`, border `1px solid {colors.ink}`, typography `{typography.button-md}`, padding `11px 24px`, rounded `{rounded.full}`.
-
-**`button-tertiary`** — White-fill quieter pill, used for tertiary nav and informational CTAs.
-
-- Background `{colors.canvas}`, text `{colors.ink}`, border `1px solid {colors.hairline}`, typography `{typography.button-md}`, padding `11px 24px`, rounded `{rounded.full}`.
-
-**`button-link`** — Inline text link styled as a subtle button.
-
-- Background transparent, text `{colors.ink}`, typography `{typography.body-sm-medium}`, padding `8px 0`. Underline appears on activation.
-
-**`button-icon-circular`** — 36×36px circular utility button (carousel arrows, share, copy).
-
-- Background `{colors.canvas}`, text `{colors.ink}`, border `1px solid {colors.hairline}`, rounded `{rounded.full}`.
-
-### Vibrant Product Cards
-
-**`product-card-coral`** — M2.7 / Token Plan signature card.
-
-- Background `{colors.brand-coral}`, text `{colors.on-dark}`, rounded `{rounded.hero}` (32px), padding `{spacing.xxl}`.
-- Hosts the M2.7 wordmark in massive `{typography.display-lg}` with white tagline.
-
-**`product-card-magenta`** — Music 2.6 product showcase.
-
-- Background `{colors.brand-magenta}`, text `{colors.on-dark}`, rounded `{rounded.hero}`, padding `{spacing.xxl}`.
-
-**`product-card-blue`** — Hailuo Video product showcase.
-
-- Background `{colors.brand-blue}`, text `{colors.on-dark}`, rounded `{rounded.hero}`, padding `{spacing.xxl}`.
-
-**`product-card-purple`** — Speech 2.8 / variant product showcase.
-
-- Background `{colors.brand-purple}`, text `{colors.on-dark}`, rounded `{rounded.hero}`, padding `{spacing.xxl}`.
-
-**`product-card-photo`** — Dark portrait product card (homepage S2 placement, video-emotion product).
-
-- Background `{colors.primary}` (black with overlaid product photo), text `{colors.on-dark}`, rounded `{rounded.hero}`, padding `{spacing.xxl}`.
-
-### Cards & Containers
-
-**`card-base`** — Standard documentation/feature card.
-
-- Background `{colors.canvas}`, rounded `{rounded.xl}`, padding `{spacing.xl}`, border `1px solid {colors.hairline}`.
-
-**`card-feature`** — Quieter feature panel on light gray.
-
-- Background `{colors.surface}`, rounded `{rounded.xl}`, padding `{spacing.xxl}`.
-
-**`card-recommendation`** — "Recommended Reading" tile in documentation footer.
-
-- Background `{colors.canvas}`, rounded `{rounded.lg}`, padding `{spacing.lg}`, border `1px solid {colors.hairline}`.
-
-**`promo-cta-card`** — Bright orange "Refunds of 10%..." promo strip with embedded CTA pill.
-
-- Background `{colors.brand-coral}`, text `{colors.on-dark}`, rounded `{rounded.hero}`, padding `{spacing.section}`. Embedded button uses `button-tertiary` (white pill on coral) for the "Join Now" action.
-
-**`ai-product-tile`** — White card in the AI Product Matrix grid (Agent, Hailuo Video, MiniMax Audio).
-
-- Background `{colors.canvas}`, rounded `{rounded.xxxl}`, padding `{spacing.xl}`, border `1px solid {colors.hairline}`. Carries an icon/illustration top, title `{typography.card-title}`, description `{typography.body-sm}`.
-
-### Inputs & Forms
-
-**`text-input`** — Standard text field.
-
-- Background `{colors.canvas}`, text `{colors.ink}`, border `1px solid {colors.hairline}`, rounded `{rounded.md}`, padding `{spacing.sm} {spacing.md}`, height 40px.
-
-**`text-input-focused`** — Activated state.
-
-- Border switches to `2px solid {colors.brand-blue-deep}`.
-
-**`text-input-error`** — Validation error state.
-
-- Border switches to `1px solid #d45656`; error label below in matching red `{typography.body-sm}`.
-
-**`search-pill`** — Documentation top-bar search field.
-
-- Background `{colors.surface}`, text `{colors.steel}`, typography `{typography.body-sm}`, rounded `{rounded.md}`, height 36px, border `1px solid {colors.hairline}`.
-
-### Tabs
-
-**`segmented-tab`** + **`segmented-tab-active`** — Underline-style tab navigation (Benchmark / Self-Evaluation / Multi-Agent Collaboration on the M2.7 page).
-
-- Inactive: text `{colors.steel}`, transparent background, padding `{spacing.md} {spacing.lg}`. Active: text shifts to `{colors.ink}`, 2px bottom border in `{colors.ink}`.
-
-**`pill-tab`** + **`pill-tab-active`** — Pricing-page tab nav (Token Plan / Audio Subscription / Video Package).
-
-- Inactive: background `{colors.canvas}`, text `{colors.steel}`, border `1px solid {colors.hairline}`, padding `{spacing.xs} {spacing.md}`, rounded `{rounded.full}`.
-- Active: background `{colors.primary}`, text `{colors.on-primary}`, no border (or matching black border).
-
-### Badges & Status
-
-**`badge-success`** — Pale-green confirmation badge ("Available", "Active").
-
-- Background `{colors.success-bg}`, text `{colors.success-text}`, typography `{typography.caption-bold}`, rounded `{rounded.full}`, padding `4px 10px`.
-
-**`badge-new`** — Coral "NEW" / "Live" pill for fresh releases.
-
-- Background `{colors.brand-coral}`, text `{colors.on-dark}`, typography `{typography.caption-bold}`, rounded `{rounded.full}`, padding `4px 10px`.
-
-**`badge-beta`** — Pale-blue "BETA" / informational pill.
-
-- Background `{colors.brand-blue-200}`, text `{colors.brand-blue-deep}`, typography `{typography.caption-bold}`, rounded `{rounded.full}`, padding `4px 10px`.
-
-**`badge-code`** — Inline code-style chip ("Code", "API").
-
-- Background `{colors.brand-blue-200}`, text `{colors.brand-blue-deep}`, typography `{typography.caption-bold}`, rounded `{rounded.sm}`, padding `2px 6px`.
-
-**`promo-banner`** — Sticky black promotional strip ABOVE the top nav ("Invite & Earn — Rewards for Both!").
-
-- Background `{colors.primary}`, text `{colors.on-primary}`, typography `{typography.body-sm-medium}`, padding `{spacing.sm} {spacing.lg}`. Carries one-line copy with optional inline link.
-
-### Data Tables
-
-**`data-table`** — Documentation models comparison table.
-
-- Background `{colors.canvas}`, text `{colors.ink}`, typography `{typography.body-sm}`, rounded `{rounded.md}`, border `1px solid {colors.hairline}`.
-
-**`data-table-header`** — Top header row of the data table.
-
-- Background `{colors.surface}`, text `{colors.steel}`, typography `{typography.caption-bold}`, padding `{spacing.sm} {spacing.md}`.
-
-**`data-table-row`** — Body rows.
-
-- Background `{colors.canvas}`, text `{colors.ink}`, typography `{typography.body-sm}`, padding `{spacing.md}`, bottom border `1px solid {colors.hairline-soft}`.
-
-### Navigation
-
-**Top Navigation (Marketing)** — Sticky white bar with logo, link list, and right-side CTAs.
-
-- Background `{colors.canvas}`, height ~64px, bottom border `1px solid {colors.hairline-soft}`.
-- Left: MiniMax wordmark + horizontal link list (Models, Product, API, Company).
-- Right: black-pill "Contact Us" + outlined-pill "Login".
-
-**Top Navigation (Documentation/Platform)** — Compressed nav with center search-pill and right-side account/upgrade CTAs.
-
-- Background `{colors.canvas}`, height ~56px, with search-pill at center and "Documentation / Account / Subscribe" links + black-pill "Sign Up" right.
-
-**`sidebar-nav-item`** + **`sidebar-nav-item-active`** — Documentation left rail link entries.
-
-- Inactive: background transparent, text `{colors.charcoal}`, typography `{typography.body-sm}`, rounded `{rounded.sm}`, padding `{spacing.xs} {spacing.md}`.
-- Active: background `{colors.surface}`, text `{colors.ink}`, typography `{typography.body-sm-medium}`.
-
-**`doc-toc-item`** — Right-rail table-of-contents links.
-
-- Background transparent, text `{colors.steel}`, typography `{typography.body-sm}`, padding `{spacing.xs} 0`. Active item color shifts to `{colors.ink}`.
-
-### Signature Components
-
-**`hero-band-marketing`** — Centered hero with massive 80px display + dual-CTA pair.
-
-- Layout: centered headline in `{typography.hero-display}` ({colors.ink}), centered subtitle in `{typography.subtitle}` ({colors.steel}), centered button row (`button-primary` + `button-secondary`).
-
-**`product-matrix-grid`** — 4-column horizontal scroll of vibrant gradient product cards (homepage "Full-Stack Model Matrix").
-
-- Each tile uses one of the `product-card-*` variants (coral, magenta, blue, purple, photo).
-- Card title in `{typography.display-lg}` (M2.7 wordmark) or `{typography.heading-lg}` (Music 2.6).
-- Below the wordmark: thin tagline in `{typography.body-sm}` 80% white opacity.
-- Optional badge top-right: `badge-new`.
-- Card heights are uniform (~360–400px); the row scrolls horizontally on mobile.
-
-**`ai-product-matrix`** — 4-column grid of white product tiles below the vibrant matrix (Agent / Hailuo Video / Audio / Video).
-
-- Each tile is `ai-product-tile` chrome.
-- Top: 100px-tall illustration zone (often line-art icon or 3D mark).
-- Below: title in `{typography.card-title}`, description in `{typography.body-sm}` `{colors.steel}`.
-
-**`docs-prose-block`** — Documentation main content area.
-
-- Max-width ~720px, centered. Body in `{typography.body-md}` `{colors.charcoal}` line-height 1.6.
-- Inline code in `{typography.body-md}` monospace fallback with `{colors.surface}` background and `{rounded.xs}` corners.
-
-**`models-comparison-table`** — Documentation table comparing model sizes and features.
-
-- Uses `data-table` chrome. Each row carries a model name (linkified, in `{colors.ink}` body-sm-medium), a description column (`{colors.charcoal}`), and a features bullet list column.
-
-**`testimonial-stat-row`** — Stats strip ("214,000+ Enterprise Clients & Developers", "0+ Countries Served").
-
-- Horizontal row of 4 stat cells, each cell with a large number in `{typography.heading-lg}` `{colors.ink}` and a label below in `{typography.body-sm}` `{colors.steel}`.
-
-**`footer-region`** — Dense black-canvas multi-column footer.
-
-- Background `{colors.footer-bg}`, padding `{spacing.section} {spacing.xxl}`.
-- Top row: MiniMax wordmark ("intelligence with everyone" tagline) and social icons (X, Twitter, GitHub, etc.).
-- Body: 4-column link grid (Research / Product / API / Company / News).
-- Section headers in `{typography.body-sm-medium}` `{colors.on-dark}`.
-
-**`footer-link`** — Individual link entry inside the footer column.
-
-- Background transparent, text `{colors.muted}`, typography `{typography.body-sm}`, padding `{spacing.xxs} 0`. Active/visited states do not change color — only opacity shifts on activation.
-
-## Do's and Don'ts
-
-### Do
-
-- Use `{colors.primary}` (black) as the dominant CTA — it's the brand's most recognizable interactive element.
-- Reserve product brand colors (`{colors.brand-coral}`, `{colors.brand-magenta}`, `{colors.brand-blue}`, `{colors.brand-purple}`) ONLY for product-identity moments — never for general buttons or text.
-- Pair `{rounded.hero}` (32px) gradient cards with `{rounded.xl}` (16px) white cards in the same viewport — the radius contrast is the visual signature.
-- Apply `{rounded.full}` to every button, every pill tab, every badge.
-- Use `{typography.hero-display}` (80px) with -2px letter-spacing for hero displays — never compromise the leading or letter-spacing.
-- Treat each model/product line as a distinct color identity. M2.7 is coral, Music is magenta, Hailuo is blue. These are brand assignments, not free choices.
-
-### Don't
-
-- Don't use brand-coral or brand-magenta on body text or large surfaces — they lose meaning when overused.
-- Don't soften corners on buttons (anything less than `{rounded.full}`); the pill is a brand signature.
-- Don't introduce a second display typeface; DM Sans handles every role.
-- Don't reduce hero leading below 1.10 — the brand needs that breathing room on the 80px display.
-- Don't apply heavy shadows on white cards; flat-with-borders is the documentation default.
-- Don't put gradient backgrounds on standard buttons; gradients are reserved for product-card identity moments.
-
-## Responsive Behavior
+| `xs` | 4px | Form inputs, inline tags |
+| `sm` | 6px | Buttons, compact cards |
+| `md` | 8px | Standard cards, alerts |
+| `lg` | 12px | Feature cards, modal dialogs, public cards |
+| `xl` | 16px | Large containers, hero sections |
+| `full` | 9999px | Pill badges, avatars, status dots |
+
+Buttons use `{rounded.sm}` (6px). Never pill-shaped buttons — the aesthetic is
+square-ish and technical.
+
+---
+
+## Responsive Behaviour
 
 ### Breakpoints
 
 | Name | Width | Key Changes |
 |---|---|---|
-| Mobile (small) | < 480px | Single column. Hero drops to 40px. Pill nav collapses to hamburger. Product matrix horizontal-scroll. Footer 1-column accordion. |
-| Mobile (large) | 480 – 767px | Same as small but AI product matrix renders 2-up. |
-| Tablet | 768 – 1023px | 2-column AI product matrix. Pill-tab nav returns. Documentation sidebar collapses to drawer. |
-| Desktop | 1024 – 1279px | Full 4-column product matrix; 3-column docs grid (sidebar / body / TOC). |
-| Wide Desktop | ≥ 1280px | Wider hero gutters, larger product photography, fixed 220px sidebar. |
+| Mobile | < 640px | Single column, stacked cards, hamburger nav |
+| Small tablet | 640–767px | Two-column where useful, still mobile nav |
+| Tablet | 768–1023px | Sidebar visible, tables may scroll horizontally |
+| Desktop | 1024–1279px | Full sidebar, all columns visible |
+| Wide | ≥ 1280px | Maximum content width, comfortable tables |
 
 ### Touch Targets
 
-- Pill buttons render at 38–40px effective height — bumps to 44px on mobile via padding override.
-- Circular icon buttons: 36×36px desktop → 44×44px on mobile.
-- Form inputs render at 40px height; bumps to 44px on mobile.
-- Sidebar nav items render at ~32px tall — bumps to 44px on mobile drawers.
+- **Minimum 44×44 CSS pixels** for all interactive elements on mobile.
+- **Minimum 40×40 CSS pixels** on desktop.
+- Attendance status controls are always 44px minimum on all screen sizes.
+- Extra separation (8px minimum) around irreversible action buttons.
 
-### Collapsing Strategy
+### Display Typography Scaling
 
-- **Promo banner** stays full-width; collapses to single line at < 480px with truncation.
-- **Top nav** below 1024px collapses to hamburger; horizontal links move into drawer.
-- **Documentation grid**: 3-column desktop → sidebar-drawer at < 1024px → single-column with collapsible sidebar at < 768px.
-- **Product matrix**: 4-column desktop → horizontal-scroll at < 1024px (carousel-style with snap points).
-- **AI Product Matrix**: 4-column → 2-column at tablet → 1-column at mobile.
-- **Hero typography**: `{typography.hero-display}` (80px) → 56px at < 1024px → 40px at < 768px → 32px at < 480px.
-- **Stats strip**: 4-column → 2×2 at < 768px → 1-column at < 480px.
+Display tiers stair-step down on smaller screens:
 
-### Image Behavior
+| Token | Wide/Desktop | Tablet | Mobile |
+|---|---|---|---|
+| `display-xxl` | 56px | 42px | 32px |
+| `display-xl` | 42px | 32px | 24px |
+| `display-lg` | 32px | 24px | 20px |
+| `display-md` | 24px | 20px | 18px |
 
-- Product card imagery uses photographic content with internal gradient overlays; lazy-loaded below the fold.
-- AI product tile illustrations are SVG-based; remain crisp at all breakpoints.
-- Avatar imagery in testimonials uses 1:1 aspect ratio with `{rounded.full}` masking.
+### Table Collapsing
+
+- Desktop: full table with all columns.
+- Tablet: horizontal scroll when columns exceed available width. Freeze the
+  first identifier column (student name, ID) when scrolling.
+- Mobile: tables collapse into labelled record cards. Each card shows the key
+  fields as label–value pairs. Alternatively, use horizontal scroll with frozen
+  first column if the user explicitly prefers tabular view.
+
+---
+
+## Interaction States
+
+Every interactive component must define all applicable states. Do not ship a
+component with only default and hover.
+
+| State | Visual Treatment |
+|---|---|
+| **Default** | Base styling as defined by the component |
+| **Hover** | Subtle background shift or border emphasis. No jarring colour change. |
+| **Focus-visible** | 2px `{colors.border-focus}` ring with 2px offset. Keyboard users must always see focus. |
+| **Pressed / Active** | Darker fill or slight scale reduction (scale 0.98). |
+| **Selected** | `{colors.brand-muted}` bg, `{colors.brand}` left border or check. |
+| **Disabled** | `{colors.canvas-subtle}` bg, `{colors.ink-disabled}` text, `cursor: not-allowed`, reduced opacity (0.5–0.6). |
+| **Loading** | Spinner or skeleton replacing content. Maintain element dimensions. |
+| **Error** | `{colors.border-danger}` border, `{colors.danger}` helper text below. |
+| **Success** | Brief `{colors.success}` check animation or text, then return to default. |
+
+Focus ring specification: `outline: 2px solid {colors.border-focus}; outline-offset: 2px;`.
+Never remove focus outlines without providing an equivalent visible indicator.
+
+---
+
+## Components
+
+### Navigation
+
+#### Portal Sidebar (Desktop)
+
+- Width: 240px, fixed.
+- Background: `{colors.canvas-soft}`.
+- Logo and coaching name at top.
+- Navigation items: `{typography.label-md}`, `{colors.ink-mute}` default,
+  `{colors.ink}` on hover, `{colors.brand}` text + `{colors.brand-muted}`
+  background when active.
+- Active item has a 3px `{colors.brand}` left border.
+- Section dividers: 1px `{colors.border-muted}`.
+- Bottom: user avatar, name, role badge, sign-out.
+- Collapsible to icon-only (48px) on tablet.
+
+#### Mobile Navigation
+
+- Bottom tab bar for primary sections (max 5 items).
+- Hamburger menu (slide-in drawer from left) for full navigation.
+- 44px minimum touch targets on all items.
+- Active tab: `{colors.brand}` icon and label.
+- Inactive tab: `{colors.ink-mute}`.
+
+#### Global Search
+
+- Triggered by a persistent search icon in the top bar, or keyboard shortcut.
+- Opens a command-palette-style overlay (`{elevation.3}`).
+- Searches across student name, ID, email, phone, guardian name, guardian phone.
+- Results grouped by type (students, payments, applications).
+- `{typography.body-md}` for results, `{typography.caption}` for metadata.
+- Recent searches shown when the input is empty.
+
+### Buttons and Actions
+
+#### Primary Button
+
+- Background: `{colors.brand}`, text: `{colors.on-brand}` (near-black on
+  green).
+- Type: `{typography.label-md}`, padding: 10px 16px, rounded: `{rounded.sm}`.
+- Hover: `{colors.brand-deep}`.
+- Minimum height: 40px desktop, 44px mobile.
+
+#### Destructive / Danger Button
+
+- Background: `{colors.danger}`, text: `{colors.on-danger}` (white).
+- Same dimensions as primary.
+- Used only for void, reject, cancel actions.
+
+#### Secondary Button
+
+- Background: `{colors.canvas}`, text: `{colors.ink}`, 1px `{colors.border-strong}` border.
+- Same dimensions as primary.
+
+#### Ghost Button
+
+- Background: transparent, text: `{colors.ink-secondary}`.
+- Hover: `{colors.canvas-subtle}` background.
+
+#### Link Button
+
+- Text-only, `{colors.brand}` or `{colors.ink-secondary}`, underline on hover.
+- No padding, inline with text.
+
+#### Button Rules
+
+- Use one dominant primary action per workflow region. Multiple primary buttons
+  may exist on a long page if they belong to separate panels or decision points.
+- Destructive buttons never sit next to primary buttons without visual
+  separation (at least 16px gap or a divider).
+- Loading state replaces the label with a spinner. Button dimensions must not
+  change during loading.
+
+### Forms and Inputs
+
+#### Text Input
+
+- Height: 40px desktop, 44px mobile.
+- Background: `{colors.canvas}`, border: 1px `{colors.border}`.
+- Rounded: `{rounded.xs}` (4px).
+- Padding: 8px 12px.
+- Text: `{typography.body-md}`.
+- Focus: `{colors.border-focus}` border + focus ring.
+- Error: `{colors.border-danger}` border, `{colors.danger}` helper text below.
+- Disabled: `{colors.canvas-subtle}` bg, `{colors.ink-disabled}` text.
+
+#### Select / Dropdown
+
+Same chrome as text input. Chevron icon in `{colors.ink-mute}`.
+
+#### Textarea
+
+Same chrome as text input but taller. Minimum height: 80px. Resizable
+vertically.
+
+#### Checkbox and Radio
+
+- Size: 20px × 20px (meets 44px touch target with padding/margin).
+- Checked: `{colors.brand}` fill, white check mark.
+- Unchecked: `{colors.canvas}` bg, 1px `{colors.border}`.
+- Focus ring on keyboard focus.
+
+#### Form Labels
+
+- `{typography.label-md}`, `{colors.ink-secondary}`.
+- Position: above the input, with `{spacing.xs}` (4px) gap.
+- Required indicator: `*` in `{colors.danger}`.
+
+#### Bilingual Form Fields
+
+When a form captures both Bangla and English values (e.g., course name),
+display two stacked inputs with clear language labels (বাংলা / English) rather
+than side-by-side inputs that compress on mobile. If only one name is required
+and the alternate is optional, place the optional field in a collapsible
+"Add alternate name" section.
+
+#### Inline Validation
+
+- Validate on blur for required/format rules.
+- Show `{colors.danger}` text + icon below the field immediately.
+- Do not block typing — never use alert() or modal validation.
+- Submit button stays enabled but shows a validation summary if errors exist.
+
+### Data Display
+
+#### Data Table
+
+- Container: 1px `{colors.border}`, `{rounded.md}` corners.
+- Header row: `{colors.canvas-soft}` bg, `{typography.label-sm}` in
+  `{colors.ink-mute}`, normal case (Bangla has no uppercase concept), bottom
+  border: 1px `{colors.border-strong}`. Use uppercase only for deliberately
+  English-only micro labels where appropriate.
+- Body rows: `{colors.canvas}` bg, alternating `{colors.canvas-soft}` on dense
+  tables (optional).
+- Row border: 1px `{colors.border-muted}`.
+- Cell padding: 12px horizontal, 10px vertical (add 4px vertical for
+  Bangla-heavy tables).
+- Hover row: `{colors.canvas-subtle}` bg.
+- Selected row: `{colors.brand-muted}` bg.
+- Sortable columns: show sort direction icon in `{colors.ink-faint}`, active
+  sort in `{colors.ink}`.
+- Empty state: centred illustration-free message in `{colors.ink-mute}` with
+  an action link or button.
+
+#### Stat Card
+
+- Background: `{colors.canvas}`, 1px `{colors.border}`, `{rounded.md}`.
+- Padding: `{spacing.xl}`.
+- Value: `{typography.display-md}` in `{colors.ink}`.
+- Label: `{typography.caption}` in `{colors.ink-mute}`, above or below value.
+- Optional trend indicator: small arrow + percentage in `{colors.success}` or
+  `{colors.danger}`.
+- Dashboard uses 2–4 stat cards in a responsive grid.
+
+#### Mobile Record Card
+
+When tables collapse on mobile, each row becomes a card:
+
+- Background: `{colors.canvas}`, 1px `{colors.border}`, `{rounded.md}`.
+- Padding: `{spacing.lg}`.
+- Primary identifier (student name, payment number) in `{typography.heading-md}`.
+- Key–value pairs in `{typography.body-md}` label + `{typography.body-md}` value.
+- Status badge aligned to the top-right.
+- Tap the entire card to navigate to the detail view.
+
+#### Pagination
+
+- Position: bottom of the table, right-aligned.
+- Shows: "Showing 1–20 of 156" in `{typography.caption}`.
+- Page buttons: 40px minimum height on desktop, 44px on mobile.
+  `{colors.ink-mute}` text, active page in `{colors.brand}` text +
+  `{colors.brand-muted}` bg.
+- "Previous" and "Next" as text buttons with the same minimum touch targets.
+
+#### Filters
+
+- Horizontal bar above the table.
+- Filter chips: `{colors.canvas-soft}` bg, `{colors.ink}` text,
+  `{rounded.full}`, `{typography.label-sm}`.
+- Active filter: `{colors.brand-muted}` bg, `{colors.brand-deep}` text.
+- Clear filters link in `{colors.ink-mute}`.
+- Complex filters open a popover or side panel.
+
+### Status Badges and Pills
+
+#### Status Badge
+
+- Inline element, `{rounded.full}`, padding: 2px 10px.
+- Text: `{typography.label-sm}`.
+- Background and text colour determined by semantic state.
+
+| State | Background | Text |
+|---|---|---|
+| Success (present, paid, active) | `success-soft` | `success-deep` |
+| Warning (late, due, pending) | `warning-soft` | `warning-deep` |
+| Danger (absent, overdue, failed) | `danger-soft` | `danger-deep` |
+| Info (published, new, queued) | `info-soft` | `info-deep` |
+| Neutral (draft, archived) | `canvas-subtle` | `ink-mute` |
+
+#### Status Dot
+
+A small 8px circle used inline with text to indicate status at a glance. Uses
+the `{colors.success}`, `{colors.warning}`, `{colors.danger}`, or
+`{colors.info}` fill colour.
+
+### Attendance Components
+
+#### Attendance Status Selector
+
+For each student in a roster, three toggle buttons in a group:
+
+- **Present** — `{colors.success-soft}` bg, `{colors.success}` border + text
+  when selected. Unselected: `{colors.canvas}` bg, `{colors.border}`.
+- **Late** — `{colors.warning-soft}` bg, `{colors.warning}` border + text
+  when selected.
+- **Absent** — `{colors.danger-soft}` bg, `{colors.danger}` border + text
+  when selected.
+- Minimum touch target: 44×44px on all screen sizes.
+- Unselected state clearly distinct from selected.
+- No default selection — every student starts unmarked.
+
+#### Attendance Summary Bar
+
+Shown above the roster and updated in real time:
+
+- Three counters: Present (green), Late (amber), Absent (red).
+- Remaining (unmarked) count in `{colors.ink-mute}`.
+- Progress indicator showing completion fraction.
+
+#### Immutable Attendance Confirmation
+
+When the teacher presses "Submit Attendance":
+
+- Full-screen overlay or blocking modal, `{elevation.3}`.
+- Background: `{colors.canvas}` with strong border.
+- Title: `{typography.heading-lg}`, e.g., "Submit Attendance — Batch 2A".
+- Summary: present/late/absent counts.
+- Late and absent student names listed explicitly.
+- Warning text in `{colors.danger}`:
+  "এই উপস্থিতি জমা দেওয়ার পর পরিবর্তন করা যাবে না। অনুপস্থিত ও বিলম্বিত
+  শিক্ষার্থীদের অভিভাবকদের SMS পাঠানো হবে।"
+  / "This attendance cannot be changed after submission. SMS will be sent to
+  guardians of late and absent students."
+- An acknowledgement checkbox: "I understand this cannot be changed" — must be
+  checked before the submit button becomes enabled. This is more accessible
+  than hold-to-submit or double-confirmation gestures.
+- Two buttons: "Cancel" (secondary) and "Submit permanently" (danger button,
+  not primary green). The submit button is disabled until the acknowledgement
+  checkbox is checked.
+
+### Financial Components
+
+#### Monetary Display
+
+- All amounts in `{typography.mono}`, right-aligned.
+- Currency: ৳ (Taka symbol) before the amount with thin space.
+- Thousands separator: comma (৳ 1,500).
+- Negative amounts or credits: parentheses, e.g., (৳ 500).
+- Overdue amounts: `{colors.danger}` text.
+- Paid amounts: `{colors.success}` text.
+- Partial: `{colors.warning}` text.
+- Due/upcoming: `{colors.ink}` text (neutral).
+- Voided: `{colors.ink-faint}`, strikethrough.
+
+#### Student Financial Summary Card
+
+- Total charged, total paid, outstanding, advance credit.
+- Outstanding in `{colors.danger}` if overdue, `{colors.ink}` otherwise.
+- Advance credit in `{colors.info}`.
+- Compact layout for embedding in student profile header.
+
+#### Payment Collection Form
+
+- Student selector with search.
+- Outstanding charges table with checkboxes (oldest pre-selected).
+- Amount input, method select, date picker, optional note.
+- Running allocation summary showing how the payment distributes.
+- "Collect Payment" primary button, disabled until valid.
+- Success state: "Payment recorded. SMS queued." with Print Receipt and
+  View Student actions.
+
+#### Printable Receipt
+
+See "Print Design" section below.
+
+### Exam and Result Components
+
+#### Marks Entry Grid
+
+- Spreadsheet-style layout: students in rows, mark components in columns.
+- Columns vary by exam mode:
+  - MCQ-only: Student, MCQ marks, Total, Pass/Fail, Entry status.
+  - Written-only: Student, Written marks, Total, Pass/Fail, Entry status.
+  - Combined: Student, MCQ marks, Written marks, Total, Pass/Fail, Entry status.
+- Subjects are exam metadata only — they do not produce separate mark columns.
+- Cell input: `{typography.mono}`, right-aligned, auto-selects content on focus.
+- Tab key moves between cells.
+- Total column is auto-computed by the backend, read-only,
+  `{colors.canvas-subtle}` bg.
+- Pass/fail indicator using status dot in the corresponding column.
+- Row highlight on hover.
+- "Mark ready for review" button per teacher assignment.
+
+#### Merit List
+
+- Ranked table: position, student name, total marks, full marks, pass/fail.
+- Equal scores share the same competition rank (1, 2, 2, 4).
+- Position column: `{typography.label-md}`, left-aligned.
+- Pass: `{colors.success}` badge. Fail: `{colors.danger}` badge.
+
+### Modals, Drawers, and Overlays
+
+#### Modal Dialog
+
+- Centred on screen, `{elevation.3}`.
+- Backdrop: `rgba(0, 0, 0, 0.5)`.
+- Max width: 480px for standard, 640px for forms, 800px for complex.
+- Rounded: `{rounded.lg}`.
+- Padding: `{spacing.xl}`.
+- Title: `{typography.heading-lg}`.
+- Close button: top-right, `{colors.ink-mute}`, 44px touch target.
+- Action buttons: bottom-right, primary + secondary.
+- Keyboard: Escape closes. Focus is trapped inside the modal.
+
+#### Drawer / Side Panel
+
+- Slides in from the right, `{elevation.3}`.
+- Width: 400–560px on desktop, full-width on mobile.
+- Same padding and typography as modals.
+- Used for detail views, filter panels, and quick-edit forms.
+
+#### Toast / Notification
+
+- Position: bottom-right on desktop, bottom-centre on mobile.
+- Auto-dismiss: 5 seconds for success, manual dismiss for errors.
+- Types:
+  - Success: `{colors.success}` left border or icon.
+  - Error: `{colors.danger}` left border or icon.
+  - Warning: `{colors.warning}` left border or icon.
+  - Info: `{colors.info}` left border or icon.
+- Text: `{typography.body-md}`.
+- Max width: 400px.
+
+### Content Components
+
+#### Notice / Material Card
+
+- Background: `{colors.canvas}`, 1px `{colors.border}`, `{rounded.md}`.
+- Title: `{typography.heading-md}`.
+- Date/author: `{typography.caption}`, `{colors.ink-mute}`.
+- Body preview: `{typography.body-md}`, max 3 lines, truncated.
+- File attachments: icon + filename + size as a chip.
+
+#### Empty State
+
+- Centred in the content area.
+- Icon or simple line illustration (optional, no decorative illustration).
+- Heading: `{typography.heading-md}`, `{colors.ink-mute}`.
+- Description: `{typography.body-md}`, `{colors.ink-mute}`.
+- Action: primary or secondary button below.
+
+### SMS and Communication
+
+#### SMS Preview Card
+
+- Shows rendered message text with character/segment count.
+- Bangla segment warning: Bangla SMS uses UCS-2 encoding (70 chars/segment vs
+  160 for Latin). Display segment count prominently in `{colors.warning}` when
+  segments exceed 2.
+- Recipient count.
+- Estimated cost in `{typography.mono}`.
+
+#### SMS Status Indicator
+
+- Inline status badge per message. SMS.BD distinguishes request acceptance from
+  final delivery, so the full lifecycle is:
+  - Queued → `info`
+  - Sending → `info`
+  - Accepted / Sent → `info` (provider accepted, delivery not confirmed)
+  - Delivered → `success` (final confirmed delivery)
+  - Failed → `danger`
+  - Retrying → `warning`
+- Only "Delivered" uses `success`; "Sent" alone does not confirm delivery.
+- Delivery timestamp in `{typography.caption}`.
+- Failed messages show a "Retry" action link.
+
+### Public Website Components
+
+#### Course Card
+
+- Background: `{colors.canvas}`, 1px `{colors.border}`, `{rounded.lg}`.
+- Cover image: aspect ratio 16:9, top of card, `{rounded.lg}` top corners.
+- Course name: `{typography.heading-lg}`.
+- Short description: `{typography.body-md}`, `{colors.ink-mute}`.
+- Batch count / admission status as pill badge.
+- CTA: "View details" link button.
+
+#### Teacher Profile Card
+
+- Photo: 80×80px circle avatar, `{rounded.full}`.
+- Name: `{typography.heading-md}`.
+- Qualifications: `{typography.body-md}`, `{colors.ink-mute}`.
+- Bio preview: max 2 lines.
+
+#### Public Navigation
+
+- Background: `{colors.canvas}`, bottom border: 1px `{colors.border}`.
+- Logo + coaching name left.
+- Nav links centre: `{typography.label-md}`, `{colors.ink-mute}`, hover
+  `{colors.ink}`.
+- Language switcher + "Sign In" link + "Apply Now" primary button right.
+- Mobile: hamburger with slide-in drawer.
+
+#### Footer
+
+- Background: `{colors.canvas-soft}`, top border: 1px `{colors.border}`.
+- Text: `{typography.caption}`, `{colors.ink-mute}`.
+- Coaching name, address, phone, email.
+- Link groups for quick navigation.
+- Social icons if applicable.
+
+---
+
+## Portal-Specific Guidelines
+
+### Owner Portal
+
+- **Density:** compact. Tables show 20 rows by default with tight row height.
+- **Quick actions:** persistent toolbar or floating action button for the five
+  quick actions (add student, collect payment, take attendance, create exam,
+  send due reminders).
+- **Dashboard:** stat cards for total students, today's attendance, overdue
+  amount, pending applications. Below: recent payments, upcoming sessions,
+  unread SMS failures.
+- **Financial screens:** use `{typography.mono}` for all amounts. Clear visual
+  distinction between overdue (danger), due (neutral), paid (success).
+
+### Teacher Portal
+
+- **Density:** moderate. Focused on assigned batches and sessions.
+- **Primary workflow:** attendance entry. The attendance grid should be the
+  first action from any session card.
+- **Marks entry:** spreadsheet-style with minimal chrome. Tab navigation
+  between cells. Auto-save drafts.
+- **No financial data visible** — the teacher portal never shows fee or payment
+  information.
+
+### Student Portal
+
+- **Density:** comfortable. Card-based layout with generous spacing.
+- **Dashboard:** upcoming class, attendance summary (present/late/absent
+  counts), current balance and next due, latest result.
+- **Read-heavy:** most screens are view-only. Profile editing is limited to
+  permitted fields with change requests for restricted fields.
+- **Receipt viewing:** accessible from fees screen, opens in print-ready view.
+
+### Public Website
+
+- **Density:** spacious. Marketing layout with editorial typography.
+- **Brand CTA (emerald):** used for "Apply Now" and key actions.
+- **Content:** courses, teachers, notices, about, contact, admission form.
+- **Screenshots:** use actual portal screenshots as proof of the product (cards,
+  tables, dashboards) composited in `{rounded.lg}` containers with
+  `{elevation.2}` shadows.
+
+---
+
+## Print Design
+
+### General Print Rules
+
+- **Paper:** A4 portrait (210 × 297mm).
+- **Margins:** 15mm all sides.
+- **Colours:** monochrome-safe. All semantic colours must be readable in
+  greyscale. Use borders, bold text, and icons/symbols instead of colour for
+  status in print.
+- **Hidden elements:** navigation, sidebar, interactive controls, tooltips,
+  hover states — all hidden via `@media print`.
+- **Page breaks:** avoid breaking inside a table row, card, or address block.
+  Use `break-inside: avoid` on key containers.
+- **Table headers:** repeat on every page (`thead { display: table-header-group }`).
+
+### Receipt Layout
+
+- **Header:** coaching centre name (Bangla and English), address, phone, logo.
+- **Receipt number and date:** right-aligned, `{typography.mono}`.
+- **Student details:** name, ID, course, batch — left-aligned block.
+- **Line items table:** description, amount columns. Right-aligned amounts in
+  `{typography.mono}`. Borders on all cells.
+- **Totals:** bold bottom row. Total paid, advance credit if any.
+- **Payment method:** method + reference below the table.
+- **Footer:** configurable footer text (receiptFooterBn / receiptFooterEn from
+  settings). Signature line with label.
+- **Default size:** A5 (half A4, 148 × 210mm) for payment receipts.
+- **Full A4:** reserved for student statements and reports.
+- If the coaching centre later requests full-A4 receipts, provide it as an
+  option — but default to A5.
+
+### Report Layout
+
+- **Header:** coaching centre name, report title, date range.
+- **Tables:** borders on all cells, header row bold, repeated on page break.
+- **Summary row:** bold, top-bordered.
+- **Amounts:** `{typography.mono}`, right-aligned, monochrome.
+- **Page numbers:** bottom-centre.
+
+---
+
+## Do's and Don'ts
+
+### Do
+
+- Reserve `{colors.brand}` for CTAs and navigation accents — it is the brand
+  action colour, not a status colour.
+- Use semantic colours consistently — the mapping table above is authoritative.
+- Render all monetary values in `{typography.mono}`, right-aligned.
+- Test every screen in Bangla before English. Bangla is the default locale.
+- Use `{rounded.sm}` (6px) for buttons — square-ish, not pill-shaped.
+- Provide all 9 interaction states for interactive components.
+- Use 44px minimum touch targets on mobile.
+- Design print layouts alongside screen layouts — not as an afterthought.
+- Use one dominant primary action per workflow region. A long operational page
+  may have multiple primary buttons if they belong to separate panels.
+- Use dark type (`{colors.on-brand}`) on the emerald button — the green reads
+  as a "lit" surface.
+
+### Don't
+
+- Don't use `{colors.brand}` for success/status indication. Use
+  `{colors.success}` instead.
+- Don't use colour as the only differentiator — pair colour with text labels,
+  icons, or patterns for accessibility.
+- Don't use decorative animation in operational flows (attendance, payment,
+  marks entry).
+- Don't use display weight above 600 — the system's calibrated mid-weight
+  breaks at 700+.
+- Don't use pill-shaped buttons (the button radius is `{rounded.sm}` 6px).
+- Don't add atmospheric gradients or full-bleed photography to portal screens.
+- Don't show financial data in the teacher portal.
+- Don't use floating-point for money — always integer minor units in code,
+  formatted with Taka symbol in display.
+- Don't clip Bangla text — always test line-height and container height with
+  complex Bengali conjuncts.
+- Don't use alert() or browser-native confirm() for destructive actions — use
+  the custom modal confirmation pattern.
+- Don't remove the coaching centre name from SMS previews and receipts.
+
+---
 
 ## Iteration Guide
 
-1. Focus on ONE component at a time. The system has high internal consistency.
-2. Reference component names and tokens directly (`{colors.primary}`, `{component-name}-pressed`, `{rounded.full}`) — do not paraphrase.
-3. Run `npx @google/design.md lint DESIGN.md` after edits to catch broken refs and contrast issues.
-4. Add new variants as separate `components:` entries (`-pressed`, `-disabled`, `-active`).
-5. Default to `{typography.body-md}` for body and `{typography.subtitle}` for emphasis. Headlines step down `hero-display → display-lg → heading-lg → heading-md → heading-sm`.
-6. Keep brand colors (coral, magenta, blue, purple) confined to product-card identity. If a brand color appears on a standard button or generic surface, ask whether it earned that surface.
-7. Pill-shaped buttons (`{rounded.full}`) always; squared buttons signal "third-party widget" in this language.
-
-## Known Gaps
-
-- Specific dark-mode token values (canvas, surface, ink, hairline) are not surfaced on these pages; the brand has not yet shipped a published dark-mode palette.
-- Animation/transition timings are not extracted; recommend 150–200ms ease for hover/focus state transitions.
-- Form validation success state is not explicitly captured beyond defaults — implement following standard green-border + success badge patterns.
-- Code syntax highlighting palette inside docs is not formalized; documentation samples appear with system-default monospace and minimal coloring.
+1. Focus on one component at a time. Reference tokens by name.
+2. Default body text to `{typography.body-md}`. Use `{typography.mono}` for
+   amounts and IDs.
+3. Test in Bangla first, English second.
+4. Run `npx @google/design.md lint DESIGN.md` after edits.
+5. When a new reusable pattern is needed, add it here before implementing —
+   this file is the source of truth.
+6. Keep emerald for actions, semantic colours for states. When in doubt, check
+   the semantic mapping table.
