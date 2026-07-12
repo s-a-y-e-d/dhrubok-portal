@@ -1,0 +1,2 @@
+import { notFound } from "next/navigation"; import { ReceiptPrint } from "@/components/portal/ReceiptPrint"; import { isLocale } from "@/lib/i18n/config";
+export default async function StudentReceipt({ params }: { params: Promise<{ locale: string; paymentId: string }> }) { const { locale, paymentId } = await params; if (!isLocale(locale)) notFound(); return <ReceiptPrint locale={locale} paymentId={paymentId} />; }

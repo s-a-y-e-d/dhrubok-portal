@@ -1,0 +1,31 @@
+{
+  "brand": {
+    "name": "Dhrubok",
+    "tagline": "A dependable place to learn"
+  },
+  "nav": {
+    "home": "Home",
+    "courses": "Courses",
+    "teachers": "Teachers",
+    "notices": "Notices",
+    "about": "About",
+    "contact": "Contact",
+    "signIn": "Sign in",
+    "apply": "Apply for admission"
+  },
+  "home": {
+    "eyebrow": "Dhrubok Coaching Centre",
+    "title": "Structured learning, clear progress",
+    "description": "Dependable information about courses, routines, attendance, results, and fees for students and guardians in one place.",
+    "coursesTitle": "Active courses",
+    "coursesEmpty": "Published courses will appear here soon."
+  },
+  "common": {
+    "skip": "Skip to main content",
+    "language": "বাংলা",
+    "loading": "Loading…",
+    "retry": "Try again",
+    "noAccessTitle": "Portal access pending",
+    "noAccessBody": "Your Google email is not yet linked to an approved owner, teacher, or student record."
+  }
+}

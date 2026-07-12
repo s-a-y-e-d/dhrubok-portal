@@ -1,0 +1,13 @@
+.git
+.next
+node_modules
+coverage
+playwright-report
+test-results
+.playwright-cli
+.env*
+!.env.example
+npm-debug.log*
+Dockerfile*
+DEPLOYMENT.md
+IMPLEMENTATION_STATUS.md

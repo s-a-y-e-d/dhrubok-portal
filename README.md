@@ -1,5 +1,10 @@
 # Dhrubok Portal
 
+`IMPLEMENTATION_PLAN.md` is the authoritative product and execution plan.
+`AGENTS.md` contains durable repository rules, and `DESIGN.md` is the source of
+truth for every user-facing interface. Track current progress and verification
+evidence in `IMPLEMENTATION_STATUS.md`.
+
 School and coaching center management portal built with:
 
 - Next.js App Router
@@ -55,6 +60,11 @@ Before changing Convex code, read `convex/_generated/ai/guidelines.md`.
 ## Checks
 
 ```bash
+npm run convex:codegen
+npm run typecheck
+npm test
 npm run lint
 npm run build
+npm run test:e2e
+git diff --check
 ```
