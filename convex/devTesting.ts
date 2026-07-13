@@ -8,6 +8,12 @@ function assertEnabled() {
   if (env.DEV_IMPERSONATION_ENABLED !== "true") throw new Error("Development impersonation is disabled");
 }
 
+export const isEnabled = query({
+  args: {},
+  returns: v.boolean(),
+  handler: async () => env.DEV_IMPERSONATION_ENABLED === "true",
+});
+
 async function requireController(ctx: Pick<MutationCtx | QueryCtx, "auth" | "db">) {
   assertEnabled();
   const identity = await ctx.auth.getUserIdentity();

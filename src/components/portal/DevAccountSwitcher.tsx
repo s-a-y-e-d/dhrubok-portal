@@ -8,10 +8,13 @@ import { api } from "../../../convex/_generated/api";
 import styles from "./portal.module.css";
 
 export function DevAccountSwitcher({ locale }: { locale: "bn" | "en" }) {
-  const bn = locale === "bn"; const personas = useQuery(api.devTesting.listPersonas, {});
+  const bn = locale === "bn";
+  const impersonationEnabled = useQuery(api.devTesting.isEnabled, {});
+  const personas = useQuery(api.devTesting.listPersonas, impersonationEnabled ? {} : "skip");
   const seedPersonas = useMutation(api.devTesting.seedPersonas); const seedAcademics = useMutation(api.devSeedData.seedAcademics); const seedOperations = useMutation(api.devSeedData.seedOperations); const select = useMutation(api.devTesting.selectPersona);
   const [busy, setBusy] = useState(false); const [message, setMessage] = useState("");
   const groups = useMemo(() => ({ teachers: personas?.filter(person => person.role === "teacher") ?? [], students: personas?.filter(person => person.role === "student") ?? [] }), [personas]);
+  if (!impersonationEnabled) return null;
   async function change(accountId: string) { setBusy(true); setMessage(""); try { const role = await select({ accountId: accountId ? accountId as Id<"portalAccounts"> : undefined }); window.location.assign(`/${locale}/${role}`); } catch (error) { setMessage(error instanceof Error ? error.message : String(error)); setBusy(false); } }
   async function createData() { setBusy(true); setMessage(""); try { const people = await seedPersonas({}); const academics = await seedAcademics({}); const operations = await seedOperations({}); setMessage(`${people.totalTeachers} teachers · ${people.totalStudents} students · ${academics.courses} courses · ${academics.batches} batches · ${academics.enrolments} enrolments · ${operations.results} results`); } catch (error) { setMessage(error instanceof Error ? error.message : String(error)); } finally { setBusy(false); } }
   return <section className={styles.devSwitcher} aria-label={bn ? "পরীক্ষামূলক অ্যাকাউন্ট" : "Test accounts"}>
