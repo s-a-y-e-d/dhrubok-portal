@@ -115,6 +115,9 @@ export default defineSchema({
       v.literal("payment"),
       v.literal("exam"),
       v.literal("charge"),
+      v.literal("due_campaign"),
+      v.literal("fee_agreement"),
+      v.literal("finance_adjustment"),
     ),
     prefix: v.string(),
     nextValue: v.number(),
@@ -545,6 +548,11 @@ export default defineSchema({
     studentId: v.id("students"),
     enrolmentId: v.optional(v.id("enrolments")),
     feePlanItemId: v.optional(v.id("feePlanItems")),
+    courseId: v.optional(v.id("courses")),
+    batchId: v.optional(v.id("batches")),
+    academicSessionId: v.optional(v.id("academicSessions")),
+    agreementId: v.optional(v.id("studentFeeAgreements")),
+    sourceAdjustmentId: v.optional(v.id("financeAdjustments")),
     type: chargeTypeValidator,
     periodKey: v.optional(v.string()),
     descriptionBn: v.string(),
@@ -568,11 +576,25 @@ export default defineSchema({
     voidedAt: v.optional(v.number()),
     voidedByAccountId: v.optional(v.id("portalAccounts")),
     voidReason: v.optional(v.string()),
+    settledAt: v.optional(v.number()),
   })
     .index("by_studentId_and_dueDate", ["studentId", "dueDate"])
     .index("by_studentId_and_status", ["studentId", "status"])
     .index("by_enrolmentId_and_periodKey", ["enrolmentId", "periodKey"])
     .index("by_status_and_dueDate", ["status", "dueDate"])
+    .index("by_courseId_and_dueDate", ["courseId", "dueDate"])
+    .index("by_batchId_and_dueDate", ["batchId", "dueDate"])
+    .index("by_courseId_and_status_and_dueDate", [
+      "courseId",
+      "status",
+      "dueDate",
+    ])
+    .index("by_batchId_and_status_and_dueDate", [
+      "batchId",
+      "status",
+      "dueDate",
+    ])
+    .index("by_academicSessionId_and_dueDate", ["academicSessionId", "dueDate"])
     .index("by_generationKey", ["generationKey"]),
 
   payments: defineTable({
@@ -593,12 +615,31 @@ export default defineSchema({
     voidedByAccountId: v.optional(v.id("portalAccounts")),
     voidReason: v.optional(v.string()),
     reversalOfPaymentId: v.optional(v.id("payments")),
+    cashDrawerSessionId: v.optional(v.id("cashDrawerSessions")),
+    importRowId: v.optional(v.id("paymentImportRows")),
+    refundedAmountMinor: v.optional(v.number()),
+    reconciliationStatus: v.optional(
+      v.union(
+        v.literal("unreviewed"),
+        v.literal("matched"),
+        v.literal("exception"),
+      ),
+    ),
   })
     .index("by_studentId_and_paidAt", ["studentId", "paidAt"])
     .index("by_status_and_paidAt", ["status", "paidAt"])
     .index("by_receiptNumber", ["receiptNumber"])
     .index("by_paymentNumber", ["paymentNumber"])
     .index("by_method_and_paidAt", ["method", "paidAt"])
+    .index("by_cashDrawerSessionId_and_paidAt", [
+      "cashDrawerSessionId",
+      "paidAt",
+    ])
+    .index("by_importRowId", ["importRowId"])
+    .index("by_collectedByAccountId_and_paidAt", [
+      "collectedByAccountId",
+      "paidAt",
+    ])
     .index("by_reversalOfPaymentId", ["reversalOfPaymentId"]),
 
   paymentAllocations: defineTable({
@@ -610,11 +651,13 @@ export default defineSchema({
     chargeDescriptionEnSnapshot: v.string(),
     createdAt: v.number(),
     reversedAt: v.optional(v.number()),
+    refundAdjustmentId: v.optional(v.id("financeAdjustments")),
   })
     .index("by_paymentId", ["paymentId"])
     .index("by_chargeId", ["chargeId"])
     .index("by_studentId_and_createdAt", ["studentId", "createdAt"])
-    .index("by_paymentId_and_chargeId", ["paymentId", "chargeId"]),
+    .index("by_paymentId_and_chargeId", ["paymentId", "chargeId"])
+    .index("by_refundAdjustmentId", ["refundAdjustmentId"]),
 
   studentFinancialSummaries: defineTable({
     studentId: v.id("students"),
@@ -625,12 +668,380 @@ export default defineSchema({
     outstandingMinor: v.number(),
     advanceCreditMinor: v.number(),
     overdueMinor: v.number(),
+    currentMinor: v.optional(v.number()),
+    overdue1To15Minor: v.optional(v.number()),
+    overdue16To30Minor: v.optional(v.number()),
+    overdue31To60Minor: v.optional(v.number()),
+    overdue61To90Minor: v.optional(v.number()),
+    overdueOver90Minor: v.optional(v.number()),
+    oldestUnpaidDueDate: v.optional(v.string()),
+    lastReminderAt: v.optional(v.number()),
+    nextPromiseDate: v.optional(v.string()),
+    summaryVersion: v.optional(v.number()),
     lastPaymentAt: v.optional(v.number()),
     updatedAt: v.number(),
   })
     .index("by_studentId", ["studentId"])
     .index("by_outstandingMinor", ["outstandingMinor"])
     .index("by_overdueMinor", ["overdueMinor"]),
+
+  receivableScopeSummaries: defineTable({
+    studentId: v.id("students"),
+    enrolmentId: v.optional(v.id("enrolments")),
+    courseId: v.optional(v.id("courses")),
+    batchId: v.optional(v.id("batches")),
+    academicSessionId: v.optional(v.id("academicSessions")),
+    outstandingMinor: v.number(),
+    overdueMinor: v.number(),
+    currentMinor: v.number(),
+    overdue1To15Minor: v.number(),
+    overdue16To30Minor: v.number(),
+    overdue31To60Minor: v.number(),
+    overdue61To90Minor: v.number(),
+    overdueOver90Minor: v.number(),
+    oldestUnpaidDueDate: v.optional(v.string()),
+    lastPaymentAt: v.optional(v.number()),
+    lastReminderAt: v.optional(v.number()),
+    updatedAt: v.number(),
+    summaryVersion: v.number(),
+  })
+    .index("by_studentId_and_enrolmentId", ["studentId", "enrolmentId"])
+    .index("by_courseId_and_overdueMinor", ["courseId", "overdueMinor"])
+    .index("by_batchId_and_overdueMinor", ["batchId", "overdueMinor"])
+    .index("by_courseId_and_oldestUnpaidDueDate", [
+      "courseId",
+      "oldestUnpaidDueDate",
+    ])
+    .index("by_batchId_and_oldestUnpaidDueDate", [
+      "batchId",
+      "oldestUnpaidDueDate",
+    ])
+    .index("by_academicSessionId_and_overdueMinor", [
+      "academicSessionId",
+      "overdueMinor",
+    ]),
+
+  financeDailySnapshots: defineTable({
+    date: v.string(),
+    collectedMinor: v.number(),
+    paymentCount: v.number(),
+    refundedMinor: v.number(),
+    outstandingMinor: v.number(),
+    overdueMinor: v.number(),
+    overdueStudentsCount: v.number(),
+    adjustmentMinor: v.number(),
+    cashVarianceMinor: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_date", ["date"]),
+
+  financeOperationalState: defineTable({
+    key: v.literal("finance"),
+    lastReceivableRefreshAt: v.optional(v.number()),
+    lastReceivableRefreshDate: v.optional(v.string()),
+    summaryDriftCount: v.number(),
+    summaryDriftMinor: v.number(),
+    lastSnapshotAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
+
+  dueReminderCampaigns: defineTable({
+    campaignNumber: v.string(),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("previewed"),
+      v.literal("queueing"),
+      v.literal("queued"),
+      v.literal("completed"),
+      v.literal("cancelled"),
+      v.literal("failed"),
+    ),
+    scopeType: v.union(
+      v.literal("all"),
+      v.literal("course"),
+      v.literal("batch"),
+      v.literal("custom"),
+    ),
+    courseId: v.optional(v.id("courses")),
+    batchId: v.optional(v.id("batches")),
+    academicSessionId: v.optional(v.id("academicSessions")),
+    ageingBuckets: v.array(
+      v.union(
+        v.literal("1_15"),
+        v.literal("16_30"),
+        v.literal("31_60"),
+        v.literal("61_90"),
+        v.literal("over_90"),
+      ),
+    ),
+    minimumOverdueMinor: v.optional(v.number()),
+    maximumOverdueMinor: v.optional(v.number()),
+    suppressIfRemindedSince: v.optional(v.number()),
+    localeMode: v.union(
+      v.literal("student_preference"),
+      v.literal("bn"),
+      v.literal("en"),
+    ),
+    templateBnSnapshot: v.string(),
+    templateEnSnapshot: v.string(),
+    resolvedStudentCount: v.number(),
+    eligibleRecipientCount: v.number(),
+    suppressedRecipientCount: v.number(),
+    queuedMessageCount: v.number(),
+    deliveredMessageCount: v.number(),
+    failedMessageCount: v.number(),
+    estimatedSegments: v.number(),
+    estimatedCostMinor: v.optional(v.number()),
+    createdByAccountId: v.id("portalAccounts"),
+    approvedByAccountId: v.optional(v.id("portalAccounts")),
+    createdAt: v.number(),
+    previewedAt: v.optional(v.number()),
+    queuedAt: v.optional(v.number()),
+    completedAt: v.optional(v.number()),
+    cancelledAt: v.optional(v.number()),
+    cancelReason: v.optional(v.string()),
+  })
+    .index("by_status_and_createdAt", ["status", "createdAt"])
+    .index("by_courseId_and_createdAt", ["courseId", "createdAt"])
+    .index("by_batchId_and_createdAt", ["batchId", "createdAt"])
+    .index("by_createdByAccountId_and_createdAt", [
+      "createdByAccountId",
+      "createdAt",
+    ])
+    .index("by_campaignNumber", ["campaignNumber"]),
+
+  dueReminderCampaignRecipients: defineTable({
+    campaignId: v.id("dueReminderCampaigns"),
+    studentId: v.id("students"),
+    courseId: v.optional(v.id("courses")),
+    batchId: v.optional(v.id("batches")),
+    overdueMinorSnapshot: v.number(),
+    currentMinor: v.number(),
+    overdue1To15Minor: v.number(),
+    overdue16To30Minor: v.number(),
+    overdue31To60Minor: v.number(),
+    overdue61To90Minor: v.number(),
+    overdueOver90Minor: v.number(),
+    guardianPhoneSnapshot: v.string(),
+    locale: localeValidator,
+    messageBodySnapshot: v.string(),
+    segmentCount: v.number(),
+    estimatedCostMinor: v.optional(v.number()),
+    status: v.union(
+      v.literal("eligible"),
+      v.literal("suppressed"),
+      v.literal("queued"),
+      v.literal("accepted"),
+      v.literal("delivered"),
+      v.literal("failed"),
+      v.literal("cancelled"),
+    ),
+    suppressionReason: v.optional(v.string()),
+    smsMessageId: v.optional(v.id("smsMessages")),
+    lastAttemptAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_campaignId_and_status", ["campaignId", "status"])
+    .index("by_campaignId_and_studentId", ["campaignId", "studentId"])
+    .index("by_studentId_and_createdAt", ["studentId", "createdAt"])
+    .index("by_smsMessageId", ["smsMessageId"]),
+
+  paymentPromises: defineTable({
+    studentId: v.id("students"),
+    courseId: v.optional(v.id("courses")),
+    batchId: v.optional(v.id("batches")),
+    promisedAmountMinor: v.optional(v.number()),
+    promisedOn: v.string(),
+    note: v.string(),
+    status: v.union(
+      v.literal("open"),
+      v.literal("kept"),
+      v.literal("missed"),
+      v.literal("cancelled"),
+    ),
+    createdByAccountId: v.id("portalAccounts"),
+    createdAt: v.number(),
+    resolvedAt: v.optional(v.number()),
+  })
+    .index("by_studentId_and_status", ["studentId", "status"])
+    .index("by_status_and_promisedOn", ["status", "promisedOn"])
+    .index("by_batchId_and_status", ["batchId", "status"]),
+
+  studentFeeAgreements: defineTable({
+    agreementNumber: v.string(),
+    studentId: v.id("students"),
+    enrolmentId: v.id("enrolments"),
+    feePlanId: v.id("feePlans"),
+    effectiveFrom: v.string(),
+    effectiveTo: v.optional(v.string()),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("active"),
+      v.literal("superseded"),
+      v.literal("ended"),
+    ),
+    agreedMonthlyAmountMinor: v.optional(v.number()),
+    agreedCourseAmountMinor: v.optional(v.number()),
+    installmentRule: v.optional(v.string()),
+    reason: v.string(),
+    approvedByAccountId: v.id("portalAccounts"),
+    createdAt: v.number(),
+    supersedesAgreementId: v.optional(v.id("studentFeeAgreements")),
+  })
+    .index("by_enrolmentId_and_status", ["enrolmentId", "status"])
+    .index("by_studentId_and_effectiveFrom", ["studentId", "effectiveFrom"])
+    .index("by_feePlanId_and_status", ["feePlanId", "status"])
+    .index("by_agreementNumber", ["agreementNumber"]),
+
+  financeAdjustments: defineTable({
+    adjustmentNumber: v.string(),
+    studentId: v.id("students"),
+    chargeId: v.optional(v.id("studentCharges")),
+    paymentId: v.optional(v.id("payments")),
+    refundAdvanceAmountMinor: v.optional(v.number()),
+    type: v.union(
+      v.literal("waiver"),
+      v.literal("credit_note"),
+      v.literal("refund"),
+      v.literal("write_off"),
+    ),
+    amountMinor: v.number(),
+    method: v.optional(paymentMethodValidator),
+    externalReference: v.optional(v.string()),
+    reason: v.string(),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("posted"),
+      v.literal("voided"),
+    ),
+    postedAt: v.optional(v.number()),
+    postedByAccountId: v.optional(v.id("portalAccounts")),
+    voidedAt: v.optional(v.number()),
+    voidedByAccountId: v.optional(v.id("portalAccounts")),
+    voidReason: v.optional(v.string()),
+    createdAt: v.number(),
+    createdByAccountId: v.id("portalAccounts"),
+  })
+    .index("by_studentId_and_createdAt", ["studentId", "createdAt"])
+    .index("by_chargeId", ["chargeId"])
+    .index("by_paymentId", ["paymentId"])
+    .index("by_type_and_postedAt", ["type", "postedAt"])
+    .index("by_status_and_postedAt", ["status", "postedAt"])
+    .index("by_adjustmentNumber", ["adjustmentNumber"]),
+
+  studentCredits: defineTable({
+    studentId: v.id("students"),
+    sourceAdjustmentId: v.id("financeAdjustments"),
+    originalAmountMinor: v.number(),
+    remainingAmountMinor: v.number(),
+    status: v.union(
+      v.literal("available"),
+      v.literal("applied"),
+      v.literal("voided"),
+    ),
+    createdAt: v.number(),
+    voidedAt: v.optional(v.number()),
+  })
+    .index("by_studentId_and_status", ["studentId", "status"])
+    .index("by_sourceAdjustmentId", ["sourceAdjustmentId"]),
+
+  financeCreditAllocations: defineTable({
+    creditId: v.id("studentCredits"),
+    adjustmentId: v.id("financeAdjustments"),
+    studentId: v.id("students"),
+    chargeId: v.id("studentCharges"),
+    amountMinor: v.number(),
+    createdAt: v.number(),
+    reversedAt: v.optional(v.number()),
+  })
+    .index("by_creditId", ["creditId"])
+    .index("by_adjustmentId", ["adjustmentId"])
+    .index("by_chargeId", ["chargeId"]),
+
+  cashDrawerSessions: defineTable({
+    drawerId: v.id("cashDrawers"),
+    businessDate: v.string(),
+    status: v.union(
+      v.literal("open"),
+      v.literal("closed"),
+      v.literal("reopened"),
+    ),
+    openingFloatMinor: v.number(),
+    expectedCashMinor: v.number(),
+    countedCashMinor: v.optional(v.number()),
+    varianceMinor: v.optional(v.number()),
+    openedByAccountId: v.id("portalAccounts"),
+    openedAt: v.number(),
+    closedByAccountId: v.optional(v.id("portalAccounts")),
+    closedAt: v.optional(v.number()),
+    closeNote: v.optional(v.string()),
+    reopenedByAccountId: v.optional(v.id("portalAccounts")),
+    reopenedAt: v.optional(v.number()),
+    reopenReason: v.optional(v.string()),
+  })
+    .index("by_drawerId_and_businessDate", ["drawerId", "businessDate"])
+    .index("by_status_and_businessDate", ["status", "businessDate"])
+    .index("by_businessDate", ["businessDate"]),
+  cashDrawers: defineTable({
+    code: v.string(),
+    nameBn: v.string(),
+    nameEn: v.string(),
+    status: v.union(v.literal("active"), v.literal("inactive")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_code", ["code"])
+    .index("by_status", ["status"]),
+  paymentImportBatches: defineTable({
+    fileName: v.string(),
+    fileHash: v.string(),
+    mappingVersion: v.number(),
+    status: v.union(
+      v.literal("staging"),
+      v.literal("previewed"),
+      v.literal("committing"),
+      v.literal("completed"),
+      v.literal("failed"),
+    ),
+    totalRows: v.number(),
+    validRows: v.number(),
+    invalidRows: v.number(),
+    committedRows: v.number(),
+    totalAmountMinor: v.number(),
+    sendSms: v.boolean(),
+    createdByAccountId: v.id("portalAccounts"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_status_and_createdAt", ["status", "createdAt"])
+    .index("by_fileHash", ["fileHash"]),
+  paymentImportRows: defineTable({
+    batchId: v.id("paymentImportBatches"),
+    rowNumber: v.number(),
+    idempotencyKey: v.string(),
+    studentNumber: v.string(),
+    amountMinor: v.number(),
+    method: paymentMethodValidator,
+    paidAt: v.number(),
+    validationErrors: v.array(v.string()),
+    matchedStudentId: v.optional(v.id("students")),
+    matchedChargeId: v.optional(v.id("studentCharges")),
+    externalReference: v.optional(v.string()),
+    note: v.optional(v.string()),
+    paymentId: v.optional(v.id("payments")),
+    status: v.union(
+      v.literal("valid"),
+      v.literal("invalid"),
+      v.literal("skipped"),
+      v.literal("committed"),
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_batchId_and_rowNumber", ["batchId", "rowNumber"])
+    .index("by_batchId_and_status", ["batchId", "status"])
+    .index("by_idempotencyKey", ["idempotencyKey"]),
 
   exams: defineTable({
     examNumber: v.string(),

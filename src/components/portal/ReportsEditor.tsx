@@ -67,6 +67,17 @@ export function ReportsEditor({ locale }: { locale: "bn" | "en" }) {
     locale,
   });
   const duesCsv = useQuery(api.reports.exports.duesCsv, { locale });
+  const ageingCsv = useQuery(api.reports.exports.receivableAgeingCsv, {
+    locale,
+  });
+  const adjustmentsCsv = useQuery(api.reports.exports.adjustmentsCsv, {
+    fromAt,
+    toAt,
+    locale,
+  });
+  const cashClosingsCsv = useQuery(api.reports.exports.cashClosingsCsv, {
+    locale,
+  });
   const workspace = useQuery(api.academics.options.ownerWorkspace, {});
   const students = useQuery(api.students.owner.listStudents, {
     status: "active",
@@ -80,6 +91,9 @@ export function ReportsEditor({ locale }: { locale: "bn" | "en" }) {
     !funnel ||
     !collectionsCsv ||
     !duesCsv ||
+    !ageingCsv ||
+    !adjustmentsCsv ||
+    !cashClosingsCsv ||
     !workspace ||
     !students ||
     !exams
@@ -305,6 +319,26 @@ export function ReportsEditor({ locale }: { locale: "bn" | "en" }) {
             <p>{bn ? "বকেয়া শিক্ষার্থী" : "Students with dues"}</p>
             <strong>{dues.page.length}</strong>
           </article>
+        </div>
+        <div className="form-actions" data-print-hidden>
+          <button
+            className="button button-secondary"
+            onClick={() => downloadCsv(ageingCsv)}
+          >
+            {bn ? "বকেয়া বয়স CSV" : "Ageing CSV"}
+          </button>
+          <button
+            className="button button-secondary"
+            onClick={() => downloadCsv(adjustmentsCsv)}
+          >
+            {bn ? "সমন্বয় CSV" : "Adjustments CSV"}
+          </button>
+          <button
+            className="button button-secondary"
+            onClick={() => downloadCsv(cashClosingsCsv)}
+          >
+            {bn ? "ক্যাশ ক্লোজিং CSV" : "Cash closings CSV"}
+          </button>
         </div>
         <div className="section-heading" data-print-hidden>
           <h3>{bn ? "পেমেন্ট" : "Payments"}</h3>

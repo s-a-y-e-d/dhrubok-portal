@@ -8,55 +8,55 @@ description: >
 
 colors:
   # ── Brand ──────────────────────────────────────────────────────────────
-  brand:          "#3ecf8e"
-  brand-deep:     "#24b47e"
-  brand-soft:     "#a7f3d0"
-  brand-muted:    "#ecfdf5"
+  brand: "#3ecf8e"
+  brand-deep: "#24b47e"
+  brand-soft: "#a7f3d0"
+  brand-muted: "#ecfdf5"
 
   # ── Semantic ───────────────────────────────────────────────────────────
-  success:        "#16a34a"
-  success-deep:   "#15803d"
-  success-soft:   "#dcfce7"
-  success-muted:  "#f0fdf4"
-  warning:        "#d97706"
-  warning-deep:   "#b45309"
-  warning-soft:   "#fef3c7"
-  warning-muted:  "#fffbeb"
-  danger:         "#dc2626"
-  danger-deep:    "#b91c1c"
-  danger-soft:    "#fee2e2"
-  danger-muted:   "#fef2f2"
-  info:           "#2563eb"
-  info-deep:      "#1d4ed8"
-  info-soft:      "#dbeafe"
-  info-muted:     "#eff6ff"
+  success: "#16a34a"
+  success-deep: "#15803d"
+  success-soft: "#dcfce7"
+  success-muted: "#f0fdf4"
+  warning: "#d97706"
+  warning-deep: "#b45309"
+  warning-soft: "#fef3c7"
+  warning-muted: "#fffbeb"
+  danger: "#dc2626"
+  danger-deep: "#b91c1c"
+  danger-soft: "#fee2e2"
+  danger-muted: "#fef2f2"
+  info: "#2563eb"
+  info-deep: "#1d4ed8"
+  info-soft: "#dbeafe"
+  info-muted: "#eff6ff"
 
   # ── Text ───────────────────────────────────────────────────────────────
-  ink:            "#171717"
-  ink-secondary:  "#404040"
-  ink-mute:       "#737373"
-  ink-faint:      "#a3a3a3"
-  ink-disabled:   "#d4d4d4"
-  on-brand:       "#171717"
-  on-dark:        "#fafafa"
-  on-success:     "#ffffff"
-  on-warning:     "#171717"
-  on-danger:      "#ffffff"
-  on-info:        "#ffffff"
+  ink: "#171717"
+  ink-secondary: "#404040"
+  ink-mute: "#737373"
+  ink-faint: "#a3a3a3"
+  ink-disabled: "#d4d4d4"
+  on-brand: "#171717"
+  on-dark: "#fafafa"
+  on-success: "#ffffff"
+  on-warning: "#171717"
+  on-danger: "#ffffff"
+  on-info: "#ffffff"
 
   # ── Surface ────────────────────────────────────────────────────────────
-  canvas:         "#ffffff"
-  canvas-soft:    "#fafafa"
-  canvas-subtle:  "#f5f5f5"
-  canvas-dark:    "#171717"
+  canvas: "#ffffff"
+  canvas-soft: "#fafafa"
+  canvas-subtle: "#f5f5f5"
+  canvas-dark: "#171717"
   canvas-dark-soft: "#262626"
 
   # ── Border ─────────────────────────────────────────────────────────────
-  border:         "#e5e5e5"
-  border-strong:  "#d4d4d4"
-  border-muted:   "#f0f0f0"
-  border-focus:   "#3ecf8e"
-  border-danger:  "#dc2626"
+  border: "#e5e5e5"
+  border-strong: "#d4d4d4"
+  border-muted: "#f0f0f0"
+  border-focus: "#3ecf8e"
+  border-danger: "#dc2626"
 
 typography:
   display-xxl:
@@ -246,101 +246,101 @@ apply them at different densities:
 primary CTAs, the logo accent, and active navigation indicators. It is **not**
 used for success/status indication — that role belongs to `{colors.success}`.
 
-| Token | Hex | Use |
-|---|---|---|
-| `brand` | #3ecf8e | Primary CTA fill, logo accent, active nav indicator |
-| `brand-deep` | #24b47e | CTA hover / pressed state |
-| `brand-soft` | #a7f3d0 | Light brand tint on selected rows, active tab bg |
-| `brand-muted` | #ecfdf5 | Subtle brand wash on highlighted cards |
+| Token         | Hex     | Use                                                 |
+| ------------- | ------- | --------------------------------------------------- |
+| `brand`       | #3ecf8e | Primary CTA fill, logo accent, active nav indicator |
+| `brand-deep`  | #24b47e | CTA hover / pressed state                           |
+| `brand-soft`  | #a7f3d0 | Light brand tint on selected rows, active tab bg    |
+| `brand-muted` | #ecfdf5 | Subtle brand wash on highlighted cards              |
 
 ### Semantic
 
 Semantic colours communicate operational state. They are system colours — they
 never appear merely as decoration.
 
-| Token | Hex | States |
-|---|---|---|
-| `success` / `success-deep` | #16a34a / #15803d | Present, paid, active, accepted, delivered |
-| `success-soft` / `success-muted` | #dcfce7 / #f0fdf4 | Badge bg, row highlight, soft indicator |
-| `warning` / `warning-deep` | #d97706 / #b45309 | Late, due soon, pending review, under review |
-| `warning-soft` / `warning-muted` | #fef3c7 / #fffbeb | Badge bg, row highlight |
-| `danger` / `danger-deep` | #dc2626 / #b91c1c | Absent, overdue, failed, rejected, voided, destructive action |
-| `danger-soft` / `danger-muted` | #fee2e2 / #fef2f2 | Badge bg, row highlight |
-| `info` / `info-deep` | #2563eb / #1d4ed8 | Published, informational, new, queued |
-| `info-soft` / `info-muted` | #dbeafe / #eff6ff | Badge bg, row highlight |
+| Token                            | Hex               | States                                                        |
+| -------------------------------- | ----------------- | ------------------------------------------------------------- |
+| `success` / `success-deep`       | #16a34a / #15803d | Present, paid, active, accepted, delivered                    |
+| `success-soft` / `success-muted` | #dcfce7 / #f0fdf4 | Badge bg, row highlight, soft indicator                       |
+| `warning` / `warning-deep`       | #d97706 / #b45309 | Late, due soon, pending review, under review                  |
+| `warning-soft` / `warning-muted` | #fef3c7 / #fffbeb | Badge bg, row highlight                                       |
+| `danger` / `danger-deep`         | #dc2626 / #b91c1c | Absent, overdue, failed, rejected, voided, destructive action |
+| `danger-soft` / `danger-muted`   | #fee2e2 / #fef2f2 | Badge bg, row highlight                                       |
+| `info` / `info-deep`             | #2563eb / #1d4ed8 | Published, informational, new, queued                         |
+| `info-soft` / `info-muted`       | #dbeafe / #eff6ff | Badge bg, row highlight                                       |
 
 ### Semantic mapping for Dhrubok domain states
 
-| Domain | State | Colour |
-|---|---|---|
-| Attendance | Present | `success` |
-| Attendance | Late | `warning` |
-| Attendance | Absent | `danger` |
-| Finance | Paid | `success` |
-| Finance | Partially paid | `warning` |
-| Finance | Due / Upcoming | `ink-mute` (neutral) |
-| Finance | Overdue | `danger` |
-| Finance | Voided | `ink-faint` + strikethrough |
-| Admission | New | `info` |
-| Admission | Under review | `warning` |
-| Admission | Accepted | `success` |
-| Admission | Rejected | `danger` |
-| Admission | Withdrawn | `ink-mute` (neutral) |
-| Exam | Draft | `ink-mute` (neutral) |
-| Exam | Ready for review | `warning` |
-| Exam | Published | `info` |
-| Student | Active | `success` |
-| Student | Paused | `warning` |
-| Student | Completed | `info` |
-| Student | Left / Archived | `ink-mute` (neutral) |
-| SMS | Queued | `info` |
-| SMS | Sending | `info` |
-| SMS | Accepted / Sent | `info` |
-| SMS | Delivered | `success` |
-| SMS | Failed | `danger` |
-| SMS | Retrying | `warning` |
-| Enrolment | Active | `success` |
-| Enrolment | Completed | `info` |
-| Enrolment | Withdrawn | `danger` |
-| Account | Active | `success` |
-| Account | Reserved | `warning` |
-| Account | Suspended | `danger` |
+| Domain     | State            | Colour                      |
+| ---------- | ---------------- | --------------------------- |
+| Attendance | Present          | `success`                   |
+| Attendance | Late             | `warning`                   |
+| Attendance | Absent           | `danger`                    |
+| Finance    | Paid             | `success`                   |
+| Finance    | Partially paid   | `warning`                   |
+| Finance    | Due / Upcoming   | `ink-mute` (neutral)        |
+| Finance    | Overdue          | `danger`                    |
+| Finance    | Voided           | `ink-faint` + strikethrough |
+| Admission  | New              | `info`                      |
+| Admission  | Under review     | `warning`                   |
+| Admission  | Accepted         | `success`                   |
+| Admission  | Rejected         | `danger`                    |
+| Admission  | Withdrawn        | `ink-mute` (neutral)        |
+| Exam       | Draft            | `ink-mute` (neutral)        |
+| Exam       | Ready for review | `warning`                   |
+| Exam       | Published        | `info`                      |
+| Student    | Active           | `success`                   |
+| Student    | Paused           | `warning`                   |
+| Student    | Completed        | `info`                      |
+| Student    | Left / Archived  | `ink-mute` (neutral)        |
+| SMS        | Queued           | `info`                      |
+| SMS        | Sending          | `info`                      |
+| SMS        | Accepted / Sent  | `info`                      |
+| SMS        | Delivered        | `success`                   |
+| SMS        | Failed           | `danger`                    |
+| SMS        | Retrying         | `warning`                   |
+| Enrolment  | Active           | `success`                   |
+| Enrolment  | Completed        | `info`                      |
+| Enrolment  | Withdrawn        | `danger`                    |
+| Account    | Active           | `success`                   |
+| Account    | Reserved         | `warning`                   |
+| Account    | Suspended        | `danger`                    |
 
 ### Text
 
-| Token | Hex | Use |
-|---|---|---|
-| `ink` | #171717 | Primary body text — near-black, never pure black |
-| `ink-secondary` | #404040 | Secondary emphasis, subheadings within cards |
-| `ink-mute` | #737373 | Labels, helper text, timestamps |
-| `ink-faint` | #a3a3a3 | Placeholder text, disabled labels |
-| `ink-disabled` | #d4d4d4 | Disabled interactive element text |
-| `on-brand` | #171717 | Text on `brand` fill — dark on green, not white |
-| `on-dark` | #fafafa | Text on `canvas-dark` surfaces |
-| `on-success` | #ffffff | Text on `success` fill |
-| `on-warning` | #171717 | Text on `warning` fill — dark on amber |
-| `on-danger` | #ffffff | Text on `danger` fill |
-| `on-info` | #ffffff | Text on `info` fill |
+| Token           | Hex     | Use                                              |
+| --------------- | ------- | ------------------------------------------------ |
+| `ink`           | #171717 | Primary body text — near-black, never pure black |
+| `ink-secondary` | #404040 | Secondary emphasis, subheadings within cards     |
+| `ink-mute`      | #737373 | Labels, helper text, timestamps                  |
+| `ink-faint`     | #a3a3a3 | Placeholder text, disabled labels                |
+| `ink-disabled`  | #d4d4d4 | Disabled interactive element text                |
+| `on-brand`      | #171717 | Text on `brand` fill — dark on green, not white  |
+| `on-dark`       | #fafafa | Text on `canvas-dark` surfaces                   |
+| `on-success`    | #ffffff | Text on `success` fill                           |
+| `on-warning`    | #171717 | Text on `warning` fill — dark on amber           |
+| `on-danger`     | #ffffff | Text on `danger` fill                            |
+| `on-info`       | #ffffff | Text on `info` fill                              |
 
 ### Surface
 
-| Token | Hex | Use |
-|---|---|---|
-| `canvas` | #ffffff | Primary page background |
-| `canvas-soft` | #fafafa | Sidebar, alternating table rows, inset panels |
-| `canvas-subtle` | #f5f5f5 | Input disabled bg, skeleton loading bg |
-| `canvas-dark` | #171717 | Inverted panels (future dark mode base) |
-| `canvas-dark-soft` | #262626 | Nested chrome on dark panels |
+| Token              | Hex     | Use                                           |
+| ------------------ | ------- | --------------------------------------------- |
+| `canvas`           | #ffffff | Primary page background                       |
+| `canvas-soft`      | #fafafa | Sidebar, alternating table rows, inset panels |
+| `canvas-subtle`    | #f5f5f5 | Input disabled bg, skeleton loading bg        |
+| `canvas-dark`      | #171717 | Inverted panels (future dark mode base)       |
+| `canvas-dark-soft` | #262626 | Nested chrome on dark panels                  |
 
 ### Border
 
-| Token | Hex | Use |
-|---|---|---|
-| `border` | #e5e5e5 | Default card/table/input borders |
+| Token           | Hex     | Use                                     |
+| --------------- | ------- | --------------------------------------- |
+| `border`        | #e5e5e5 | Default card/table/input borders        |
 | `border-strong` | #d4d4d4 | Emphasised borders, table header bottom |
-| `border-muted` | #f0f0f0 | Subtle separators within cards |
-| `border-focus` | #3ecf8e | Focus ring colour (brand emerald) |
-| `border-danger` | #dc2626 | Error state input borders |
+| `border-muted`  | #f0f0f0 | Subtle separators within cards          |
+| `border-focus`  | #3ecf8e | Focus ring colour (brand emerald)       |
+| `border-danger` | #dc2626 | Error state input borders               |
 
 ---
 
@@ -360,22 +360,22 @@ for Latin glyphs. Both fonts must be loaded at weights 400, 500, and 600.
 
 ### Hierarchy
 
-| Token | Size | Weight | Line-height | Letter-spacing | Use |
-|---|---|---|---|---|---|
-| `display-xxl` | 56px | 600 | 1.1 | -1.4px | Public hero headline |
-| `display-xl` | 42px | 600 | 1.15 | -1.05px | Public section opener |
-| `display-lg` | 32px | 600 | 1.2 | -0.64px | Page title (portal) |
-| `display-md` | 24px | 600 | 1.25 | -0.36px | Card title, dialog title |
-| `heading-lg` | 20px | 600 | 1.3 | 0 | Section heading |
-| `heading-md` | 16px | 600 | 1.4 | 0 | Sub-section, table group |
-| `body-lg` | 16px | 400 | 1.6 | 0 | Public body lead, form descriptions |
-| `body-md` | 14px | 400 | 1.5 | 0 | Default portal body |
-| `body-sm` | 13px | 400 | 1.5 | 0 | Compact body, table help text |
-| `label-md` | 14px | 500 | 1.0 | 0 | Form labels, button text |
-| `label-sm` | 12px | 500 | 1.0 | 0 | Small labels, column headers |
-| `caption` | 12px | 400 | 1.5 | 0 | Helper text, timestamps, footnotes |
-| `mono` | 14px | 400 | 1.5 | 0 | Monetary values, IDs, codes |
-| `mono-sm` | 12px | 400 | 1.5 | 0 | Compact monetary, receipt line items |
+| Token         | Size | Weight | Line-height | Letter-spacing | Use                                  |
+| ------------- | ---- | ------ | ----------- | -------------- | ------------------------------------ |
+| `display-xxl` | 56px | 600    | 1.1         | -1.4px         | Public hero headline                 |
+| `display-xl`  | 42px | 600    | 1.15        | -1.05px        | Public section opener                |
+| `display-lg`  | 32px | 600    | 1.2         | -0.64px        | Page title (portal)                  |
+| `display-md`  | 24px | 600    | 1.25        | -0.36px        | Card title, dialog title             |
+| `heading-lg`  | 20px | 600    | 1.3         | 0              | Section heading                      |
+| `heading-md`  | 16px | 600    | 1.4         | 0              | Sub-section, table group             |
+| `body-lg`     | 16px | 400    | 1.6         | 0              | Public body lead, form descriptions  |
+| `body-md`     | 14px | 400    | 1.5         | 0              | Default portal body                  |
+| `body-sm`     | 13px | 400    | 1.5         | 0              | Compact body, table help text        |
+| `label-md`    | 14px | 500    | 1.0         | 0              | Form labels, button text             |
+| `label-sm`    | 12px | 500    | 1.0         | 0              | Small labels, column headers         |
+| `caption`     | 12px | 400    | 1.5         | 0              | Helper text, timestamps, footnotes   |
+| `mono`        | 14px | 400    | 1.5         | 0              | Monetary values, IDs, codes          |
+| `mono-sm`     | 12px | 400    | 1.5         | 0              | Compact monetary, receipt line items |
 
 ### Bangla Typography Rules
 
@@ -418,17 +418,17 @@ right-aligned in table columns.
 
 Base unit is 8px with sub-tokens for fine work:
 
-| Token | Value | Common use |
-|---|---|---|
-| `xxs` | 2px | Hairline gaps, icon–text micro spacing |
-| `xs` | 4px | Tight padding inside pills and badges |
-| `sm` | 8px | Default inner padding, compact gaps |
-| `md` | 12px | Table cell padding, form field gap |
-| `lg` | 16px | Card padding, section gap in compact views |
-| `xl` | 24px | Section padding, comfortable card body |
-| `2xl` | 32px | Card padding on public pages, modal body |
-| `3xl` | 48px | Page section gap |
-| `4xl` | 64px | Public page section padding |
+| Token | Value | Common use                                 |
+| ----- | ----- | ------------------------------------------ |
+| `xxs` | 2px   | Hairline gaps, icon–text micro spacing     |
+| `xs`  | 4px   | Tight padding inside pills and badges      |
+| `sm`  | 8px   | Default inner padding, compact gaps        |
+| `md`  | 12px  | Table cell padding, form field gap         |
+| `lg`  | 16px  | Card padding, section gap in compact views |
+| `xl`  | 24px  | Section padding, comfortable card body     |
+| `2xl` | 32px  | Card padding on public pages, modal body   |
+| `3xl` | 48px  | Page section gap                           |
+| `4xl` | 64px  | Public page section padding                |
 
 ### Container and Grid
 
@@ -449,12 +449,12 @@ the design.
 
 ## Elevation and Depth
 
-| Level | Treatment | Use |
-|---|---|---|
-| 0 | Flat, 1px `{colors.border}` | Default cards, table containers |
-| 1 | `{elevation.1}` | Subtle card lift on hover, dropdowns |
-| 2 | `{elevation.2}` | Floating elements, popovers, search results |
-| 3 | `{elevation.3}` | Modals, drawers, command palette |
+| Level | Treatment                   | Use                                         |
+| ----- | --------------------------- | ------------------------------------------- |
+| 0     | Flat, 1px `{colors.border}` | Default cards, table containers             |
+| 1     | `{elevation.1}`             | Subtle card lift on hover, dropdowns        |
+| 2     | `{elevation.2}`             | Floating elements, popovers, search results |
+| 3     | `{elevation.3}`             | Modals, drawers, command palette            |
 
 Elevation is used sparingly. Most portal content sits at Level 0. Only floating
 and overlay elements use shadows.
@@ -465,14 +465,14 @@ and overlay elements use shadows.
 
 ### Border Radius Scale
 
-| Token | Value | Use |
-|---|---|---|
-| `xs` | 4px | Form inputs, inline tags |
-| `sm` | 6px | Buttons, compact cards |
-| `md` | 8px | Standard cards, alerts |
-| `lg` | 12px | Feature cards, modal dialogs, public cards |
-| `xl` | 16px | Large containers, hero sections |
-| `full` | 9999px | Pill badges, avatars, status dots |
+| Token  | Value  | Use                                        |
+| ------ | ------ | ------------------------------------------ |
+| `xs`   | 4px    | Form inputs, inline tags                   |
+| `sm`   | 6px    | Buttons, compact cards                     |
+| `md`   | 8px    | Standard cards, alerts                     |
+| `lg`   | 12px   | Feature cards, modal dialogs, public cards |
+| `xl`   | 16px   | Large containers, hero sections            |
+| `full` | 9999px | Pill badges, avatars, status dots          |
 
 Buttons use `{rounded.sm}` (6px). Never pill-shaped buttons — the aesthetic is
 square-ish and technical.
@@ -483,13 +483,13 @@ square-ish and technical.
 
 ### Breakpoints
 
-| Name | Width | Key Changes |
-|---|---|---|
-| Mobile | < 640px | Single column, stacked cards, hamburger nav |
-| Small tablet | 640–767px | Two-column where useful, still mobile nav |
-| Tablet | 768–1023px | Sidebar visible, tables may scroll horizontally |
-| Desktop | 1024–1279px | Full sidebar, all columns visible |
-| Wide | ≥ 1280px | Maximum content width, comfortable tables |
+| Name         | Width       | Key Changes                                     |
+| ------------ | ----------- | ----------------------------------------------- |
+| Mobile       | < 640px     | Single column, stacked cards, hamburger nav     |
+| Small tablet | 640–767px   | Two-column where useful, still mobile nav       |
+| Tablet       | 768–1023px  | Sidebar visible, tables may scroll horizontally |
+| Desktop      | 1024–1279px | Full sidebar, all columns visible               |
+| Wide         | ≥ 1280px    | Maximum content width, comfortable tables       |
 
 ### Touch Targets
 
@@ -502,12 +502,12 @@ square-ish and technical.
 
 Display tiers stair-step down on smaller screens:
 
-| Token | Wide/Desktop | Tablet | Mobile |
-|---|---|---|---|
-| `display-xxl` | 56px | 42px | 32px |
-| `display-xl` | 42px | 32px | 24px |
-| `display-lg` | 32px | 24px | 20px |
-| `display-md` | 24px | 20px | 18px |
+| Token         | Wide/Desktop | Tablet | Mobile |
+| ------------- | ------------ | ------ | ------ |
+| `display-xxl` | 56px         | 42px   | 32px   |
+| `display-xl`  | 42px         | 32px   | 24px   |
+| `display-lg`  | 32px         | 24px   | 20px   |
+| `display-md`  | 24px         | 20px   | 18px   |
 
 ### Table Collapsing
 
@@ -525,17 +525,17 @@ Display tiers stair-step down on smaller screens:
 Every interactive component must define all applicable states. Do not ship a
 component with only default and hover.
 
-| State | Visual Treatment |
-|---|---|
-| **Default** | Base styling as defined by the component |
-| **Hover** | Subtle background shift or border emphasis. No jarring colour change. |
-| **Focus-visible** | 2px `{colors.border-focus}` ring with 2px offset. Keyboard users must always see focus. |
-| **Pressed / Active** | Darker fill or slight scale reduction (scale 0.98). |
-| **Selected** | `{colors.brand-muted}` bg, `{colors.brand}` left border or check. |
-| **Disabled** | `{colors.canvas-subtle}` bg, `{colors.ink-disabled}` text, `cursor: not-allowed`, reduced opacity (0.5–0.6). |
-| **Loading** | Spinner or skeleton replacing content. Maintain element dimensions. |
-| **Error** | `{colors.border-danger}` border, `{colors.danger}` helper text below. |
-| **Success** | Brief `{colors.success}` check animation or text, then return to default. |
+| State                | Visual Treatment                                                                                             |
+| -------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **Default**          | Base styling as defined by the component                                                                     |
+| **Hover**            | Subtle background shift or border emphasis. No jarring colour change.                                        |
+| **Focus-visible**    | 2px `{colors.border-focus}` ring with 2px offset. Keyboard users must always see focus.                      |
+| **Pressed / Active** | Darker fill or slight scale reduction (scale 0.98).                                                          |
+| **Selected**         | `{colors.brand-muted}` bg, `{colors.brand}` left border or check.                                            |
+| **Disabled**         | `{colors.canvas-subtle}` bg, `{colors.ink-disabled}` text, `cursor: not-allowed`, reduced opacity (0.5–0.6). |
+| **Loading**          | Spinner or skeleton replacing content. Maintain element dimensions.                                          |
+| **Error**            | `{colors.border-danger}` border, `{colors.danger}` helper text below.                                        |
+| **Success**          | Brief `{colors.success}` check animation or text, then return to default.                                    |
 
 Focus ring specification: `outline: 2px solid {colors.border-focus}; outline-offset: 2px;`.
 Never remove focus outlines without providing an equivalent visible indicator.
@@ -734,13 +734,13 @@ When tables collapse on mobile, each row becomes a card:
 - Text: `{typography.label-sm}`.
 - Background and text colour determined by semantic state.
 
-| State | Background | Text |
-|---|---|---|
-| Success (present, paid, active) | `success-soft` | `success-deep` |
-| Warning (late, due, pending) | `warning-soft` | `warning-deep` |
-| Danger (absent, overdue, failed) | `danger-soft` | `danger-deep` |
-| Info (published, new, queued) | `info-soft` | `info-deep` |
-| Neutral (draft, archived) | `canvas-subtle` | `ink-mute` |
+| State                            | Background      | Text           |
+| -------------------------------- | --------------- | -------------- |
+| Success (present, paid, active)  | `success-soft`  | `success-deep` |
+| Warning (late, due, pending)     | `warning-soft`  | `warning-deep` |
+| Danger (absent, overdue, failed) | `danger-soft`   | `danger-deep`  |
+| Info (published, new, queued)    | `info-soft`     | `info-deep`    |
+| Neutral (draft, archived)        | `canvas-subtle` | `ink-mute`     |
 
 #### Status Dot
 
@@ -1107,6 +1107,26 @@ See "Print Design" section below.
   an explicit acknowledgement. It is never a browser confirmation dialog.
 - Published merit is academic metadata. Do not introduce podiums, confetti,
   celebratory animation, or decorative rank treatments.
+
+### Finance Operations
+
+- Keep one owner-navigation entry for Finance. Inside it, use a horizontally
+  scrollable workspace tab list on narrow screens; never add a second sidebar.
+- Finance overview cards are drill-down controls whose destination contains the
+  exact filtered records composing the displayed metric.
+- Use the fixed ageing buckets Current, 1–15, 16–30, 31–60, 61–90, and 90+ days.
+  Colour communicates risk only and is always paired with text.
+- Payment, adjustment, campaign, import, and drawer-close flows require an
+  explicit preview or confirmation before posting, followed by an authoritative
+  server result and a clear next action.
+- Money columns are right-aligned with tabular numerals. Integer minor units are
+  authoritative; formatted BDT values are display-only.
+- Campaign previews show eligible, suppressed, segment, and estimated-cost
+  counts before the cost-incurring confirmation action.
+- Mobile receivables cards preserve student, overdue amount, oldest due date,
+  promise, and last-reminded information.
+- Cash variance is a semantic exception and requires a reason before closing.
+  Closed sessions remain read-only until an explicit, audited reopen.
 
 ---
 

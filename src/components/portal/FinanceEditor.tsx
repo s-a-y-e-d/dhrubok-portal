@@ -166,6 +166,25 @@ export function FinanceEditor({ locale }: { locale: "bn" | "en" }) {
   const [checkedCharges, setCheckedCharges] = useState<Record<string, boolean>>(
     {},
   );
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  const previewAmountMinor = Math.round((Number(paymentAmount) || 0) * 100);
+  const previewChargeIds = (charges?.page ?? [])
+    .filter((charge) => checkedCharges[charge.chargeId])
+    .map((charge) => charge.chargeId);
+  const allocationPreview = useQuery(
+    api.finance.functions.allocationPreview,
+    studentId && previewAmountMinor > 0
+      ? {
+          studentId,
+          amountMinor: previewAmountMinor,
+          chargeIds: previewChargeIds,
+        }
+      : "skip",
+  );
+  useEffect(() => {
+    const timeoutId = setTimeout(() => setPaymentConfirmed(false), 0);
+    return () => clearTimeout(timeoutId);
+  }, [studentId, paymentAmount, paymentMethod, checkedCharges]);
 
   // Reset checked charges and payment input when student changes
   useEffect(() => {
@@ -173,6 +192,7 @@ export function FinanceEditor({ locale }: { locale: "bn" | "en" }) {
       setPaymentAmount("");
       setPaymentRef("");
       setPaymentNote("");
+      setPaymentConfirmed(false);
       setFeedback(null);
       setVoidTarget("");
       if (charges?.page) {
@@ -244,29 +264,16 @@ export function FinanceEditor({ locale }: { locale: "bn" | "en" }) {
   const amountVal = Number(paymentAmount) || 0;
   const amountMinor = Math.round(amountVal * 100);
 
-  let remainingPayment = amountMinor;
-  const computedAllocations: Array<{
-    chargeId: Id<"studentCharges">;
-    chargeNumber: string;
-    description: string;
-    amountMinor: number;
-  }> = [];
-
-  for (const charge of unpaidCharges) {
-    if (remainingPayment <= 0) break;
-    if (checkedCharges[charge.chargeId]) {
-      const chargeBalance = charge.netAmountMinor - charge.paidAmountMinor;
-      const allocated = Math.min(remainingPayment, chargeBalance);
-      computedAllocations.push({
-        chargeId: charge.chargeId,
-        chargeNumber: charge.chargeNumber,
-        description: charge.description,
-        amountMinor: allocated,
-      });
-      remainingPayment -= allocated;
-    }
-  }
-  const advanceAmountMinor = remainingPayment;
+  const computedAllocations = (allocationPreview?.allocations ?? []).map(
+    (row) => ({
+      chargeId: row.chargeId,
+      chargeNumber: row.chargeNumber,
+      description: bn ? row.descriptionBn : row.descriptionEn,
+      amountMinor: row.amountMinor,
+    }),
+  );
+  const advanceAmountMinor =
+    allocationPreview?.advanceAmountMinor ?? amountMinor;
 
   const allChecked =
     unpaidCharges.length > 0 &&
@@ -965,6 +972,7 @@ export function FinanceEditor({ locale }: { locale: "bn" | "en" }) {
                       );
                       return;
                     }
+                    if (!allocationPreview || !paymentConfirmed) return;
 
                     setBusy(true);
                     setFeedback(null);
@@ -991,6 +999,7 @@ export function FinanceEditor({ locale }: { locale: "bn" | "en" }) {
                         setPaymentAmount("");
                         setPaymentRef("");
                         setPaymentNote("");
+                        setPaymentConfirmed(false);
                       })
                       .catch((cause) => {
                         setFeedback({
@@ -1454,10 +1463,34 @@ export function FinanceEditor({ locale }: { locale: "bn" | "en" }) {
                     />
                   </label>
 
+                  <label
+                    className="check-row"
+                    style={{ alignItems: "flex-start" }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={paymentConfirmed}
+                      onChange={(event) =>
+                        setPaymentConfirmed(event.target.checked)
+                      }
+                      disabled={!allocationPreview || amountVal <= 0}
+                    />
+                    <span>
+                      {bn
+                        ? "আমি সার্ভার-যাচাইকৃত বরাদ্দ, অগ্রিম এবং পেমেন্ট পদ্ধতি পর্যালোচনা করেছি।"
+                        : "I reviewed the server-verified allocation, advance amount, and payment method."}
+                    </span>
+                  </label>
+
                   <button
                     type="submit"
                     className="button button-primary"
-                    disabled={busy || amountVal <= 0}
+                    disabled={
+                      busy ||
+                      amountVal <= 0 ||
+                      !allocationPreview ||
+                      !paymentConfirmed
+                    }
                     style={{ height: "44px", marginTop: "8px" }}
                   >
                     {busy

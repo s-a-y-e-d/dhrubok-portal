@@ -275,6 +275,31 @@ async function applyAdvanceToCharge(
   const charge = await ctx.db.get("studentCharges", chargeId);
   if (!charge) return;
   let remaining = charge.netAmountMinor - charge.paidAmountMinor;
+  const credits = await ctx.db
+    .query("studentCredits")
+    .withIndex("by_studentId_and_status", (q) =>
+      q.eq("studentId", charge.studentId).eq("status", "available"),
+    )
+    .take(100);
+  for (const credit of credits) {
+    if (remaining <= 0) break;
+    const applied = Math.min(remaining, credit.remainingAmountMinor);
+    if (applied <= 0) continue;
+    await ctx.db.insert("financeCreditAllocations", {
+      creditId: credit._id,
+      adjustmentId: credit.sourceAdjustmentId,
+      studentId: charge.studentId,
+      chargeId: charge._id,
+      amountMinor: applied,
+      createdAt: Date.now(),
+    });
+    const creditRemaining = credit.remainingAmountMinor - applied;
+    await ctx.db.patch("studentCredits", credit._id, {
+      remainingAmountMinor: creditRemaining,
+      status: creditRemaining === 0 ? "applied" : "available",
+    });
+    remaining -= applied;
+  }
   const payments = await ctx.db
     .query("payments")
     .withIndex("by_studentId_and_paidAt", (q) =>
@@ -345,13 +370,30 @@ export const generateMonthlyBatch = internalMutation({
             .unique()
         )
           continue;
-        const originalAmountMinor =
-          enrolment.agreedMonthlyAmountMinor ?? item.amountMinor;
-        assertMinorUnits(originalAmountMinor);
         const dueDate = dueDateForMonth(
           args.periodKey,
           item.dueDay ?? plan.defaultDueDay ?? dueDefault,
         );
+        const agreements = await ctx.db
+          .query("studentFeeAgreements")
+          .withIndex("by_studentId_and_effectiveFrom", (q) =>
+            q
+              .eq("studentId", enrolment.studentId)
+              .lte("effectiveFrom", dueDate),
+          )
+          .order("desc")
+          .take(20);
+        const agreement = agreements.find(
+          (row) =>
+            row.enrolmentId === enrolment._id &&
+            row.status !== "draft" &&
+            (!row.effectiveTo || row.effectiveTo >= dueDate),
+        );
+        const originalAmountMinor =
+          agreement?.agreedMonthlyAmountMinor ??
+          enrolment.agreedMonthlyAmountMinor ??
+          item.amountMinor;
+        assertMinorUnits(originalAmountMinor);
         const discountAmountMinor = await discountForItem(
           ctx,
           enrolment._id,
@@ -371,6 +413,10 @@ export const generateMonthlyBatch = internalMutation({
           chargeNumber,
           studentId: enrolment.studentId,
           enrolmentId: enrolment._id,
+          courseId: enrolment.courseId,
+          batchId: enrolment.batchId,
+          academicSessionId: enrolment.academicSessionId,
+          agreementId: agreement?._id,
           feePlanItemId: item._id,
           type: item.chargeType,
           periodKey: args.periodKey,
@@ -433,6 +479,14 @@ export const createCustomCharge = mutation({
     assertLocalDate(args.dueDate);
     const student = await ctx.db.get("students", args.studentId);
     if (!student) throw new Error("Student not found");
+    const enrolment = args.enrolmentId
+      ? await ctx.db.get("enrolments", args.enrolmentId)
+      : null;
+    if (
+      args.enrolmentId &&
+      (!enrolment || enrolment.studentId !== args.studentId)
+    )
+      throw new Error("Enrolment does not belong to this student");
     const duplicate = await ctx.db
       .query("studentCharges")
       .withIndex("by_generationKey", (q) =>
@@ -446,6 +500,9 @@ export const createCustomCharge = mutation({
       chargeNumber,
       studentId: args.studentId,
       enrolmentId: args.enrolmentId,
+      courseId: enrolment?.courseId,
+      batchId: enrolment?.batchId,
+      academicSessionId: enrolment?.academicSessionId,
       type: args.type,
       descriptionBn: args.descriptionBn,
       descriptionEn: args.descriptionEn,
@@ -521,6 +578,15 @@ export const collectPayment = mutation({
     const year = new Date(args.paidAt).getUTCFullYear();
     const paymentNumber = await nextIdentifier(ctx, "payment", "PAY", year);
     const receiptNumber = await nextIdentifier(ctx, "receipt", "RCPT", year);
+    const cashDrawerSession =
+      args.method === "cash"
+        ? await ctx.db
+            .query("cashDrawerSessions")
+            .withIndex("by_status_and_businessDate", (q) =>
+              q.eq("status", "open"),
+            )
+            .first()
+        : null;
     const paymentId = await ctx.db.insert("payments", {
       paymentNumber,
       receiptNumber,
@@ -535,6 +601,9 @@ export const collectPayment = mutation({
       status: "posted",
       collectedByAccountId: account._id,
       createdAt: Date.now(),
+      cashDrawerSessionId: cashDrawerSession?._id,
+      refundedAmountMinor: 0,
+      reconciliationStatus: "unreviewed",
     });
     for (const { allocation, charge } of checked) {
       await ctx.db.insert("paymentAllocations", {
@@ -605,6 +674,74 @@ export const collectPayment = mutation({
       receiptNumber,
       advanceAmountMinor,
       smsQueued: true,
+    };
+  },
+});
+
+export const allocationPreview = query({
+  args: {
+    studentId: v.id("students"),
+    amountMinor: v.number(),
+    chargeIds: v.array(v.id("studentCharges")),
+  },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx);
+    assertMinorUnits(args.amountMinor);
+    if (args.amountMinor <= 0 || args.chargeIds.length > 100)
+      return {
+        allocations: [],
+        allocatedAmountMinor: 0,
+        advanceAmountMinor: Math.max(0, args.amountMinor),
+        outstandingBeforeMinor: 0,
+        outstandingAfterMinor: 0,
+      };
+    const requested = new Set(args.chargeIds);
+    const charges = await ctx.db
+      .query("studentCharges")
+      .withIndex("by_studentId_and_dueDate", (q) =>
+        q.eq("studentId", args.studentId),
+      )
+      .take(500);
+    const eligible = charges
+      .filter(
+        (row) =>
+          requested.has(row._id) &&
+          row.status !== "voided" &&
+          row.status !== "paid" &&
+          row.netAmountMinor > row.paidAmountMinor,
+      )
+      .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+    let remaining = args.amountMinor;
+    const allocations = [];
+    for (const charge of eligible) {
+      if (remaining <= 0) break;
+      const amountMinor = Math.min(
+        remaining,
+        charge.netAmountMinor - charge.paidAmountMinor,
+      );
+      allocations.push({
+        chargeId: charge._id,
+        chargeNumber: charge.chargeNumber,
+        descriptionBn: charge.descriptionBn,
+        descriptionEn: charge.descriptionEn,
+        dueDate: charge.dueDate,
+        amountMinor,
+      });
+      remaining -= amountMinor;
+    }
+    const outstandingBeforeMinor = eligible.reduce(
+      (sum, row) => sum + row.netAmountMinor - row.paidAmountMinor,
+      0,
+    );
+    return {
+      allocations,
+      allocatedAmountMinor: args.amountMinor - remaining,
+      advanceAmountMinor: remaining,
+      outstandingBeforeMinor,
+      outstandingAfterMinor: Math.max(
+        0,
+        outstandingBeforeMinor - (args.amountMinor - remaining),
+      ),
     };
   },
 });
