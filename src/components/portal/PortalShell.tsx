@@ -52,33 +52,98 @@ const ownerNavGroups: NavGroupDef[] = [
     groupLabelEn: "Operations",
     groupLabelBn: "কার্যক্রম",
     items: [
-      { labelEn: "Overview", labelBn: "ওভারভিউ", path: "", icon: LayoutDashboard },
-      { labelEn: "Admissions", labelBn: "ভর্তি", path: "/admissions", icon: UserPlus },
-      { labelEn: "Students", labelBn: "শিক্ষার্থী", path: "/students", icon: Users },
-      { labelEn: "Academics", labelBn: "একাডেমিক", path: "/courses", icon: BookOpen },
-      { labelEn: "Attendance", labelBn: "উপস্থিতি", path: "/attendance", icon: CalendarCheck },
-      { labelEn: "Finance", labelBn: "অর্থায়ন", path: "/finance", icon: DollarSign },
-      { labelEn: "Exams", labelBn: "পরীক্ষা", path: "/exams", icon: FileSpreadsheet },
-    ]
+      {
+        labelEn: "Overview",
+        labelBn: "ওভারভিউ",
+        path: "",
+        icon: LayoutDashboard,
+      },
+      {
+        labelEn: "Admissions",
+        labelBn: "ভর্তি",
+        path: "/admissions",
+        icon: UserPlus,
+      },
+      {
+        labelEn: "Students",
+        labelBn: "শিক্ষার্থী",
+        path: "/students",
+        icon: Users,
+      },
+      {
+        labelEn: "Academics",
+        labelBn: "একাডেমিক",
+        path: "/courses",
+        icon: BookOpen,
+      },
+      {
+        labelEn: "Attendance",
+        labelBn: "উপস্থিতি",
+        path: "/attendance",
+        icon: CalendarCheck,
+      },
+      {
+        labelEn: "Finance",
+        labelBn: "অর্থায়ন",
+        path: "/finance",
+        icon: DollarSign,
+      },
+      {
+        labelEn: "Exams",
+        labelBn: "পরীক্ষা",
+        path: "/exams",
+        icon: FileSpreadsheet,
+      },
+    ],
   },
   {
     groupLabelEn: "Communication",
     groupLabelBn: "যোগাযোগ",
     items: [
-      { labelEn: "Materials", labelBn: "শেখার সামগ্রী", path: "/materials", icon: FileText },
-      { labelEn: "Notices/SMS", labelBn: "নোটিশ ও SMS", path: "/notices", icon: Bell },
-      { labelEn: "Messages & SMS", labelBn: "বার্তা ও SMS", path: "/messages", icon: MessageSquare },
-    ]
+      {
+        labelEn: "Materials",
+        labelBn: "শেখার সামগ্রী",
+        path: "/materials",
+        icon: FileText,
+      },
+      {
+        labelEn: "Notices/SMS",
+        labelBn: "নোটিশ ও SMS",
+        path: "/notices",
+        icon: Bell,
+      },
+      {
+        labelEn: "Messages & SMS",
+        labelBn: "বার্তা ও SMS",
+        path: "/messages",
+        icon: MessageSquare,
+      },
+    ],
   },
   {
     groupLabelEn: "System",
     groupLabelBn: "সিস্টেম",
     items: [
-      { labelEn: "Reports", labelBn: "প্রতিবেদন", path: "/reports", icon: BarChart3 },
-      { labelEn: "Website", labelBn: "ওয়েবসাইট", path: "/website", icon: Globe },
-      { labelEn: "Settings", labelBn: "সেটিংস", path: "/settings", icon: Settings },
-    ]
-  }
+      {
+        labelEn: "Reports",
+        labelBn: "প্রতিবেদন",
+        path: "/reports",
+        icon: BarChart3,
+      },
+      {
+        labelEn: "Website",
+        labelBn: "ওয়েবসাইট",
+        path: "/website",
+        icon: Globe,
+      },
+      {
+        labelEn: "Settings",
+        labelBn: "সেটিংস",
+        path: "/settings",
+        icon: Settings,
+      },
+    ],
+  },
 ];
 
 const teacherNavGroups: NavGroupDef[] = [
@@ -86,28 +151,53 @@ const teacherNavGroups: NavGroupDef[] = [
     groupLabelEn: "My Work",
     groupLabelBn: "আমার কাজ",
     items: [
-      { labelEn: "Overview", labelBn: "ওভারভিউ", path: "", icon: LayoutDashboard },
-      { labelEn: "My batches", labelBn: "আমার ব্যাচ", path: "/batches", icon: BookOpen },
+      {
+        labelEn: "Overview",
+        labelBn: "ওভারভিউ",
+        path: "",
+        icon: LayoutDashboard,
+      },
+      {
+        labelEn: "My batches",
+        labelBn: "আমার ব্যাচ",
+        path: "/batches",
+        icon: BookOpen,
+      },
       { labelEn: "Routine", labelBn: "রুটিন", path: "/routine", icon: Clock },
-      { labelEn: "Attendance", labelBn: "উপস্থিতি", path: "/attendance", icon: CalendarCheck },
-      { labelEn: "Exams/marks", labelBn: "পরীক্ষা ও নম্বর", path: "/exams", icon: FileSpreadsheet },
-    ]
+      {
+        labelEn: "Attendance",
+        labelBn: "উপস্থিতি",
+        path: "/attendance",
+        icon: CalendarCheck,
+      },
+      {
+        labelEn: "Exams/marks",
+        labelBn: "পরীক্ষা ও নম্বর",
+        path: "/exams",
+        icon: FileSpreadsheet,
+      },
+    ],
   },
   {
     groupLabelEn: "Resources",
     groupLabelBn: "রিসোর্স",
     items: [
-      { labelEn: "Materials", labelBn: "শেখার সামগ্রী", path: "/materials", icon: FileText },
+      {
+        labelEn: "Materials",
+        labelBn: "শেখার সামগ্রী",
+        path: "/materials",
+        icon: FileText,
+      },
       { labelEn: "Notices", labelBn: "নোটিশ", path: "/notices", icon: Bell },
-    ]
+    ],
   },
   {
     groupLabelEn: "Account",
     groupLabelBn: "অ্যাকাউন্ট",
     items: [
       { labelEn: "Profile", labelBn: "প্রোফাইল", path: "/profile", icon: User },
-    ]
-  }
+    ],
+  },
 ];
 
 const studentNavGroups: NavGroupDef[] = [
@@ -115,41 +205,94 @@ const studentNavGroups: NavGroupDef[] = [
     groupLabelEn: "My Portal",
     groupLabelBn: "আমার পোর্টাল",
     items: [
-      { labelEn: "Overview", labelBn: "ওভারভিউ", path: "", icon: LayoutDashboard },
+      {
+        labelEn: "Overview",
+        labelBn: "ওভারভিউ",
+        path: "",
+        icon: LayoutDashboard,
+      },
       { labelEn: "Routine", labelBn: "রুটিন", path: "/routine", icon: Clock },
-      { labelEn: "Attendance", labelBn: "উপস্থিতি", path: "/attendance", icon: CalendarCheck },
-      { labelEn: "Fees/receipts", labelBn: "ফি ও রশিদ", path: "/fees", icon: Receipt },
-      { labelEn: "Results", labelBn: "ফলাফল", path: "/results", icon: GraduationCap },
-    ]
+      {
+        labelEn: "Attendance",
+        labelBn: "উপস্থিতি",
+        path: "/attendance",
+        icon: CalendarCheck,
+      },
+      {
+        labelEn: "Fees/receipts",
+        labelBn: "ফি ও রশিদ",
+        path: "/fees",
+        icon: Receipt,
+      },
+      {
+        labelEn: "Results",
+        labelBn: "ফলাফল",
+        path: "/results",
+        icon: GraduationCap,
+      },
+    ],
   },
   {
     groupLabelEn: "Learning",
     groupLabelBn: "শেখার অংশ",
     items: [
-      { labelEn: "Materials", labelBn: "শেখার সামগ্রী", path: "/materials", icon: FileText },
+      {
+        labelEn: "Materials",
+        labelBn: "শেখার সামগ্রী",
+        path: "/materials",
+        icon: FileText,
+      },
       { labelEn: "Notices", labelBn: "নোটিশ", path: "/notices", icon: Bell },
-    ]
+    ],
   },
   {
     groupLabelEn: "Account",
     groupLabelBn: "অ্যাকাউন্ট",
     items: [
       { labelEn: "Profile", labelBn: "প্রোফাইল", path: "/profile", icon: User },
-    ]
-  }
+    ],
+  },
 ];
 
 // Owner Quick Actions Definition
 const ownerQuickActions = [
-  { labelEn: "Add student", labelBn: "শিক্ষার্থী যোগ করুন", path: "/students?add=true", icon: UserPlus },
-  { labelEn: "Collect payment", labelBn: "ফি সংগ্রহ করুন", path: "/finance/collect", icon: DollarSign },
-  { labelEn: "Take attendance", labelBn: "উপস্থিতি নিন", path: "/attendance", icon: CalendarCheck },
-  { labelEn: "Create exam", labelBn: "পরীক্ষা তৈরি করুন", path: "/exams", icon: FileSpreadsheet },
-  { labelEn: "Send reminders", labelBn: "বকেয়া তাগিদ পাঠান", path: "/finance/dues", icon: Bell },
+  {
+    labelEn: "Add student",
+    labelBn: "শিক্ষার্থী যোগ করুন",
+    path: "/students?add=true",
+    icon: UserPlus,
+  },
+  {
+    labelEn: "Collect payment",
+    labelBn: "ফি সংগ্রহ করুন",
+    path: "/finance?view=collect",
+    icon: DollarSign,
+  },
+  {
+    labelEn: "Take attendance",
+    labelBn: "উপস্থিতি নিন",
+    path: "/attendance",
+    icon: CalendarCheck,
+  },
+  {
+    labelEn: "Create exam",
+    labelBn: "পরীক্ষা তৈরি করুন",
+    path: "/exams",
+    icon: FileSpreadsheet,
+  },
+  {
+    labelEn: "Send reminders",
+    labelBn: "বকেয়া তাগিদ পাঠান",
+    path: "/finance?view=dues",
+    icon: Bell,
+  },
 ];
 
 // Route Auto-resolved Metadata
-const navMetadata: Record<string, { titleEn: string; titleBn: string; descEn: string; descBn: string }> = {
+const navMetadata: Record<
+  string,
+  { titleEn: string; titleBn: string; descEn: string; descBn: string }
+> = {
   "": {
     titleEn: "Overview",
     titleBn: "ওভারভিউ",
@@ -178,7 +321,8 @@ const navMetadata: Record<string, { titleEn: string; titleBn: string; descEn: st
     titleEn: "Attendance",
     titleBn: "উপস্থিতি",
     descEn: "Track daily student attendance and manage class rosters.",
-    descBn: "শিক্ষার্থীদের দৈনিক উপস্থিতি ট্র্যাক করুন এবং তালিকা পরিচালনা করুন।",
+    descBn:
+      "শিক্ষার্থীদের দৈনিক উপস্থিতি ট্র্যাক করুন এবং তালিকা পরিচালনা করুন।",
   },
   "/finance": {
     titleEn: "Finance",
@@ -286,9 +430,12 @@ export function PortalShell({
 
   useEffect(() => {
     const savedTheme = window.localStorage.getItem("dhrubok-portal-theme");
-    const preferredTheme = savedTheme === "light" || savedTheme === "dark"
-      ? savedTheme
-      : window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    const preferredTheme =
+      savedTheme === "light" || savedTheme === "dark"
+        ? savedTheme
+        : window.matchMedia?.("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
     queueMicrotask(() => setTheme(preferredTheme));
   }, []);
 
@@ -354,7 +501,8 @@ export function PortalShell({
     if (drawerOpen) {
       drawerWasOpen.current = true;
       document.addEventListener("keydown", handleKeyDown);
-      const firstFocusable = drawerRef.current?.querySelector<HTMLElement>("button, a[href]");
+      const firstFocusable =
+        drawerRef.current?.querySelector<HTMLElement>("button, a[href]");
       firstFocusable?.focus();
     } else if (drawerWasOpen.current) {
       drawerWasOpen.current = false;
@@ -372,23 +520,68 @@ export function PortalShell({
   const getBottomNavItems = () => {
     if (role === "owner") {
       return [
-        { labelEn: "Overview", labelBn: "ওভারভিউ", path: "", icon: LayoutDashboard },
-        { labelEn: "Collect Fee", labelBn: "ফি সংগ্রহ", path: "/finance", icon: DollarSign },
-        { labelEn: "Students", labelBn: "শিক্ষার্থী", path: "/students", icon: Users },
-        { labelEn: "Attendance", labelBn: "উপস্থিতি", path: "/attendance", icon: CalendarCheck },
+        {
+          labelEn: "Overview",
+          labelBn: "ওভারভিউ",
+          path: "",
+          icon: LayoutDashboard,
+        },
+        {
+          labelEn: "Collect Fee",
+          labelBn: "ফি সংগ্রহ",
+          path: "/finance?view=collect",
+          icon: DollarSign,
+        },
+        {
+          labelEn: "Students",
+          labelBn: "শিক্ষার্থী",
+          path: "/students",
+          icon: Users,
+        },
+        {
+          labelEn: "Attendance",
+          labelBn: "উপস্থিতি",
+          path: "/attendance",
+          icon: CalendarCheck,
+        },
       ];
     } else if (role === "teacher") {
       return [
-        { labelEn: "Overview", labelBn: "ওভারভিউ", path: "", icon: LayoutDashboard },
-        { labelEn: "Batches", labelBn: "আমার ব্যাচ", path: "/batches", icon: BookOpen },
+        {
+          labelEn: "Overview",
+          labelBn: "ওভারভিউ",
+          path: "",
+          icon: LayoutDashboard,
+        },
+        {
+          labelEn: "Batches",
+          labelBn: "আমার ব্যাচ",
+          path: "/batches",
+          icon: BookOpen,
+        },
         { labelEn: "Routine", labelBn: "রুটিন", path: "/routine", icon: Clock },
-        { labelEn: "Attendance", labelBn: "উপস্থিতি", path: "/attendance", icon: CalendarCheck },
+        {
+          labelEn: "Attendance",
+          labelBn: "উপস্থিতি",
+          path: "/attendance",
+          icon: CalendarCheck,
+        },
       ];
     } else {
       return [
-        { labelEn: "Overview", labelBn: "ওভারভিউ", path: "", icon: LayoutDashboard },
+        {
+          labelEn: "Overview",
+          labelBn: "ওভারভিউ",
+          path: "",
+          icon: LayoutDashboard,
+        },
         { labelEn: "Routine", labelBn: "রুটিন", path: "/routine", icon: Clock },
-        { labelEn: "Attendance", labelBn: "উপস্থিতি", path: "/attendance", icon: CalendarCheck },
+        {
+          labelEn: "Attendance",
+          labelBn: "উপস্থিতি",
+          path: "/attendance",
+          icon: CalendarCheck,
+        },
         { labelEn: "Fees", labelBn: "ফি ও রশিদ", path: "/fees", icon: Receipt },
       ];
     }
@@ -400,12 +593,19 @@ export function PortalShell({
   const userInitial = user?.firstName
     ? user.firstName.charAt(0).toUpperCase()
     : user?.primaryEmailAddress?.emailAddress?.charAt(0).toUpperCase() || "U";
-  const userSafeName = user?.fullName || user?.primaryEmailAddress?.emailAddress?.split("@")[0] || "User";
+  const userSafeName =
+    user?.fullName ||
+    user?.primaryEmailAddress?.emailAddress?.split("@")[0] ||
+    "User";
 
   return (
     <div className={styles.portalContainer} data-theme={theme}>
       {/* DESKTOP/TABLET SIDEBAR NAVIGATION */}
-      <aside className={styles.sidebar} data-print-hidden aria-label={isBn ? "প্রধান নেভিগেশন" : "Main Navigation"}>
+      <aside
+        className={styles.sidebar}
+        data-print-hidden
+        aria-label={isBn ? "প্রধান নেভিগেশন" : "Main Navigation"}
+      >
         <div className={styles.sidebarHeader}>
           <div className={styles.sidebarLogo} aria-hidden="true">
             {isBn ? "ধ্রু" : "Dh"}
@@ -415,12 +615,19 @@ export function PortalShell({
           </span>
         </div>
 
-        <nav className={styles.navList} aria-label={isBn ? "পোর্টাল লিঙ্কসমূহ" : "Portal Links"}>
+        <nav
+          className={styles.navList}
+          aria-label={isBn ? "পোর্টাল লিঙ্কসমূহ" : "Portal Links"}
+        >
           {navGroups.map((group, groupIdx) => (
             <div key={group.groupLabelEn} style={{ marginBottom: "8px" }}>
               <div
                 className={styles.sidebarSectionHeader}
-                style={groupIdx === 0 ? { borderTop: "none", marginTop: 0, paddingTop: "8px" } : undefined}
+                style={
+                  groupIdx === 0
+                    ? { borderTop: "none", marginTop: 0, paddingTop: "8px" }
+                    : undefined
+                }
               >
                 {isBn ? group.groupLabelBn : group.groupLabelEn}
               </div>
@@ -462,7 +669,10 @@ export function PortalShell({
                     href={`/${locale}/owner${action.path}`}
                     className={styles.navItem}
                   >
-                    <span className={styles.navIcon} style={{ color: 'var(--brand)' }}>
+                    <span
+                      className={styles.navIcon}
+                      style={{ color: "var(--brand)" }}
+                    >
                       <Icon className="w-5 h-5" aria-hidden="true" />
                     </span>
                     <div className={styles.navLabelContainer}>
@@ -482,7 +692,14 @@ export function PortalShell({
           <div className={styles.profileCard}>
             <div className={styles.avatar} aria-hidden="true">
               {user?.imageUrl ? (
-                <Image src={user.imageUrl} alt="" width={40} height={40} unoptimized className={styles.avatarImage} />
+                <Image
+                  src={user.imageUrl}
+                  alt=""
+                  width={40}
+                  height={40}
+                  unoptimized
+                  className={styles.avatarImage}
+                />
               ) : (
                 userInitial
               )}
@@ -490,7 +707,17 @@ export function PortalShell({
             <div className={styles.profileInfo}>
               <span className={styles.profileName}>{userSafeName}</span>
               <span className={styles.profileRole}>
-                {role === "owner" ? (isBn ? "মালিক" : "Owner") : role === "teacher" ? (isBn ? "শিক্ষক" : "Teacher") : (isBn ? "শিক্ষার্থী" : "Student")}
+                {role === "owner"
+                  ? isBn
+                    ? "মালিক"
+                    : "Owner"
+                  : role === "teacher"
+                    ? isBn
+                      ? "শিক্ষক"
+                      : "Teacher"
+                    : isBn
+                      ? "শিক্ষার্থী"
+                      : "Student"}
               </span>
             </div>
           </div>
@@ -517,10 +744,25 @@ export function PortalShell({
           </div>
           <div className={styles.headerActions}>
             {actions}
-            <button onClick={toggleTheme} className={styles.iconButton}
-              aria-label={theme === "dark" ? (isBn ? "লাইট মোড চালু করুন" : "Use light mode") : (isBn ? "ডার্ক মোড চালু করুন" : "Use dark mode")}
-              title={theme === "dark" ? "Light mode" : "Dark mode"}>
-              {theme === "dark" ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
+            <button
+              onClick={toggleTheme}
+              className={styles.iconButton}
+              aria-label={
+                theme === "dark"
+                  ? isBn
+                    ? "লাইট মোড চালু করুন"
+                    : "Use light mode"
+                  : isBn
+                    ? "ডার্ক মোড চালু করুন"
+                    : "Use dark mode"
+              }
+              title={theme === "dark" ? "Light mode" : "Dark mode"}
+            >
+              {theme === "dark" ? (
+                <Sun aria-hidden="true" />
+              ) : (
+                <Moon aria-hidden="true" />
+              )}
             </button>
             <button
               onClick={toggleLanguage}
@@ -557,9 +799,24 @@ export function PortalShell({
           >
             <span>{isBn ? "EN" : "বাংলা"}</span>
           </button>
-          <button onClick={toggleTheme} className={styles.iconButton}
-            aria-label={theme === "dark" ? (isBn ? "লাইট মোড চালু করুন" : "Use light mode") : (isBn ? "ডার্ক মোড চালু করুন" : "Use dark mode")}>
-            {theme === "dark" ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
+          <button
+            onClick={toggleTheme}
+            className={styles.iconButton}
+            aria-label={
+              theme === "dark"
+                ? isBn
+                  ? "লাইট মোড চালু করুন"
+                  : "Use light mode"
+                : isBn
+                  ? "ডার্ক মোড চালু করুন"
+                  : "Use dark mode"
+            }
+          >
+            {theme === "dark" ? (
+              <Sun aria-hidden="true" />
+            ) : (
+              <Moon aria-hidden="true" />
+            )}
           </button>
         </header>
 
@@ -573,7 +830,11 @@ export function PortalShell({
         </main>
 
         {/* MOBILE BOTTOM NAVIGATION */}
-        <nav className={styles.mobileBottomNav} data-print-hidden aria-label={isBn ? "মোবাইল নেভিগেশন" : "Mobile Navigation"}>
+        <nav
+          className={styles.mobileBottomNav}
+          data-print-hidden
+          aria-label={isBn ? "মোবাইল নেভিগেশন" : "Mobile Navigation"}
+        >
           <ul className={styles.bottomNavList}>
             {bottomNavPrimary.map((item) => {
               const Icon = item.icon;
@@ -640,12 +901,19 @@ export function PortalShell({
           </button>
         </div>
 
-        <nav className={styles.drawerContent} aria-label={isBn ? "মোবাইল মেনু লিঙ্কসমূহ" : "Mobile Menu Links"}>
+        <nav
+          className={styles.drawerContent}
+          aria-label={isBn ? "মোবাইল মেনু লিঙ্কসমূহ" : "Mobile Menu Links"}
+        >
           {navGroups.map((group, groupIdx) => (
             <div key={group.groupLabelEn} style={{ marginBottom: "8px" }}>
               <div
                 className={styles.sidebarSectionHeader}
-                style={groupIdx === 0 ? { borderTop: "none", marginTop: 0, paddingTop: "8px" } : undefined}
+                style={
+                  groupIdx === 0
+                    ? { borderTop: "none", marginTop: 0, paddingTop: "8px" }
+                    : undefined
+                }
               >
                 {isBn ? group.groupLabelBn : group.groupLabelEn}
               </div>
@@ -689,7 +957,10 @@ export function PortalShell({
                     className={styles.navItem}
                     onClick={() => setDrawerOpen(false)}
                   >
-                    <span className={styles.navIcon} style={{ color: 'var(--brand)' }}>
+                    <span
+                      className={styles.navIcon}
+                      style={{ color: "var(--brand)" }}
+                    >
                       <Icon className="w-5 h-5" aria-hidden="true" />
                     </span>
                     <div className={styles.navLabelContainer}>
@@ -708,7 +979,14 @@ export function PortalShell({
           <div className={styles.profileCard}>
             <div className={styles.avatar} aria-hidden="true">
               {user?.imageUrl ? (
-                <Image src={user.imageUrl} alt="" width={40} height={40} unoptimized className={styles.avatarImage} />
+                <Image
+                  src={user.imageUrl}
+                  alt=""
+                  width={40}
+                  height={40}
+                  unoptimized
+                  className={styles.avatarImage}
+                />
               ) : (
                 userInitial
               )}
@@ -716,7 +994,17 @@ export function PortalShell({
             <div className={styles.profileInfo}>
               <span className={styles.profileName}>{userSafeName}</span>
               <span className={styles.profileRole}>
-                {role === "owner" ? (isBn ? "মালিক" : "Owner") : role === "teacher" ? (isBn ? "শিক্ষক" : "Teacher") : (isBn ? "শিক্ষার্থী" : "Student")}
+                {role === "owner"
+                  ? isBn
+                    ? "মালিক"
+                    : "Owner"
+                  : role === "teacher"
+                    ? isBn
+                      ? "শিক্ষক"
+                      : "Teacher"
+                    : isBn
+                      ? "শিক্ষার্থী"
+                      : "Student"}
               </span>
             </div>
           </div>

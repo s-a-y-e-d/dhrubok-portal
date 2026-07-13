@@ -343,14 +343,13 @@ function OwnerDashboard({ locale }: { locale: "bn" | "en" }) {
                     <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
                       {s.status === "active" && (
                         <Link
-                          href={`/${locale}/owner/finance?student=${s.studentId}&action=collect`}
+                          href={`/${locale}/owner/finance?view=collect&student=${s.studentId}`}
                           className="button button-secondary"
                           style={{
                             padding: "4px 8px",
                             fontSize: "11px",
                             minHeight: "auto",
                           }}
-                          onClick={() => setShowDropdown(false)}
                         >
                           {bn ? "ফি সংগ্রহ" : "Collect Fee"}
                         </Link>
@@ -363,7 +362,6 @@ function OwnerDashboard({ locale }: { locale: "bn" | "en" }) {
                           fontSize: "11px",
                           minHeight: "auto",
                         }}
-                        onClick={() => setShowDropdown(false)}
                       >
                         {bn ? "প্রোফাইল" : "Profile"}
                       </Link>
@@ -375,7 +373,6 @@ function OwnerDashboard({ locale }: { locale: "bn" | "en" }) {
                           fontSize: "11px",
                           minHeight: "auto",
                         }}
-                        onClick={() => setShowDropdown(false)}
                       >
                         {bn ? "বিবরণী" : "Statement"}
                       </Link>
