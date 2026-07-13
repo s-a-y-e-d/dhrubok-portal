@@ -28,12 +28,10 @@ import {
   Languages,
   Moon,
   Sun,
+  MessageSquare,
 } from "lucide-react";
 import styles from "./portal.module.css";
 import { DevAccountSwitcher } from "./DevAccountSwitcher";
-
-/* Nav items at which a group divider is inserted AFTER */
-const ownerDividerAfter = new Set(["/students", "/exams"]);
 
 // Navigation Item Definition
 interface NavItemDef {
@@ -43,41 +41,102 @@ interface NavItemDef {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-const ownerNavItems: NavItemDef[] = [
-  { labelEn: "Overview", labelBn: "ওভারভিউ", path: "", icon: LayoutDashboard },
-  { labelEn: "Admissions", labelBn: "ভর্তি", path: "/admissions", icon: UserPlus },
-  { labelEn: "Students", labelBn: "শিক্ষার্থী", path: "/students", icon: Users },
-  { labelEn: "Academics", labelBn: "একাডেমিক", path: "/courses", icon: BookOpen },
-  { labelEn: "Attendance", labelBn: "উপস্থিতি", path: "/attendance", icon: CalendarCheck },
-  { labelEn: "Finance", labelBn: "অর্থায়ন", path: "/finance", icon: DollarSign },
-  { labelEn: "Exams", labelBn: "পরীক্ষা", path: "/exams", icon: FileSpreadsheet },
-  { labelEn: "Materials", labelBn: "শেখার সামগ্রী", path: "/materials", icon: FileText },
-  { labelEn: "Notices/SMS", labelBn: "নোটিশ ও SMS", path: "/notices", icon: Bell },
-  { labelEn: "Reports", labelBn: "প্রতিবেদন", path: "/reports", icon: BarChart3 },
-  { labelEn: "Website", labelBn: "ওয়েবসাইট", path: "/website", icon: Globe },
-  { labelEn: "Settings", labelBn: "সেটিংস", path: "/settings", icon: Settings },
+interface NavGroupDef {
+  groupLabelEn: string;
+  groupLabelBn: string;
+  items: NavItemDef[];
+}
+
+const ownerNavGroups: NavGroupDef[] = [
+  {
+    groupLabelEn: "Operations",
+    groupLabelBn: "কার্যক্রম",
+    items: [
+      { labelEn: "Overview", labelBn: "ওভারভিউ", path: "", icon: LayoutDashboard },
+      { labelEn: "Admissions", labelBn: "ভর্তি", path: "/admissions", icon: UserPlus },
+      { labelEn: "Students", labelBn: "শিক্ষার্থী", path: "/students", icon: Users },
+      { labelEn: "Academics", labelBn: "একাডেমিক", path: "/courses", icon: BookOpen },
+      { labelEn: "Attendance", labelBn: "উপস্থিতি", path: "/attendance", icon: CalendarCheck },
+      { labelEn: "Finance", labelBn: "অর্থায়ন", path: "/finance", icon: DollarSign },
+      { labelEn: "Exams", labelBn: "পরীক্ষা", path: "/exams", icon: FileSpreadsheet },
+    ]
+  },
+  {
+    groupLabelEn: "Communication",
+    groupLabelBn: "যোগাযোগ",
+    items: [
+      { labelEn: "Materials", labelBn: "শেখার সামগ্রী", path: "/materials", icon: FileText },
+      { labelEn: "Notices/SMS", labelBn: "নোটিশ ও SMS", path: "/notices", icon: Bell },
+      { labelEn: "Messages & SMS", labelBn: "বার্তা ও SMS", path: "/messages", icon: MessageSquare },
+    ]
+  },
+  {
+    groupLabelEn: "System",
+    groupLabelBn: "সিস্টেম",
+    items: [
+      { labelEn: "Reports", labelBn: "প্রতিবেদন", path: "/reports", icon: BarChart3 },
+      { labelEn: "Website", labelBn: "ওয়েবসাইট", path: "/website", icon: Globe },
+      { labelEn: "Settings", labelBn: "সেটিংস", path: "/settings", icon: Settings },
+    ]
+  }
 ];
 
-const teacherNavItems: NavItemDef[] = [
-  { labelEn: "Overview", labelBn: "ওভারভিউ", path: "", icon: LayoutDashboard },
-  { labelEn: "My batches", labelBn: "আমার ব্যাচ", path: "/batches", icon: BookOpen },
-  { labelEn: "Routine", labelBn: "রুটিন", path: "/routine", icon: Clock },
-  { labelEn: "Attendance", labelBn: "উপস্থিতি", path: "/attendance", icon: CalendarCheck },
-  { labelEn: "Exams/marks", labelBn: "পরীক্ষা ও নম্বর", path: "/exams", icon: FileSpreadsheet },
-  { labelEn: "Materials", labelBn: "শেখার সামগ্রী", path: "/materials", icon: FileText },
-  { labelEn: "Notices", labelBn: "নোটিশ", path: "/notices", icon: Bell },
-  { labelEn: "Profile", labelBn: "প্রোফাইল", path: "/profile", icon: User },
+const teacherNavGroups: NavGroupDef[] = [
+  {
+    groupLabelEn: "My Work",
+    groupLabelBn: "আমার কাজ",
+    items: [
+      { labelEn: "Overview", labelBn: "ওভারভিউ", path: "", icon: LayoutDashboard },
+      { labelEn: "My batches", labelBn: "আমার ব্যাচ", path: "/batches", icon: BookOpen },
+      { labelEn: "Routine", labelBn: "রুটিন", path: "/routine", icon: Clock },
+      { labelEn: "Attendance", labelBn: "উপস্থিতি", path: "/attendance", icon: CalendarCheck },
+      { labelEn: "Exams/marks", labelBn: "পরীক্ষা ও নম্বর", path: "/exams", icon: FileSpreadsheet },
+    ]
+  },
+  {
+    groupLabelEn: "Resources",
+    groupLabelBn: "রিসোর্স",
+    items: [
+      { labelEn: "Materials", labelBn: "শেখার সামগ্রী", path: "/materials", icon: FileText },
+      { labelEn: "Notices", labelBn: "নোটিশ", path: "/notices", icon: Bell },
+    ]
+  },
+  {
+    groupLabelEn: "Account",
+    groupLabelBn: "অ্যাকাউন্ট",
+    items: [
+      { labelEn: "Profile", labelBn: "প্রোফাইল", path: "/profile", icon: User },
+    ]
+  }
 ];
 
-const studentNavItems: NavItemDef[] = [
-  { labelEn: "Overview", labelBn: "ওভারভিউ", path: "", icon: LayoutDashboard },
-  { labelEn: "Routine", labelBn: "রুটিন", path: "/routine", icon: Clock },
-  { labelEn: "Attendance", labelBn: "উপস্থিতি", path: "/attendance", icon: CalendarCheck },
-  { labelEn: "Fees/receipts", labelBn: "ফি ও রশিদ", path: "/fees", icon: Receipt },
-  { labelEn: "Results", labelBn: "ফলাফল", path: "/results", icon: GraduationCap },
-  { labelEn: "Materials", labelBn: "শেখার সামগ্রী", path: "/materials", icon: FileText },
-  { labelEn: "Notices", labelBn: "নোটিশ", path: "/notices", icon: Bell },
-  { labelEn: "Profile", labelBn: "প্রোফাইল", path: "/profile", icon: User },
+const studentNavGroups: NavGroupDef[] = [
+  {
+    groupLabelEn: "My Portal",
+    groupLabelBn: "আমার পোর্টাল",
+    items: [
+      { labelEn: "Overview", labelBn: "ওভারভিউ", path: "", icon: LayoutDashboard },
+      { labelEn: "Routine", labelBn: "রুটিন", path: "/routine", icon: Clock },
+      { labelEn: "Attendance", labelBn: "উপস্থিতি", path: "/attendance", icon: CalendarCheck },
+      { labelEn: "Fees/receipts", labelBn: "ফি ও রশিদ", path: "/fees", icon: Receipt },
+      { labelEn: "Results", labelBn: "ফলাফল", path: "/results", icon: GraduationCap },
+    ]
+  },
+  {
+    groupLabelEn: "Learning",
+    groupLabelBn: "শেখার অংশ",
+    items: [
+      { labelEn: "Materials", labelBn: "শেখার সামগ্রী", path: "/materials", icon: FileText },
+      { labelEn: "Notices", labelBn: "নোটিশ", path: "/notices", icon: Bell },
+    ]
+  },
+  {
+    groupLabelEn: "Account",
+    groupLabelBn: "অ্যাকাউন্ট",
+    items: [
+      { labelEn: "Profile", labelBn: "প্রোফাইল", path: "/profile", icon: User },
+    ]
+  }
 ];
 
 // Owner Quick Actions Definition
@@ -241,13 +300,12 @@ export function PortalShell({
     });
   };
 
-  // Select navigation items by role
-  const navItems =
+  const navGroups =
     role === "owner"
-      ? ownerNavItems
+      ? ownerNavGroups
       : role === "teacher"
-        ? teacherNavItems
-        : studentNavItems;
+        ? teacherNavGroups
+        : studentNavGroups;
 
   // Active state matching helper
   const isItemActive = (itemPath: string) => {
@@ -315,7 +373,7 @@ export function PortalShell({
     if (role === "owner") {
       return [
         { labelEn: "Overview", labelBn: "ওভারভিউ", path: "", icon: LayoutDashboard },
-        { labelEn: "Admissions", labelBn: "ভর্তি", path: "/admissions", icon: UserPlus },
+        { labelEn: "Collect Fee", labelBn: "ফি সংগ্রহ", path: "/finance", icon: DollarSign },
         { labelEn: "Students", labelBn: "শিক্ষার্থী", path: "/students", icon: Users },
         { labelEn: "Attendance", labelBn: "উপস্থিতি", path: "/attendance", icon: CalendarCheck },
       ];
@@ -358,30 +416,37 @@ export function PortalShell({
         </div>
 
         <nav className={styles.navList} aria-label={isBn ? "পোর্টাল লিঙ্কসমূহ" : "Portal Links"}>
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const active = isItemActive(item.path);
-            const showDivider = role === "owner" && ownerDividerAfter.has(item.path);
-            return (
-              <React.Fragment key={item.labelEn}>
-                <Link
-                  href={`/${locale}/${role}${item.path}`}
-                  className={`${styles.navItem} ${active ? styles.navItemActive : ""}`}
-                  aria-current={active ? "page" : undefined}
-                >
-                  <span className={styles.navIcon}>
-                    <Icon className="w-5 h-5" aria-hidden="true" />
-                  </span>
-                  <div className={styles.navLabelContainer}>
-                    <span className={styles.navLabelPrimary}>
-                      {isBn ? item.labelBn : item.labelEn}
+          {navGroups.map((group, groupIdx) => (
+            <div key={group.groupLabelEn} style={{ marginBottom: "8px" }}>
+              <div
+                className={styles.sidebarSectionHeader}
+                style={groupIdx === 0 ? { borderTop: "none", marginTop: 0, paddingTop: "8px" } : undefined}
+              >
+                {isBn ? group.groupLabelBn : group.groupLabelEn}
+              </div>
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const active = isItemActive(item.path);
+                return (
+                  <Link
+                    key={item.labelEn}
+                    href={`/${locale}/${role}${item.path}`}
+                    className={`${styles.navItem} ${active ? styles.navItemActive : ""}`}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    <span className={styles.navIcon}>
+                      <Icon className="w-5 h-5" aria-hidden="true" />
                     </span>
-                  </div>
-                </Link>
-                {showDivider && <div className={styles.navGroupDivider} />}
-              </React.Fragment>
-            );
-          })}
+                    <div className={styles.navLabelContainer}>
+                      <span className={styles.navLabelPrimary}>
+                        {isBn ? item.labelBn : item.labelEn}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
 
           {/* Owner Quick Actions Section */}
           {role === "owner" && (
@@ -576,28 +641,38 @@ export function PortalShell({
         </div>
 
         <nav className={styles.drawerContent} aria-label={isBn ? "মোবাইল মেনু লিঙ্কসমূহ" : "Mobile Menu Links"}>
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const active = isItemActive(item.path);
-            return (
-              <Link
-                key={item.labelEn}
-                href={`/${locale}/${role}${item.path}`}
-                className={`${styles.navItem} ${active ? styles.navItemActive : ""}`}
-                onClick={() => setDrawerOpen(false)}
-                aria-current={active ? "page" : undefined}
+          {navGroups.map((group, groupIdx) => (
+            <div key={group.groupLabelEn} style={{ marginBottom: "8px" }}>
+              <div
+                className={styles.sidebarSectionHeader}
+                style={groupIdx === 0 ? { borderTop: "none", marginTop: 0, paddingTop: "8px" } : undefined}
               >
-                <span className={styles.navIcon}>
-                  <Icon className="w-5 h-5" aria-hidden="true" />
-                </span>
-                <div className={styles.navLabelContainer}>
-                  <span className={styles.navLabelPrimary}>
-                    {isBn ? item.labelBn : item.labelEn}
-                  </span>
-                </div>
-              </Link>
-            );
-          })}
+                {isBn ? group.groupLabelBn : group.groupLabelEn}
+              </div>
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const active = isItemActive(item.path);
+                return (
+                  <Link
+                    key={item.labelEn}
+                    href={`/${locale}/${role}${item.path}`}
+                    className={`${styles.navItem} ${active ? styles.navItemActive : ""}`}
+                    onClick={() => setDrawerOpen(false)}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    <span className={styles.navIcon}>
+                      <Icon className="w-5 h-5" aria-hidden="true" />
+                    </span>
+                    <div className={styles.navLabelContainer}>
+                      <span className={styles.navLabelPrimary}>
+                        {isBn ? item.labelBn : item.labelEn}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
 
           {/* Mobile Drawer Owner Quick Actions */}
           {role === "owner" && (

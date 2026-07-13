@@ -30,6 +30,7 @@ export function DirectAdmissionForm({ locale, onCancel }: { locale: "bn" | "en";
         studentDisplayName: String(data.get("studentDisplayName")), studentNameBn: opt("studentNameBn"), studentNameEn: opt("studentNameEn"), studentEmail: String(data.get("studentEmail")),
         studentPhone: opt("studentPhone"), dateOfBirth: opt("dateOfBirth"), gender: opt("gender"), schoolCollege: String(data.get("schoolCollege")), currentClass: String(data.get("currentClass")), address: opt("address"),
         guardianName: String(data.get("guardianName")), guardianPhone: String(data.get("guardianPhone")), guardianRelationship: String(data.get("guardianRelationship")), alternateGuardianPhone: opt("alternateGuardianPhone"),
+        motherName: String(data.get("motherName")), motherPhone: String(data.get("motherPhone")),
         preferredSmsLocale: data.get("preferredSmsLocale") === "en" ? "en" : "bn", courseId, batchId, feePlanId: opt("feePlanId") as Id<"feePlans"> | undefined,
         agreedMonthlyAmountMinor: minor("agreedMonthly"), agreedCourseAmountMinor: minor("agreedCourse"), initialAdmissionFeeMinor: minor("initialAdmissionFee"), internalNote: opt("internalNote"),
       });
@@ -51,7 +52,7 @@ export function DirectAdmissionForm({ locale, onCancel }: { locale: "bn" | "en";
         {field(bn ? "স্কুল/কলেজ" : "School or college", "schoolCollege", true)}{field(bn ? "বর্তমান শ্রেণি" : "Current class", "currentClass", true)}{field(bn ? "ভর্তির তারিখ" : "Admission date", "admissionDate", true, "date")}
       </div><label>{bn ? "ঠিকানা" : "Address"}<textarea name="address" rows={2} /></label></fieldset>
       <fieldset><legend>{bn ? "অভিভাবকের তথ্য" : "Guardian details"}</legend><div className="form-grid">
-        {field(bn ? "অভিভাবকের নাম" : "Guardian name", "guardianName", true)}{field(bn ? "ফোন" : "Phone", "guardianPhone", true, "tel")}{field(bn ? "সম্পর্ক" : "Relationship", "guardianRelationship", true)}{field(bn ? "বিকল্প ফোন" : "Alternate phone", "alternateGuardianPhone", false, "tel")}
+        {field(bn ? "বাবার নাম" : "Father's name", "guardianName", true)}{field(bn ? "বাবার ফোন" : "Father's phone", "guardianPhone", true, "tel")}<input name="guardianRelationship" type="hidden" value="father" />{field(bn ? "মায়ের নাম" : "Mother's name", "motherName", true)}{field(bn ? "মায়ের ফোন" : "Mother's phone", "motherPhone", true, "tel")}
         <label>{bn ? "SMS ভাষা" : "SMS language"}<select name="preferredSmsLocale" defaultValue="bn"><option value="bn">বাংলা</option><option value="en">English</option></select></label>
       </div></fieldset>
       <fieldset><legend>{bn ? "কোর্স ও ফি" : "Course and fees"}</legend><div className="form-grid">

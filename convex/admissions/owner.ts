@@ -61,6 +61,8 @@ const applicationDetailValidator = v.object({
   guardianPhone: v.string(),
   guardianRelationship: v.string(),
   alternateGuardianPhone: v.union(v.string(), v.null()),
+  motherName: v.union(v.string(), v.null()),
+  motherPhone: v.union(v.string(), v.null()),
   preferredSmsLocale: v.union(v.literal("bn"), v.literal("en")),
   requestedCourseId: v.id("courses"),
   requestedBatchId: v.id("batches"),
@@ -172,6 +174,8 @@ export const getApplication = query({
       guardianPhone: application.guardianPhone,
       guardianRelationship: application.guardianRelationship,
       alternateGuardianPhone: application.alternateGuardianPhone ?? null,
+      motherName: application.motherName ?? null,
+      motherPhone: application.motherPhone ?? null,
       preferredSmsLocale: application.preferredSmsLocale,
       requestedCourseId: application.requestedCourseId,
       requestedBatchId: application.requestedBatchId,
@@ -362,6 +366,7 @@ export const acceptApplication = mutation({
       photoStorageId: application.photoStorageId, guardianName: application.guardianName, guardianPhone: application.guardianPhone,
       normalizedGuardianPhone: application.normalizedGuardianPhone, guardianRelationship: application.guardianRelationship,
       alternateGuardianPhone: application.alternateGuardianPhone, preferredSmsLocale: application.preferredSmsLocale,
+      motherName: application.motherName, motherPhone: application.motherPhone,
       admissionDate: args.admissionDate, status: "active", sourceApplicationId: application._id,
       internalNote: optionalText(args.internalNote, "Internal note", 2000),
       searchText: `${studentNumber} ${application.studentDisplayName} ${application.studentEmail}`.toLowerCase(),
@@ -398,6 +403,14 @@ export const acceptApplication = mutation({
       });
     }
     await refreshFinancialSummary(ctx, studentId);
+    const today = dhakaDate();
+    const dailySummary = await ctx.db.query("dailyOperationalSummaries").withIndex("by_date", (q) => q.eq("date", today)).unique();
+    if (dailySummary) {
+      await ctx.db.patch(dailySummary._id, {
+        activeStudentCount: dailySummary.activeStudentCount + 1,
+        updatedAt: Date.now(),
+      });
+    }
     await ctx.db.patch("admissionApplications", application._id, { status: "accepted", acceptedStudentId: studentId, conversionKey, reviewedByAccountId: account._id, reviewedAt: now, updatedAt: now });
     const template = await ctx.db.query("smsTemplates").withIndex("by_key", (q) => q.eq("key", "admission_accepted")).unique();
     if (template?.enabled) {
@@ -415,7 +428,7 @@ export const createDirectAdmission = mutation({
     studentDisplayName: v.string(), studentNameBn: v.optional(v.string()), studentNameEn: v.optional(v.string()),
     studentEmail: v.string(), studentPhone: v.optional(v.string()), dateOfBirth: v.optional(v.string()), gender: v.optional(v.string()),
     schoolCollege: v.string(), currentClass: v.string(), address: v.optional(v.string()),
-    guardianName: v.string(), guardianPhone: v.string(), guardianRelationship: v.string(), alternateGuardianPhone: v.optional(v.string()),
+    guardianName: v.string(), guardianPhone: v.string(), guardianRelationship: v.string(), alternateGuardianPhone: v.optional(v.string()), motherName: v.optional(v.string()), motherPhone: v.optional(v.string()),
     preferredSmsLocale: v.union(v.literal("bn"), v.literal("en")), courseId: v.id("courses"), batchId: v.id("batches"),
     feePlanId: v.optional(v.id("feePlans")), agreedMonthlyAmountMinor: v.optional(v.number()), agreedCourseAmountMinor: v.optional(v.number()),
     internalNote: v.optional(v.string()), initialAdmissionFeeMinor: v.optional(v.number()),
@@ -449,6 +462,7 @@ export const createDirectAdmission = mutation({
       gender: profile.gender, schoolCollege: profile.schoolCollege, currentClass: profile.currentClass, address: profile.address,
       guardianName: profile.guardianName, guardianPhone: profile.guardianPhone, normalizedGuardianPhone: profile.normalizedGuardianPhone,
       guardianRelationship: profile.guardianRelationship, alternateGuardianPhone: profile.alternateGuardianPhone,
+      motherName: profile.motherName, motherPhone: profile.motherPhone,
       preferredSmsLocale: args.preferredSmsLocale, admissionDate: args.admissionDate, status: "active",
       internalNote: optionalText(args.internalNote, "Internal note", 2000),
       searchText: `${studentNumber} ${profile.studentDisplayName} ${profile.studentEmail}`.toLowerCase(),
@@ -475,6 +489,14 @@ export const createDirectAdmission = mutation({
       });
     }
     await refreshFinancialSummary(ctx, studentId);
+    const today = dhakaDate();
+    const dailySummary = await ctx.db.query("dailyOperationalSummaries").withIndex("by_date", (q) => q.eq("date", today)).unique();
+    if (dailySummary) {
+      await ctx.db.patch(dailySummary._id, {
+        activeStudentCount: dailySummary.activeStudentCount + 1,
+        updatedAt: Date.now(),
+      });
+    }
     await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: "student.directly_admitted", entityType: "student", entityId: studentId, summary: "Student directly admitted by owner", metadata: { enrolmentId, courseId: course._id, batchId: batch._id } });
     return { studentId, enrolmentId };
   },

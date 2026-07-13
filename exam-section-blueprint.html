@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ধ্রুবক পোর্টালের অফলাইন পরীক্ষা ব্যবস্থাপনার পূর্ণাঙ্গ বাংলা প্রোডাক্ট ব্লুপ্রিন্ট।">
+  <title>ধ্রুবক পোর্টাল — পরীক্ষা বিভাগ ব্লুপ্রিন্ট</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+Bengali:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --brand: #3ecf8e;
+      --brand-deep: #24b47e;
+      --brand-soft: #a7f3d0;
+      --brand-muted: #ecfdf5;
+      --success: #16a34a;
+      --success-muted: #f0fdf4;
+      --warning: #d97706;
+      --warning-muted: #fffbeb;
+      --danger: #dc2626;
+      --danger-muted: #fef2f2;
+      --info: #2563eb;
+      --info-muted: #eff6ff;
+      --ink: #171717;
+      --ink-secondary: #404040;
+      --ink-mute: #737373;
+      --canvas: #fff;
+      --canvas-soft: #fafafa;
+      --canvas-subtle: #f5f5f5;
+      --border: #e5e5e5;
+      --border-strong: #d4d4d4;
+      --sidebar: 250px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--canvas);
+      font-family: Inter, "Noto Sans Bengali", sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    h1, h2 { letter-spacing: 0; }
+    a { color: inherit; }
+    a:focus-visible, button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+    .shell { min-height: 100vh; display: grid; grid-template-columns: var(--sidebar) minmax(0, 1fr); }
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 24px 16px;
+      background: var(--canvas-soft);
+      border-right: 1px solid var(--border);
+      overflow: auto;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; }
+    .brand-mark { width: 30px; height: 30px; border-radius: 8px; background: var(--brand); display: grid; place-items: center; font-weight: 600; }
+    .brand strong { display: block; font-size: 14px; }
+    .brand span { display: block; color: var(--ink-mute); font-size: 12px; }
+    .nav-label { margin: 22px 12px 8px; color: var(--ink-mute); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+    .nav { display: grid; gap: 2px; }
+    .nav a { min-height: 40px; padding: 9px 12px; border-left: 3px solid transparent; border-radius: 6px; color: var(--ink-secondary); text-decoration: none; }
+    .nav a:hover { background: var(--canvas-subtle); color: var(--ink); }
+    .nav a:first-child { border-left-color: var(--brand); background: var(--brand-muted); color: var(--ink); font-weight: 500; }
+
+    main { min-width: 0; }
+    .hero { padding: 72px 5vw 56px; border-bottom: 1px solid var(--border); }
+    .container { width: min(1120px, 100%); margin: 0 auto; }
+    .eyebrow { margin: 0 0 10px; color: var(--brand-deep); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+    h1 { max-width: 850px; margin: 0; font-size: clamp(32px, 5vw, 56px); line-height: 1.08; letter-spacing: -1.2px; font-weight: 600; }
+    .lead { max-width: 790px; margin: 22px 0 0; color: var(--ink-secondary); font-size: 17px; line-height: 1.7; }
+    .hero-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 28px; }
+    .tag { padding: 5px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--canvas); color: var(--ink-secondary); font-size: 12px; }
+    .tag.core { background: var(--brand-muted); border-color: var(--brand-soft); color: var(--ink); }
+
+    section.content { padding: 56px 5vw; border-bottom: 1px solid var(--border); }
+    .section-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 440px); gap: 32px; align-items: end; margin-bottom: 30px; }
+    .section-number { display: block; margin-bottom: 8px; color: var(--brand-deep); font: 500 12px/1.4 ui-monospace, Consolas, monospace; }
+    h2 { margin: 0; font-size: clamp(24px, 3vw, 34px); line-height: 1.2; letter-spacing: -.5px; font-weight: 600; }
+    h3 { margin: 0 0 8px; font-size: 17px; line-height: 1.35; font-weight: 600; }
+    p { margin: 0; }
+    .section-head p, .muted { color: var(--ink-mute); }
+
+    .callout { padding: 18px 20px; border: 1px solid var(--brand-soft); border-left: 4px solid var(--brand); border-radius: 8px; background: var(--brand-muted); }
+    .callout strong { display: block; margin-bottom: 4px; }
+    .callout.warning { border-color: #fcd34d; border-left-color: var(--warning); background: var(--warning-muted); }
+    .callout.danger { border-color: #fecaca; border-left-color: var(--danger); background: var(--danger-muted); }
+
+    .flow { display: grid; grid-template-columns: repeat(8, minmax(120px, 1fr)); gap: 8px; overflow-x: auto; padding: 4px 0 14px; }
+    .flow-step { position: relative; min-height: 92px; padding: 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--canvas); }
+    .flow-step:not(:last-child)::after { content: "→"; position: absolute; right: -9px; top: 34px; z-index: 1; color: var(--ink-mute); }
+    .flow-step span { display: block; color: var(--ink-mute); font-size: 11px; }
+    .flow-step strong { display: block; margin-top: 5px; font-size: 13px; line-height: 1.4; }
+
+    .grid-2, .grid-3, .grid-4 { display: grid; gap: 16px; }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .card { padding: 20px; border: 1px solid var(--border); border-radius: 8px; background: var(--canvas); }
+    .card p { color: var(--ink-mute); }
+    .card .number { display: inline-grid; place-items: center; width: 28px; height: 28px; margin-bottom: 16px; border-radius: 6px; background: var(--brand-muted); font-weight: 600; }
+    .card.recommended { border-color: var(--brand); }
+    .card.recommended::before { content: "Recommended"; display: inline-block; margin-bottom: 12px; color: var(--brand-deep); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+
+    .option-title { display: flex; gap: 10px; align-items: flex-start; }
+    .radio { width: 18px; height: 18px; margin-top: 2px; border: 2px solid var(--border-strong); border-radius: 50%; flex: 0 0 auto; }
+    .recommended .radio { border: 5px solid var(--brand-deep); }
+    .mini-ui { margin-top: 16px; padding: 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--canvas-soft); }
+    .mini-label { margin-bottom: 6px; color: var(--ink-mute); font-size: 12px; font-weight: 500; }
+    .fake-input { min-height: 40px; padding: 9px 11px; border: 1px solid var(--border-strong); border-radius: 4px; background: white; }
+    .check-list { display: grid; gap: 8px; }
+    .check { display: flex; gap: 8px; align-items: center; }
+    .check::before { content: "✓"; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 4px; background: var(--brand); color: var(--ink); font-size: 11px; font-weight: 600; }
+
+    .table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; min-width: 760px; background: white; }
+    th, td { padding: 12px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
+    th { background: var(--canvas-soft); color: var(--ink-mute); font-size: 12px; font-weight: 500; }
+    tbody tr:last-child td { border-bottom: 0; }
+    .score { font-family: ui-monospace, Consolas, monospace; text-align: right; }
+    .pill { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 500; }
+    .pill.success { color: var(--success); background: var(--success-muted); }
+    .pill.warning { color: var(--warning); background: var(--warning-muted); }
+    .pill.danger { color: var(--danger); background: var(--danger-muted); }
+    .pill.info { color: var(--info); background: var(--info-muted); }
+
+    .formula { padding: 20px; border-radius: 8px; background: var(--ink); color: white; font-family: ui-monospace, Consolas, monospace; line-height: 1.8; }
+    .formula em { color: var(--brand-soft); font-style: normal; }
+    .message { padding: 22px; border: 1px solid var(--border); border-radius: 8px; background: var(--canvas-soft); }
+    .message-header { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 14px; color: var(--ink-mute); font-size: 12px; }
+    .message blockquote { margin: 0; padding-left: 16px; border-left: 3px solid var(--brand); font-size: 15px; }
+
+    .priority-list { display: grid; gap: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .priority { display: grid; grid-template-columns: 52px minmax(0, 1fr) 110px; gap: 16px; align-items: center; padding: 16px 18px; border-bottom: 1px solid var(--border); }
+    .priority:last-child { border-bottom: 0; }
+    .priority b { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 6px; background: var(--brand-muted); }
+    .priority span { color: var(--ink-mute); font-size: 12px; text-align: right; }
+
+    .do-not { border-left: 4px solid var(--danger); }
+    footer { padding: 30px 5vw; color: var(--ink-mute); background: var(--canvas-soft); }
+    footer .container { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+
+    @media (max-width: 980px) {
+      .shell { grid-template-columns: 1fr; }
+      .sidebar { position: static; width: 100%; height: auto; padding: 14px 5vw; border-right: 0; border-bottom: 1px solid var(--border); }
+      .brand { margin: 0; }
+      .sidebar .nav-label, .sidebar .nav { display: none; }
+      .section-head { grid-template-columns: 1fr; align-items: start; }
+      .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 680px) {
+      .hero { padding-top: 48px; }
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      .priority { grid-template-columns: 42px minmax(0, 1fr); }
+      .priority span { grid-column: 2; text-align: left; }
+      h1 { letter-spacing: -.6px; }
+    }
+    @media print {
+      .shell { display: block; }
+      .sidebar { display: none; }
+      .hero, section.content { padding: 28px 0; }
+      .container { width: 100%; }
+      .card, .table-wrap, .callout, .message, .priority-list { break-inside: avoid; }
+      body { font-size: 11px; }
+      h1 { font-size: 32px; }
+      h2 { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Document navigation">
+      <div class="brand">
+        <div class="brand-mark">D</div>
+        <div><strong>ধ্রুবক পোর্টাল</strong><span>পরীক্ষা বিভাগ ব্লুপ্রিন্ট</span></div>
+      </div>
+      <div class="nav-label">ব্লুপ্রিন্ট</div>
+      <nav class="nav">
+        <a href="#overview">সারসংক্ষেপ</a>
+        <a href="#lifecycle">পরীক্ষার জীবনচক্র</a>
+        <a href="#audience">শিক্ষার্থী নির্বাচন</a>
+        <a href="#format">CQ + MCQ কাঠামো</a>
+        <a href="#results">বিষয়ভিত্তিক ফলাফল</a>
+        <a href="#entry">নম্বর এন্ট্রি</a>
+        <a href="#merit">মেধাতালিকা</a>
+        <a href="#publication">প্রকাশ ও SMS</a>
+        <a href="#reports">রিপোর্ট</a>
+        <a href="#priority">বাস্তবায়ন ক্রম</a>
+      </nav>
+    </aside>
+
+    <main>
+      <header class="hero" id="overview">
+        <div class="container">
+          <p class="eyebrow">প্রোডাক্ট স্পেসিফিকেশন · ১২ জুলাই ২০২৬</p>
+          <h1>শিক্ষার্থী নির্বাচন থেকে মেধাস্থানসহ ফলাফল—একটি নির্ভরযোগ্য অফলাইন পরীক্ষা ব্যবস্থা</h1>
+          <p class="lead">এই ব্লুপ্রিন্টে ধ্রুবকের বর্তমান শিক্ষক নম্বর এন্ট্রি, মালিকের পর্যালোচনা, অপরিবর্তনীয় প্রকাশনা, সংস্করণভিত্তিক সংশোধন, প্রিন্টযোগ্য রিপোর্ট ও অভিভাবক SMS-এর সঙ্গে নমনীয় ব্যাচ নির্বাচন, CQ + MCQ নম্বর বণ্টন, বিষয়ভিত্তিক ফলাফল এবং স্বয়ংক্রিয় মেধাতালিকা যুক্ত করা হয়েছে।</p>
+          <div class="hero-meta">
+            <span class="tag core">একটি কোচিং সেন্টার</span>
+            <span class="tag">মালিক + শিক্ষক কর্মপ্রবাহ</span>
+            <span class="tag">অফলাইন পরীক্ষা</span>
+            <span class="tag">বাংলা + ইংরেজি</span>
+            <span class="tag">মা + বাবার যোগাযোগ</span>
+          </div>
+        </div>
+      </header>
+
+      <section class="content" id="lifecycle">
+        <div class="container">
+          <div class="section-head">
+            <div><span class="section-number">০১ / জীবনচক্র</span><h2>খসড়া থেকে প্রকাশ—একটি নিয়ন্ত্রিত কর্মপ্রবাহ</h2></div>
+            <p>প্রতিটি ধাপে দায়িত্ব ও অনুমতি পরিষ্কার। শিক্ষক নম্বর প্রস্তুত করবেন; মালিক ফলাফল প্রকাশ ও সংশোধন নিয়ন্ত্রণ করবেন।</p>
+          </div>
+          <div class="flow" aria-label="Exam lifecycle">
+            <div class="flow-step"><span>০১</span><strong>খসড়া</strong></div>
+            <div class="flow-step"><span>০২</span><strong>সময় নির্ধারিত</strong></div>
+            <div class="flow-step"><span>০৩</span><strong>নম্বর এন্ট্রি</strong></div>
+            <div class="flow-step"><span>০৪</span><strong>শিক্ষক জমা দিয়েছেন</strong></div>
+            <div class="flow-step"><span>০৫</span><strong>মালিকের পর্যালোচনা</strong></div>
+            <div class="flow-step"><span>০৬</span><strong>প্রকাশিত</strong></div>
+            <div class="flow-step"><span>০৭</span><strong>সংশোধনের জন্য খোলা</strong></div>
+            <div class="flow-step"><span>০৮</span><strong>পুনঃপ্রকাশ / আর্কাইভ</strong></div>
+          </div>
+          <div class="callout"><strong>প্রকাশনার বিশ্বস্ততা</strong>প্রকাশের সময় শিক্ষার্থীর দৃশ্যমান ফল স্থির হবে, কোর্সভিত্তিক মেধাস্থান গণনা হবে, নতুন প্রকাশনা সংস্করণ তৈরি হবে এবং অভিভাবক SMS কিউ হবে। SMS ব্যর্থ হলেও প্রকাশিত ফলাফল কখনো বাতিল হবে না।</div>
+        </div>
+      </section>
+
+      <section class="content" id="audience">
+        <div class="container">
+          <div class="section-head">
+            <div><span class="section-number">০২ / শিক্ষার্থী নির্বাচন</span><h2>নমনীয় পরীক্ষার্থী নির্বাচন</h2></div>
+            <p>প্রথমে কোর্স নির্বাচন করে, সেই কোর্সের কোন সক্রিয় শিক্ষার্থীরা পরীক্ষার তালিকায় থাকবে তা মালিক নির্ধারণ করবেন।</p>
+          </div>
+          <div class="grid-3">
+            <article class="card">
+              <div class="option-title"><span class="radio"></span><div><h3>একটি ব্যাচ</h3><p>ক্লাস টেস্ট বা নির্দিষ্ট ব্যাচের পরীক্ষার জন্য একটি ব্যাচ নির্বাচন করুন।</p></div></div>
+              <div class="mini-ui"><div class="mini-label">ব্যাচ নির্বাচন করুন</div><div class="fake-input">HSC বিজ্ঞান · ব্যাচ A ▾</div></div>
+            </article>
+            <article class="card recommended">
+              <div class="option-title"><span class="radio"></span><div><h3>একাধিক ব্যাচ</h3><p>একই কোর্সের বাছাই করা একাধিক ব্যাচকে একটি পরীক্ষায় যুক্ত করুন।</p></div></div>
+              <div class="mini-ui check-list"><div class="check">ব্যাচ A</div><div class="check">ব্যাচ C</div><div class="check">সান্ধ্য ব্যাচ</div></div>
+            </article>
+            <article class="card">
+              <div class="option-title"><span class="radio"></span><div><h3>সব ব্যাচ</h3><p>কোর্সের সব সক্রিয় ব্যাচের উপযুক্ত সক্রিয় শিক্ষার্থীকে অন্তর্ভুক্ত করুন।</p></div></div>
+              <div class="mini-ui"><strong>৬টি ব্যাচ · ১৮৪ জন পরীক্ষার্থী</strong><div class="mini-label">তালিকা স্থির করার আগে সরাসরি প্রিভিউ</div></div>
+            </article>
+          </div>
+          <div class="callout warning" style="margin-top:16px"><strong>গুরুত্বপূর্ণ নিয়ম</strong>“সব ব্যাচ” বলতে তালিকা নিশ্চিত করার মুহূর্তে নির্বাচিত কোর্সের সব উপযুক্ত সক্রিয় ভর্তি বোঝাবে। এরপর পরীক্ষার্থীর তালিকা স্থির করতে হবে, যাতে পরবর্তী ভর্তি, ব্যাচ পরিবর্তন বা কোর্স ত্যাগ পরীক্ষাটিকে নীরবে বদলে না দেয়।</div>
+        </div>
+      </section>
+
+      <section class="content" id="format">
+        <div class="container">
+          <div class="section-head">
+            <div><span class="section-number">০৩ / প্রশ্নের ধরন</span><h2>শুধু CQ, শুধু MCQ অথবা উভয়ই</h2></div>
+            <p>প্রশ্নের ধরন ও নম্বর বণ্টন প্রতিটি বিষয়ের জন্য আলাদা হবে, যাতে একটি পরীক্ষায় বিভিন্ন বিষয়ের প্রকৃত কাঠামো রাখা যায়।</p>
+          </div>
+          <div class="grid-3">
+            <article class="card"><div class="number">CQ</div><h3>শুধু সৃজনশীল/লিখিত</h3><p>CQ পূর্ণমান ও পাসের নিয়ম নির্ধারণ করুন। MCQ নম্বরের ঘর দেখানো হবে না।</p></article>
+            <article class="card"><div class="number">MCQ</div><h3>শুধু বহুনির্বাচনী</h3><p>MCQ পূর্ণমান ও পাসের নিয়ম নির্ধারণ করুন। CQ নম্বরের ঘর দেখানো হবে না।</p></article>
+            <article class="card recommended"><div class="number">+</div><h3>CQ + MCQ একসঙ্গে</h3><p>দুই অংশের নম্বর দিন। সিস্টেম যাচাই করবে যে দুই অংশের যোগফল বিষয়ের মোট পূর্ণমানের সমান।</p></article>
+          </div>
+          <div class="table-wrap" style="margin-top:20px">
+            <table>
+              <thead><tr><th>বিষয়</th><th>ধরন</th><th class="score">CQ পূর্ণমান</th><th class="score">MCQ পূর্ণমান</th><th class="score">মোট</th><th class="score">পাস</th><th>অংশভিত্তিক পাসের নিয়ম</th></tr></thead>
+              <tbody>
+                <tr><td>বাংলা</td><td>CQ + MCQ</td><td class="score">৭০</td><td class="score">৩০</td><td class="score">১০০</td><td class="score">৪০</td><td>শুধু মোট নম্বরে</td></tr>
+                <tr><td>ইংরেজি</td><td>CQ</td><td class="score">১০০</td><td class="score">—</td><td class="score">১০০</td><td class="score">৪০</td><td>প্রযোজ্য নয়</td></tr>
+                <tr><td>পদার্থবিজ্ঞান</td><td>CQ + MCQ</td><td class="score">৭৫</td><td class="score">২৫</td><td class="score">১০০</td><td class="score">৪০</td><td>CQ ২৫ + MCQ ৮</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="content" id="results">
+        <div class="container">
+          <div class="section-head">
+            <div><span class="section-number">04 / DATA MODEL</span><h2>Results must be stored subject by subject</h2></div>
+            <p>An exam may include several subjects, so a single combined mark row is insufficient. Each student needs one result record per exam subject.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Subject</th><th>Participation</th><th class="score">CQ</th><th class="score">MCQ</th><th class="score">Total</th><th>Result</th></tr></thead>
+              <tbody>
+                <tr><td>Bangla</td><td>Present</td><td class="score">48/70</td><td class="score">22/30</td><td class="score">70/100</td><td><span class="pill success">Pass</span></td></tr>
+                <tr><td>English</td><td>Present</td><td class="score">62/100</td><td class="score">—</td><td class="score">62/100</td><td><span class="pill success">Pass</span></td></tr>
+                <tr><td>Physics</td><td>Absent</td><td class="score">—</td><td class="score">—</td><td class="score">—</td><td><span class="pill danger">Absent</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="grid-2" style="margin-top:20px">
+            <div class="callout"><strong>Server-calculated summary</strong>Grand total, percentage, overall pass/fail, failed-subject count, and course merit position are derived from validated subject records.</div>
+            <div class="callout warning"><strong>Pass policy must be explicit</strong>Define whether failing or missing one subject fails the whole exam, and whether separate CQ/MCQ component passes are required.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="content" id="entry">
+        <div class="container">
+          <div class="section-head">
+            <div><span class="section-number">05 / MARKS ENTRY</span><h2>A spreadsheet-like workspace for teachers and owners</h2></div>
+            <p>Fast keyboard entry, clear validation, and a deliberate distinction between saving work and submitting it for review.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Student</th><th>Participation</th><th class="score">MCQ / 30</th><th class="score">CQ / 70</th><th class="score">Total</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr><td><strong>STU-001</strong><br><span class="muted">Anik Hasan</span></td><td>Present</td><td class="score">24</td><td class="score">61</td><td class="score">85</td><td><span class="pill success">Complete</span></td></tr>
+                <tr><td><strong>STU-002</strong><br><span class="muted">Rafi Islam</span></td><td>Present</td><td class="score">18</td><td class="score">—</td><td class="score">—</td><td><span class="pill warning">Missing CQ</span></td></tr>
+                <tr><td><strong>STU-003</strong><br><span class="muted">Nabila Noor</span></td><td>Absent</td><td class="score">—</td><td class="score">—</td><td class="score">—</td><td><span class="pill success">Complete</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="grid-4" style="margin-top:20px">
+            <article class="card"><h3>Draft safely</h3><p>Save partial work without marking a student or subject ready for owner review.</p></article>
+            <article class="card"><h3>Enter rapidly</h3><p>Tab, Enter, arrows, sticky student column, search, and incomplete-only filtering.</p></article>
+            <article class="card"><h3>Validate instantly</h3><p>Reject negative marks, excess marks, missing components, and marks for absent students.</p></article>
+            <article class="card"><h3>Import carefully</h3><p>Paste from Excel or import CSV through a preview that identifies every invalid row.</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="content" id="merit">
+        <div class="container">
+          <div class="section-head">
+            <div><span class="section-number">06 / MERIT</span><h2>Dynamic course-based merit list</h2></div>
+            <p>The merit list is calculated automatically from the complete, reviewed result set—but becomes official only when the owner publishes it.</p>
+          </div>
+          <div class="grid-2">
+            <div class="formula">
+              <em>Primary:</em> higher grand total<br>
+              <em>Tie-break 1:</em> higher total CQ/written marks<br>
+              <em>Tie-break 2:</em> higher total MCQ marks<br>
+              <em>Still tied:</em> same merit position
+            </div>
+            <div class="callout warning"><strong>Do not rank by “obtained marks” and “total marks” as separate values</strong>All candidates in one merit scope should be evaluated against the same configured full marks. Ranking uses obtained grand total; percentage is useful when valid candidates can have different totals.</div>
+          </div>
+          <div class="table-wrap" style="margin-top:20px">
+            <table>
+              <thead><tr><th>Position</th><th>Student</th><th>Batch</th><th class="score">Obtained</th><th class="score">Full marks</th><th class="score">Percentage</th><th>Result</th></tr></thead>
+              <tbody>
+                <tr><td><strong>1st</strong></td><td>Nusrat Jahan</td><td>Batch A</td><td class="score">472</td><td class="score">500</td><td class="score">94.4%</td><td><span class="pill success">Pass</span></td></tr>
+                <tr><td><strong>2nd</strong></td><td>Arif Hasan</td><td>Batch C</td><td class="score">458</td><td class="score">500</td><td class="score">91.6%</td><td><span class="pill success">Pass</span></td></tr>
+                <tr><td><strong>3rd</strong></td><td>Samia Rahman</td><td>Batch A</td><td class="score">449</td><td class="score">500</td><td class="score">89.8%</td><td><span class="pill success">Pass</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="muted" style="margin-top:12px">Recommended default: merit is course-wide across the selected audience. Batch filters may be offered for analysis, but should not silently redefine the official course merit position.</p>
+        </div>
+      </section>
+
+      <section class="content" id="publication">
+        <div class="container">
+          <div class="section-head">
+            <div><span class="section-number">07 / PUBLICATION</span><h2>Preview, publish, then notify both guardians safely</h2></div>
+            <p>Publication is an owner-only decision with recipient counts, missing-contact warnings, exact message previews, and permanent version history.</p>
+          </div>
+          <div class="grid-2">
+            <article class="card">
+              <h3>Publication checklist</h3>
+              <div class="check-list" style="margin-top:14px">
+                <div class="check">184 candidates resolved</div>
+                <div class="check">All subject marks complete</div>
+                <div class="check">142 passed · 42 failed</div>
+                <div class="check">Official merit list calculated</div>
+                <div class="check">315 unique guardian recipients</div>
+                <div class="check">7 missing guardian phone numbers flagged</div>
+              </div>
+            </article>
+            <div class="message">
+              <div class="message-header"><strong>SMS preview · English</strong><span>Mother / Father</span></div>
+              <blockquote>Dear Parent, Anik Hasan's result for Monthly Exam: Obtained Marks: 450/500, Result: Pass, Merit Position: 5th.</blockquote>
+            </div>
+          </div>
+          <div class="grid-2" style="margin-top:16px">
+            <div class="message">
+              <div class="message-header"><strong>SMS preview · বাংলা</strong><span>মা / বাবা</span></div>
+              <blockquote lang="bn">প্রিয় অভিভাবক, মাসিক পরীক্ষায় অনিক হাসানের প্রাপ্ত নম্বর ৪৫০/৫০০, ফলাফল: উত্তীর্ণ, মেধাস্থান: ৫ম।</blockquote>
+            </div>
+            <div class="callout"><strong>Guardian recipient policy</strong>Allow Mother, Father, or both according to centre settings. De-duplicate identical numbers, use the student's preferred SMS language, and track delivery separately for each unique recipient.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="content" id="reports">
+        <div class="container">
+          <div class="section-head">
+            <div><span class="section-number">08 / REPORTS</span><h2>Reports for students, teachers, and owners</h2></div>
+            <p>Every report is bilingual, printable, version-labelled, and based on the frozen published snapshot.</p>
+          </div>
+          <div class="grid-3">
+            <article class="card"><h3>Individual result</h3><p>Subject marks, components, grand total, percentage, pass/fail, merit, comments, publication version, and print date.</p></article>
+            <article class="card"><h3>Tabulation sheet</h3><p>A4 landscape view of every candidate and subject, including total, result, and official merit position.</p></article>
+            <article class="card"><h3>Merit list</h3><p>Course-wide official ranking with optional batch filters for internal analysis.</p></article>
+            <article class="card"><h3>Subject analysis</h3><p>Highest, lowest, average, pass percentage, absence count, score distribution, and batch comparison.</p></article>
+            <article class="card"><h3>Student history</h3><p>Results across exams, subject trends, failure history, and attendance shown as context—not a mark adjustment.</p></article>
+            <article class="card"><h3>Correction history</h3><p>Previous and new values, reason, editor, approving owner, publication versions, and corrected-SMS status.</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="content" id="priority">
+        <div class="container">
+          <div class="section-head">
+            <div><span class="section-number">09 / DELIVERY</span><h2>Recommended implementation order</h2></div>
+            <p>Build academic correctness and operational speed before adding broad analytics or unrelated assessment features.</p>
+          </div>
+          <div class="priority-list">
+            <div class="priority"><b>1</b><div><strong>Subject-level result records</strong><p class="muted">The foundation for genuine multi-subject exams.</p></div><span>Foundational</span></div>
+            <div class="priority"><b>2</b><div><strong>Audience modes and frozen candidate roster</strong><p class="muted">Single batch, multiple batches, or all course batches.</p></div><span>Core workflow</span></div>
+            <div class="priority"><b>3</b><div><strong>Per-subject CQ/MCQ rules</strong><p class="muted">Full marks, distribution, pass rules, and validation.</p></div><span>Core workflow</span></div>
+            <div class="priority"><b>4</b><div><strong>Subject and batch teacher assignments</strong><p class="muted">Teachers see and edit only their assigned scope.</p></div><span>Access control</span></div>
+            <div class="priority"><b>5</b><div><strong>Draft and submit marks workflow</strong><p class="muted">Separate incremental saving from review submission.</p></div><span>Reliability</span></div>
+            <div class="priority"><b>6</b><div><strong>Spreadsheet marks entry and import</strong><p class="muted">Keyboard entry, filters, paste, and validated CSV preview.</p></div><span>Efficiency</span></div>
+            <div class="priority"><b>7</b><div><strong>Merit rules and owner validation</strong><p class="muted">Deterministic rankings and a complete review checklist.</p></div><span>Publication</span></div>
+            <div class="priority"><b>8</b><div><strong>Guardian SMS with merit position</strong><p class="muted">Mother/Father recipient rules, deduplication, preview, and delivery logs.</p></div><span>Communication</span></div>
+            <div class="priority"><b>9</b><div><strong>Reports and visible version history</strong><p class="muted">Result cards, tabulation, merit, analysis, and corrections.</p></div><span>Reporting</span></div>
+          </div>
+          <div class="card do-not" style="margin-top:20px">
+            <h3>Keep outside the current scope</h3>
+            <p>Online exams, question banks, AI question generation, subjective-answer auto-grading, predictive performance scoring, public unauthenticated result lookup, and a generic GPA/transcript system.</p>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <div class="container"><strong>Dhrubok Portal · Exam Section Blueprint</strong><span>Offline exams · Bangla and English · Owner-controlled publication</span></div>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

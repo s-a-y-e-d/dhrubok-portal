@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^7.5.16",
+    "@convex-dev/migrations": "^0.3.5",
     "@hookform/resolvers": "^5.4.0",
     "clsx": "^2.1.1",
     "convex": "^1.42.1",

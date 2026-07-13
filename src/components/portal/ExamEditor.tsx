@@ -1,32 +1,209 @@
 "use client";
 
-import { useMutation, useQuery } from "convex/react";
-import { useState, type FormEvent } from "react";
+import { useQuery } from "convex/react";
+import { useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+import { ExamWorkQueue } from "./exams/ExamWorkQueue";
+import { ExamCreateWizard } from "./exams/create/ExamCreateWizard";
+import { MarksWorkspace } from "./exams/marks/MarksWorkspace";
+import { OwnerReviewWorkspace } from "./exams/review/OwnerReviewWorkspace";
 import { PortalPageState } from "./PortalPageState";
 
-type RosterRow = { studentId: Id<"students">; studentNumber?: string; studentName?: string; participation: "present" | "absent"; mcqScoreScaled?: number; writtenScoreScaled?: number; totalScoreScaled?: number; passed?: boolean; entryStatus: string };
-const pagination = { numItems: 100, cursor: null } as const;
-
-function ExamCreateForm({ locale }: { locale: "bn" | "en" }) {
-  const bn = locale === "bn"; const sessions = useQuery(api.academics.sessions.list, { status: "active", paginationOpts: pagination }); const subjects = useQuery(api.academics.subjects.list, { status: "active", paginationOpts: pagination }); const teachers = useQuery(api.academics.teachers.list, { status: "active", paginationOpts: pagination }); const [sessionId, setSessionId] = useState<Id<"academicSessions"> | "">(""); const activeSession = sessionId || sessions?.page[0]?._id || ""; const courses = useQuery(api.academics.courses.list, activeSession ? { academicSessionId: activeSession, status: "active", paginationOpts: pagination } : "skip"); const [courseId, setCourseId] = useState<Id<"courses"> | "">(""); const activeCourse = courseId || courses?.page[0]?._id || ""; const batches = useQuery(api.academics.batches.list, activeCourse ? { courseId: activeCourse, status: "active", paginationOpts: pagination } : "skip"); const create = useMutation(api.exams.functions.create); const [message, setMessage] = useState<string | null>(null); const [busy, setBusy] = useState(false);
-  if (!sessions || !subjects || !teachers) return <PortalPageState state="loading" locale={locale} />;
-  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const form = event.currentTarget; const data = new FormData(form); const mode = data.get("mode") as "mcq" | "written" | "both"; const mcq = Math.round(Number(data.get("mcqFullMarks") || 0) * 100); const written = Math.round(Number(data.get("writtenFullMarks") || 0) * 100); setBusy(true); setMessage(null); try { await create({ courseId: activeCourse as Id<"courses">, nameBn: String(data.get("nameBn")), nameEn: String(data.get("nameEn")), examDate: String(data.get("examDate")), mode, mcqFullMarksScaled: mode === "written" ? undefined : mcq, writtenFullMarksScaled: mode === "mcq" ? undefined : written, totalFullMarksScaled: (mode === "written" ? 0 : mcq) + (mode === "mcq" ? 0 : written), passMarksScaled: Math.round(Number(data.get("passMarks")) * 100), subjectIds: data.getAll("subjectIds").map(String) as Id<"subjects">[], batchIds: data.getAll("batchIds").map(String) as Id<"batches">[], teacherAssignments: data.getAll("teacherIds").map((value) => ({ teacherId: String(value) as Id<"teachers"> })) }); form.reset(); setMessage(bn ? "পরীক্ষা তৈরি হয়েছে।" : "Exam created."); } catch (cause) { setMessage(cause instanceof Error ? cause.message : "Could not create exam"); } finally { setBusy(false); } }
-  return <details className="editor-disclosure"><summary>{bn ? "নতুন পরীক্ষা তৈরি করুন" : "Create a new exam"}</summary><form className="operation-form" onSubmit={(event) => void submit(event)}><fieldset><legend>{bn ? "পরীক্ষার তথ্য" : "Exam details"}</legend><div className="form-grid"><label>{bn ? "সেশন" : "Session"}<select value={activeSession} onChange={(event) => { setSessionId(event.target.value as Id<"academicSessions">); setCourseId(""); }}>{sessions.page.map((session) => <option key={session._id} value={session._id}>{bn ? session.nameBn : session.nameEn}</option>)}</select></label><label>{bn ? "কোর্স" : "Course"}<select value={activeCourse} onChange={(event) => setCourseId(event.target.value as Id<"courses">)}>{courses?.page.map((course) => <option key={course._id} value={course._id}>{bn ? course.nameBn : course.nameEn}</option>)}</select></label><label>বাংলা<input name="nameBn" required /></label><label>English<input name="nameEn" required /></label><label>{bn ? "তারিখ" : "Date"}<input name="examDate" type="date" required /></label><label>{bn ? "ধরন" : "Mode"}<select name="mode" defaultValue="both"><option value="mcq">MCQ</option><option value="written">{bn ? "লিখিত" : "Written"}</option><option value="both">{bn ? "উভয়" : "Both"}</option></select></label><label>MCQ {bn ? "পূর্ণমান" : "full marks"}<input name="mcqFullMarks" type="number" min="0" step="0.01" defaultValue="40" /></label><label>{bn ? "লিখিত পূর্ণমান" : "Written full marks"}<input name="writtenFullMarks" type="number" min="0" step="0.01" defaultValue="60" /></label><label>{bn ? "পাস নম্বর" : "Pass marks"}<input name="passMarks" type="number" min="0" step="0.01" defaultValue="40" required /></label></div></fieldset><fieldset><legend>{bn ? "বিষয়" : "Subjects"}</legend><div className="choice-grid">{subjects.page.map((subject) => <label className="check-row" key={subject._id}><input type="checkbox" name="subjectIds" value={subject._id} /><span>{bn ? subject.nameBn : subject.nameEn}</span></label>)}</div></fieldset><fieldset><legend>{bn ? "ব্যাচ" : "Batches"}</legend><div className="choice-grid">{batches?.page.map((batch) => <label className="check-row" key={batch._id}><input type="checkbox" name="batchIds" value={batch._id} /><span>{bn ? batch.nameBn : batch.nameEn}</span></label>)}</div></fieldset><fieldset><legend>{bn ? "শিক্ষক" : "Teachers"}</legend><div className="choice-grid">{teachers.page.map((teacher) => <label className="check-row" key={teacher._id}><input type="checkbox" name="teacherIds" value={teacher._id} /><span>{teacher.displayName}</span></label>)}</div></fieldset>{message && <p className="form-message error">{message}</p>}<button className="button button-primary" disabled={busy || !activeCourse}>{bn ? "পরীক্ষা তৈরি" : "Create exam"}</button></form></details>;
+function TeacherExamWork({ locale }: { locale: "bn" | "en" }) {
+  const bn = locale === "bn";
+  const assignments = useQuery(api.exams.assignments.myWork, {});
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
+  const requested = useSearchParams()?.get(
+    "assignment",
+  ) as Id<"examTeacherAssignments"> | null;
+  const [selected, setSelected] = useState<Id<"examTeacherAssignments"> | null>(
+    requested,
+  );
+  if (!assignments) return <PortalPageState state="loading" locale={locale} />;
+  const visibleAssignments = assignments.filter((row) => {
+    const matchesStatus = !status || row.assignment.status === status;
+    const term = search.trim().toLocaleLowerCase();
+    const matchesSearch =
+      !term ||
+      row.exam?.nameBn.toLocaleLowerCase().includes(term) ||
+      row.exam?.nameEn.toLocaleLowerCase().includes(term) ||
+      row.batch?.nameBn.toLocaleLowerCase().includes(term) ||
+      row.batch?.nameEn.toLocaleLowerCase().includes(term);
+    return matchesStatus && matchesSearch;
+  });
+  const active = visibleAssignments.some(
+    (row) => row.assignment._id === selected,
+  )
+    ? selected
+    : (visibleAssignments.find(
+        (row) =>
+          row.exam?.status === "marks_entry" || row.exam?.status === "reopened",
+      )?.assignment._id ?? visibleAssignments[0]?.assignment._id);
+  return (
+    <>
+      <header className="portal-page-header">
+        <p className="eyebrow">{bn ? "আমার পরীক্ষার কাজ" : "My exam work"}</p>
+        <h1>
+          {bn ? "বিষয়ভিত্তিক নম্বর এন্ট্রি" : "Subject-level marks entry"}
+        </h1>
+        <p>
+          {bn
+            ? "খসড়া আলাদা করে সংরক্ষণ করুন, তারপর সম্পূর্ণ অ্যাসাইনমেন্ট পর্যালোচনার জন্য জমা দিন।"
+            : "Save drafts separately, then submit the complete assignment for owner review."}
+        </p>
+      </header>
+      <div className="master-detail">
+        <section>
+          <div className="marks-toolbar">
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              aria-label={bn ? "পরীক্ষার কাজ খুঁজুন" : "Search exam work"}
+              placeholder={bn ? "পরীক্ষা বা ব্যাচ" : "Exam or batch"}
+            />
+            <select
+              value={status}
+              onChange={(event) => setStatus(event.target.value)}
+              aria-label={bn ? "কাজের অবস্থা" : "Work status"}
+            >
+              <option value="">{bn ? "সব কাজ" : "All work"}</option>
+              <option value="pending">
+                {bn ? "শুরু হয়নি" : "Not started"}
+              </option>
+              <option value="in_progress">
+                {bn ? "খসড়া চলছে" : "Draft in progress"}
+              </option>
+              <option value="submitted">
+                {bn ? "জমা হয়েছে" : "Submitted"}
+              </option>
+              <option value="returned">{bn ? "ফেরত এসেছে" : "Returned"}</option>
+            </select>
+          </div>
+          <div className="selection-list">
+            {visibleAssignments.map((row) => (
+              <button
+                key={row.assignment._id}
+                className={active === row.assignment._id ? "selected" : ""}
+                onClick={() => setSelected(row.assignment._id)}
+              >
+                <strong>
+                  {row.exam ? (bn ? row.exam.nameBn : row.exam.nameEn) : "—"}
+                </strong>
+                <span>
+                  {row.batch
+                    ? bn
+                      ? row.batch.nameBn
+                      : row.batch.nameEn
+                    : bn
+                      ? "সব ফ্রোজেন ব্যাচ"
+                      : "All frozen batches"}{" "}
+                  · {row.assignment.status ?? "pending"}
+                </span>
+              </button>
+            ))}
+            {!visibleAssignments.length && (
+              <p className="empty-panel">
+                {bn
+                  ? "এই ফিল্টারে কোনো কাজ নেই।"
+                  : "No work matches these filters."}
+              </p>
+            )}
+          </div>
+        </section>
+        <section>
+          {active ? (
+            <MarksWorkspace locale={locale} assignmentId={active} />
+          ) : (
+            <p className="empty-panel">
+              {bn ? "কোনো অ্যাসাইনমেন্ট নেই।" : "No exam assignments."}
+            </p>
+          )}
+        </section>
+      </div>
+    </>
+  );
 }
 
-function MarksRow({ locale, examId, row }: { locale: "bn" | "en"; examId: Id<"exams">; row: RosterRow }) {
-  const bn = locale === "bn"; const save = useMutation(api.exams.functions.saveResult); const ready = useMutation(api.exams.functions.markResultReady); const [busy, setBusy] = useState(false); const [message, setMessage] = useState<string | null>(null);
-  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const data = new FormData(event.currentTarget); const absent = data.get("participation") === "absent"; setBusy(true); setMessage(null); try { await save({ examId, studentId: row.studentId, participation: absent ? "absent" : "present", mcqScoreScaled: absent || data.get("mcq") === "" ? undefined : Math.round(Number(data.get("mcq")) * 100), writtenScoreScaled: absent || data.get("written") === "" ? undefined : Math.round(Number(data.get("written")) * 100), teacherCommentBn: String(data.get("commentBn") || "") || undefined, teacherCommentEn: String(data.get("commentEn") || "") || undefined }); await ready({ examId, studentId: row.studentId }); setMessage(bn ? "পর্যালোচনার জন্য প্রস্তুত" : "Ready for review"); } catch (cause) { setMessage(cause instanceof Error ? cause.message : "Could not save marks"); } finally { setBusy(false); } }
-  return <form className="marks-row" onSubmit={(event) => void submit(event)}><div><strong>{row.studentName || row.studentId}</strong><span>{row.studentNumber || row.studentId}</span></div><select name="participation" defaultValue={row.participation}><option value="present">{bn ? "উপস্থিত" : "Present"}</option><option value="absent">{bn ? "অনুপস্থিত" : "Absent"}</option></select><input name="mcq" type="number" min="0" step="0.01" defaultValue={row.mcqScoreScaled === undefined ? "" : row.mcqScoreScaled / 100} placeholder="MCQ" /><input name="written" type="number" min="0" step="0.01" defaultValue={row.writtenScoreScaled === undefined ? "" : row.writtenScoreScaled / 100} placeholder={bn ? "লিখিত" : "Written"} /><input name="commentBn" placeholder="মন্তব্য" /><input name="commentEn" placeholder="Comment" /><button className="button button-secondary" disabled={busy}>{bn ? "সংরক্ষণ" : "Save"}</button><small>{message || row.entryStatus}</small></form>;
-}
-
-export function ExamEditor({ locale, role }: { locale: "bn" | "en"; role: "owner" | "teacher" }) {
-  const bn = locale === "bn"; const exams = useQuery(api.exams.functions.listManaged, {}); const [selected, setSelected] = useState<Id<"exams"> | "">(""); const teacherRoster = useQuery(api.exams.functions.teacherRoster, role === "teacher" && selected ? { examId: selected } : "skip"); const ownerReview = useQuery(api.exams.functions.ownerReview, role === "owner" && selected ? { examId: selected } : "skip");
-  const submitReview = useMutation(api.exams.functions.submitForOwnerReview); const publish = useMutation(api.exams.functions.publish); const reopen = useMutation(api.exams.functions.reopen); const [busy, setBusy] = useState(false); const [feedback, setFeedback] = useState<string | null>(null); const [confirmation, setConfirmation] = useState<"publish" | "reopen" | null>(null);
-  if (!exams) return <PortalPageState state="loading" locale={locale} />; const selectedExam = exams.find((exam) => exam.examId === selected);
-  async function execute(work: () => Promise<unknown>) { setBusy(true); setFeedback(null); try { await work(); setFeedback(bn ? "পরীক্ষা আপডেট হয়েছে।" : "Exam updated."); return true; } catch (cause) { setFeedback(cause instanceof Error ? cause.message : "Operation failed"); return false; } finally { setBusy(false); } }
-  const rows = role === "teacher" ? teacherRoster as RosterRow[] | undefined : ownerReview?.results as RosterRow[] | undefined;
-  return <><header className="portal-page-header"><p className="eyebrow">{bn ? "অফলাইন পরীক্ষা" : "Offline exams"}</p><h1>{role === "teacher" ? (bn ? "নম্বর এন্ট্রি" : "Marks entry") : (bn ? "ফল পর্যালোচনা ও প্রকাশ" : "Review and publish results")}</h1><p>{bn ? "নম্বর সার্ভার গণনা করে; মেধাস্থান শুধু প্রকাশের সময় লেখা হয়।" : "Totals are computed by the server; merit is written only at publication."}</p></header>{role === "owner" && <ExamCreateForm locale={locale} />}<div className="master-detail"><section><div className="selection-list">{exams.map((exam) => <button key={exam.examId} className={selected === exam.examId ? "selected" : ""} onClick={() => { setSelected(exam.examId); setFeedback(null); setConfirmation(null); }}><strong>{bn ? exam.nameBn : exam.nameEn}</strong><span>{exam.examNumber} · {exam.examDate} · {exam.status}{exam.publicationVersion ? ` · v${exam.publicationVersion}` : ""}</span></button>)}</div>{exams.length === 0 && <p className="empty-panel">{bn ? "কোনো পরীক্ষা নেই।" : "No exams available."}</p>}</section><section>{selected && rows === undefined ? <PortalPageState state="loading" locale={locale} /> : selectedExam && rows ? <><div className="detail-title"><div><p className="eyebrow">{selectedExam.examNumber}</p><h2>{bn ? selectedExam.nameBn : selectedExam.nameEn}</h2></div><span className="status-pill queued">{selectedExam.status}</span></div>{feedback && <p className="form-message error">{feedback}</p>}{role === "teacher" ? <div className="marks-grid">{rows.map((row) => <MarksRow key={row.studentId} locale={locale} examId={selectedExam.examId} row={row} />)}</div> : <><div className="table-wrap"><table><thead><tr><th>{bn ? "শিক্ষার্থী" : "Student"}</th><th>{bn ? "অংশগ্রহণ" : "Participation"}</th><th>MCQ</th><th>{bn ? "লিখিত" : "Written"}</th><th>{bn ? "মোট" : "Total"}</th><th>{bn ? "অবস্থা" : "Status"}</th></tr></thead><tbody>{rows.map((row) => <tr key={row.studentId}><td>{row.studentId}</td><td>{row.participation}</td><td>{row.mcqScoreScaled === undefined ? "—" : row.mcqScoreScaled / 100}</td><td>{row.writtenScoreScaled === undefined ? "—" : row.writtenScoreScaled / 100}</td><td>{row.totalScoreScaled === undefined ? "—" : row.totalScoreScaled / 100}</td><td>{row.entryStatus}</td></tr>)}</tbody></table></div><div className="form-actions exam-actions">{selectedExam.status === "marks_entry" || selectedExam.status === "reopened" ? <button className="button button-secondary" disabled={busy} onClick={() => void execute(() => submitReview({ examId: selectedExam.examId }))}>{bn ? "পর্যালোচনার জন্য প্রস্তুত" : "Submit for review"}</button> : null}{selectedExam.status === "ready_for_review" && <button className="button button-primary" disabled={busy} aria-expanded={confirmation === "publish"} onClick={() => setConfirmation("publish")}>{bn ? "ফল প্রকাশ" : "Publish results"}</button>}{selectedExam.status === "published" && <button className="button button-danger" disabled={busy} aria-expanded={confirmation === "reopen"} onClick={() => setConfirmation("reopen")}>{bn ? "সংশোধনের জন্য খুলুন" : "Reopen for correction"}</button>}</div>{confirmation === "publish" && <section className="operation-form compact-form" role="alertdialog" aria-labelledby="publish-results-title" aria-describedby="publish-results-warning"><h3 id="publish-results-title">{bn ? "ফল প্রকাশ নিশ্চিত করুন" : "Confirm result publication"}</h3><p id="publish-results-warning" className="form-message error">{bn ? "ফল, পাস/ফেল এবং কোর্সভিত্তিক মেধাস্থান প্রকাশিত হবে। শিক্ষার্থীদের জন্য ফল স্থির হবে এবং অভিভাবক SMS ইভেন্ট কিউ হবে।" : "Results, pass/fail, and course merit positions will be published. Student results will be frozen and guardian SMS events will be queued."}</p><p>{bn ? "শিক্ষার্থী" : "Students"}: <strong>{rows.length}</strong></p><div className="form-actions"><button className="button button-secondary" type="button" disabled={busy} onClick={() => setConfirmation(null)}>{bn ? "বাতিল" : "Cancel"}</button><button className="button button-primary" type="button" disabled={busy} onClick={() => { void execute(() => publish({ examId: selectedExam.examId })).then((ok) => { if (ok) setConfirmation(null); }); }}>{bn ? "ফল ও SMS প্রকাশ করুন" : "Publish results and SMS"}</button></div></section>}{confirmation === "reopen" && <form className="operation-form compact-form" role="alertdialog" aria-labelledby="reopen-results-title" onSubmit={(event) => { event.preventDefault(); const reason = String(new FormData(event.currentTarget).get("reason")).trim(); void execute(() => reopen({ examId: selectedExam.examId, reason })).then((ok) => { if (ok) setConfirmation(null); }); }}><fieldset><legend id="reopen-results-title">{bn ? "সংশোধনের জন্য পুনরায় খুলুন" : "Reopen results for correction"}</legend><p className="form-message error">{bn ? "প্রকাশিত ফল সংশোধনের জন্য খুলবে। কারণটি অডিট রেকর্ডে স্থায়ীভাবে সংরক্ষিত হবে এবং পুনরায় প্রকাশে নতুন সংস্করণ তৈরি হবে।" : "Published results will reopen for correction. The reason is permanently retained in the audit record, and republishing creates a new version."}</p><label>{bn ? "পুনরায় খোলার কারণ" : "Reason for reopening"}<textarea name="reason" required rows={3} /></label><div className="form-actions"><button className="button button-secondary" type="button" disabled={busy} onClick={() => setConfirmation(null)}>{bn ? "বাতিল" : "Cancel"}</button><button className="button button-danger" disabled={busy}>{bn ? "ফল পুনরায় খুলুন" : "Reopen results"}</button></div></fieldset></form>}</>}</> : <p className="empty-panel">{bn ? "একটি পরীক্ষা নির্বাচন করুন।" : "Select an exam."}</p>}</section></div></>;
+export function ExamEditor({
+  locale,
+  role,
+}: {
+  locale: "bn" | "en";
+  role: "owner" | "teacher";
+}) {
+  const bn = locale === "bn";
+  const requested = useSearchParams()?.get("exam") as Id<"exams"> | null;
+  const [selected, setSelected] = useState<Id<"exams"> | undefined>(
+    requested ?? undefined,
+  );
+  const detail = useQuery(
+    api.exams.exams.detail,
+    selected ? { examId: selected } : "skip",
+  );
+  if (role === "teacher") return <TeacherExamWork locale={locale} />;
+  return (
+    <>
+      <header className="portal-page-header">
+        <p className="eyebrow">{bn ? "অফলাইন পরীক্ষা" : "Offline exams"}</p>
+        <h1>
+          {bn
+            ? "পরীক্ষা, পর্যালোচনা ও প্রকাশনা"
+            : "Exams, review, and publication"}
+        </h1>
+        <p>
+          {bn
+            ? "প্রার্থী তালিকা ফ্রিজ করুন, বিষয়ভিত্তিক অগ্রগতি দেখুন এবং যাচাইকৃত সংস্করণ প্রকাশ করুন।"
+            : "Freeze the audience, monitor subject-level progress, and publish a validated version."}
+        </p>
+      </header>
+      <details className="editor-disclosure">
+        <summary>
+          {bn ? "পাঁচ ধাপে পরীক্ষা তৈরি করুন" : "Create an exam in five steps"}
+        </summary>
+        <ExamCreateWizard locale={locale} onCreated={setSelected} />
+      </details>
+      <div className="master-detail">
+        <ExamWorkQueue
+          locale={locale}
+          selected={selected}
+          onSelect={setSelected}
+        />
+        <section>
+          {selected && detail === undefined ? (
+            <PortalPageState state="loading" locale={locale} />
+          ) : detail?.exam.modelVersion === 2 ? (
+            <>
+              <div className="detail-title">
+                <div>
+                  <p className="eyebrow">{detail.exam.examNumber}</p>
+                  <h2>{bn ? detail.exam.nameBn : detail.exam.nameEn}</h2>
+                </div>
+                <span className="status-pill queued">{detail.exam.status}</span>
+              </div>
+              <OwnerReviewWorkspace locale={locale} examId={detail.exam._id} />
+            </>
+          ) : detail ? (
+            <section className="warning-panel">
+              <strong>
+                {bn ? "পুরোনো সম্মিলিত ফল" : "Legacy combined result"}
+              </strong>
+              <p>
+                {bn
+                  ? "ঐতিহাসিক ফল অপরিবর্তিত রাখা হয়েছে। রিপোর্ট থেকে প্রকাশিত সংস্করণ দেখা ও প্রিন্ট করা যাবে।"
+                  : "Historical values are preserved unchanged. Use Reports to view and print the published version."}
+              </p>
+            </section>
+          ) : (
+            <p className="empty-panel">
+              {bn ? "একটি পরীক্ষা নির্বাচন করুন।" : "Select an exam."}
+            </p>
+          )}
+        </section>
+      </div>
+    </>
+  );
 }

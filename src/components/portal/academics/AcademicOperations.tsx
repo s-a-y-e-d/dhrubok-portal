@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { PortalPageState } from "../PortalPageState";
@@ -34,15 +34,15 @@ export function AcademicOperations({
 
   const courseSubjects = useQuery(
     api.academics.courses.listSubjects,
-    batch ? { courseId: batch.courseId } : "skip"
+    batch ? { courseId: batch.courseId } : "skip",
   );
   const activeAssignments = useQuery(
     api.academics.assignments.listForBatch,
-    batchId ? { batchId, status: "active", paginationOpts: pageLimit } : "skip"
+    batchId ? { batchId, status: "active", paginationOpts: pageLimit } : "skip",
   );
   const activeSchedules = useQuery(
     api.academics.schedules.listForBatch,
-    batchId ? { batchId, status: "active", paginationOpts: pageLimit } : "skip"
+    batchId ? { batchId, status: "active", paginationOpts: pageLimit } : "skip",
   );
 
   // Mutations
@@ -69,25 +69,27 @@ export function AcademicOperations({
   }
 
   // Map subjects for friendly labels
-  const subjectMap = useMemo(() => {
-    return new Map(workspace.subjects.map((s) => [s.subjectId, s]));
-  }, [workspace.subjects]);
-
-  const teacherMap = useMemo(() => {
-    return new Map(workspace.teachers.map((t) => [t.teacherId, t]));
-  }, [workspace.teachers]);
+  const subjectMap = new Map(workspace.subjects.map((s) => [s.subjectId, s]));
+  const teacherMap = new Map(workspace.teachers.map((t) => [t.teacherId, t]));
 
   // Compute available subjects to link (active subjects not already linked to the course)
-  const linkedSubjectIds = new Set(courseSubjects?.map((s) => s.subjectId) ?? []);
-  const availableSubjects = workspace.subjects.filter((s) => !linkedSubjectIds.has(s.subjectId));
+  const linkedSubjectIds = new Set(
+    courseSubjects?.map((s) => s.subjectId) ?? [],
+  );
+  const availableSubjects = workspace.subjects.filter(
+    (s) => !linkedSubjectIds.has(s.subjectId),
+  );
 
-  const runMutationAction = (work: () => Promise<unknown>, form?: HTMLFormElement) => {
+  const runMutationAction = (
+    work: () => Promise<unknown>,
+    form?: HTMLFormElement,
+  ) => {
     void executeMutation(
       work,
       setBusy,
       setFeedback,
       bn ? "একাডেমিক রেকর্ড আপডেট হয়েছে।" : "Academic record updated.",
-      bn
+      bn,
     ).then((ok) => {
       if (ok) {
         form?.reset();
@@ -99,7 +101,10 @@ export function AcademicOperations({
     if (!batch) return;
     const subjectId = String(data.get("subjectId")) as Id<"subjects">;
     const sortOrder = Number(data.get("sortOrder"));
-    runMutationAction(() => addSubject({ courseId: batch.courseId, subjectId, sortOrder }), form);
+    runMutationAction(
+      () => addSubject({ courseId: batch.courseId, subjectId, sortOrder }),
+      form,
+    );
   };
 
   const handleUnlinkSubject = (courseSubjectId: Id<"courseSubjects">) => {
@@ -122,8 +127,9 @@ export function AcademicOperations({
     const endsOn = String(data.get("endsOn")) || undefined;
 
     runMutationAction(
-      () => createAssignment({ batchId, teacherId, subjectId, startsOn, endsOn }),
-      form
+      () =>
+        createAssignment({ batchId, teacherId, subjectId, startsOn, endsOn }),
+      form,
     );
   };
 
@@ -133,8 +139,10 @@ export function AcademicOperations({
     const subjVal = String(data.get("subjectId"));
     const subjectId = subjVal ? (subjVal as Id<"subjects">) : undefined;
     const weekday = Number(data.get("weekday"));
-    const startMinutes = Number(data.get("startHour")) * 60 + Number(data.get("startMinute"));
-    const endMinutes = Number(data.get("endHour")) * 60 + Number(data.get("endMinute"));
+    const startMinutes =
+      Number(data.get("startHour")) * 60 + Number(data.get("startMinute"));
+    const endMinutes =
+      Number(data.get("endHour")) * 60 + Number(data.get("endMinute"));
     const roomBn = String(data.get("roomBn")) || undefined;
     const roomEn = String(data.get("roomEn")) || undefined;
     const effectiveFrom = String(data.get("effectiveFrom"));
@@ -154,7 +162,7 @@ export function AcademicOperations({
           effectiveFrom,
           effectiveUntil,
         }),
-      form
+      form,
     );
   };
 
@@ -167,7 +175,7 @@ export function AcademicOperations({
 
     runMutationAction(
       () => createClass({ batchId, teacherId, sessionDate, startsAt, endsAt }),
-      form
+      form,
     );
   };
 
@@ -184,9 +192,12 @@ export function AcademicOperations({
                 className={isSelected ? "selected" : ""}
                 onClick={() => onSelectBatchId(isSelected ? null : b.batchId)}
               >
-                <strong style={{ fontSize: "14px" }}>{bn ? b.nameBn : b.nameEn}</strong>
+                <strong style={{ fontSize: "14px" }}>
+                  {bn ? b.nameBn : b.nameEn}
+                </strong>
                 <span style={{ fontSize: "11px", color: "var(--ink-mute)" }}>
-                  {workspace.courses.find((c) => c.courseId === b.courseId)?.nameEn ?? ""}
+                  {workspace.courses.find((c) => c.courseId === b.courseId)
+                    ?.nameEn ?? ""}
                 </span>
               </button>
             );
@@ -199,29 +210,64 @@ export function AcademicOperations({
         {batch && batchId ? (
           <div>
             <header style={{ marginBottom: "20px" }}>
-              <span className="eyebrow">{bn ? "ব্যাচ অপারেশনস" : "Batch Operations"}</span>
-              <h2 style={{ margin: "4px 0 8px", fontSize: "24px", fontWeight: 600 }}>
+              <span className="eyebrow">
+                {bn ? "ব্যাচ অপারেশনস" : "Batch Operations"}
+              </span>
+              <h2
+                style={{
+                  margin: "4px 0 8px",
+                  fontSize: "24px",
+                  fontWeight: 600,
+                }}
+              >
                 {bn ? batch.nameBn : batch.nameEn}
               </h2>
-              <p style={{ margin: 0, color: "var(--ink-mute)", fontSize: "13px" }}>
-                {bn ? "কোর্স:" : "Course:"} {workspace.courses.find((c) => c.courseId === batch.courseId)?.nameEn ?? ""}
+              <p
+                style={{
+                  margin: 0,
+                  color: "var(--ink-mute)",
+                  fontSize: "13px",
+                }}
+              >
+                {bn ? "কোর্স:" : "Course:"}{" "}
+                {workspace.courses.find((c) => c.courseId === batch.courseId)
+                  ?.nameEn ?? ""}
               </p>
             </header>
 
             <FeedbackMessage value={feedback} />
 
             {/* Scoped Course Subjects */}
-            <section className="section" style={{ paddingBlock: "24px", marginTop: "16px" }}>
-              <div className="section-heading" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <section
+              className="section"
+              style={{ paddingBlock: "24px", marginTop: "16px" }}
+            >
+              <div
+                className="section-heading"
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
                 <h3 style={{ fontSize: "16px", fontWeight: 600, margin: 0 }}>
-                  {bn ? "কোর্সের বিষয় তালিকা" : "Subjects in this batch's course"}
+                  {bn
+                    ? "কোর্সের বিষয় তালিকা"
+                    : "Subjects in this batch's course"}
                 </h3>
               </div>
               {!courseSubjects ? (
-                <p style={{ fontSize: "13px", color: "var(--ink-mute)" }}>{bn ? "লোড হচ্ছে..." : "Loading subjects..."}</p>
+                <p style={{ fontSize: "13px", color: "var(--ink-mute)" }}>
+                  {bn ? "লোড হচ্ছে..." : "Loading subjects..."}
+                </p>
               ) : courseSubjects.length === 0 ? (
-                <p className="empty-panel" style={{ padding: "16px", fontSize: "13px" }}>
-                  {bn ? "কোনো বিষয় যুক্ত নেই।" : "No subjects linked to this course."}
+                <p
+                  className="empty-panel"
+                  style={{ padding: "16px", fontSize: "13px" }}
+                >
+                  {bn
+                    ? "কোনো বিষয় যুক্ত নেই।"
+                    : "No subjects linked to this course."}
                 </p>
               ) : (
                 <div className="table-wrap" style={{ marginTop: "12px" }}>
@@ -239,12 +285,18 @@ export function AcademicOperations({
                         return (
                           <tr key={cs._id}>
                             <td>{subj?.code ?? "—"}</td>
-                            <td>{subj ? (bn ? subj.nameBn : subj.nameEn) : "—"}</td>
+                            <td>
+                              {subj ? (bn ? subj.nameBn : subj.nameEn) : "—"}
+                            </td>
                             <td>
                               <button
                                 className="button button-secondary"
                                 type="button"
-                                style={{ minHeight: "32px", padding: "4px 10px", fontSize: "12px" }}
+                                style={{
+                                  minHeight: "32px",
+                                  padding: "4px 10px",
+                                  fontSize: "12px",
+                                }}
                                 onClick={() => handleUnlinkSubject(cs._id)}
                               >
                                 {bn ? "অপসারণ" : "Unlink"}
@@ -261,14 +313,29 @@ export function AcademicOperations({
 
             {/* Active Assignments */}
             <section className="section" style={{ paddingBlock: "24px" }}>
-              <h3 style={{ fontSize: "16px", fontWeight: 600, margin: "0 0 12px" }}>
-                {bn ? "সক্রিয় শিক্ষক অ্যাসাইনমেন্ট" : "Active Teacher Assignments"}
+              <h3
+                style={{
+                  fontSize: "16px",
+                  fontWeight: 600,
+                  margin: "0 0 12px",
+                }}
+              >
+                {bn
+                  ? "সক্রিয় শিক্ষক অ্যাসাইনমেন্ট"
+                  : "Active Teacher Assignments"}
               </h3>
               {!activeAssignments ? (
-                <p style={{ fontSize: "13px", color: "var(--ink-mute)" }}>{bn ? "লোড হচ্ছে..." : "Loading assignments..."}</p>
+                <p style={{ fontSize: "13px", color: "var(--ink-mute)" }}>
+                  {bn ? "লোড হচ্ছে..." : "Loading assignments..."}
+                </p>
               ) : activeAssignments.page.length === 0 ? (
-                <p className="empty-panel" style={{ padding: "16px", fontSize: "13px" }}>
-                  {bn ? "কোনো শিক্ষক অ্যাসাইনমেন্ট নেই।" : "No active teacher assignments."}
+                <p
+                  className="empty-panel"
+                  style={{ padding: "16px", fontSize: "13px" }}
+                >
+                  {bn
+                    ? "কোনো শিক্ষক অ্যাসাইনমেন্ট নেই।"
+                    : "No active teacher assignments."}
                 </p>
               ) : (
                 <div className="table-wrap">
@@ -284,27 +351,45 @@ export function AcademicOperations({
                     <tbody>
                       {activeAssignments.page.map((row) => {
                         const tInfo = teacherMap.get(row.teacherId);
-                        const sInfo = row.subjectId ? subjectMap.get(row.subjectId) : null;
+                        const sInfo = row.subjectId
+                          ? subjectMap.get(row.subjectId)
+                          : null;
                         return (
                           <tr key={row._id}>
                             <td>{tInfo?.displayName ?? row.teacherId}</td>
-                            <td>{sInfo ? (bn ? sInfo.nameBn : sInfo.nameEn) : (bn ? "সব বিষয়" : "All subjects")}</td>
+                            <td>
+                              {sInfo
+                                ? bn
+                                  ? sInfo.nameBn
+                                  : sInfo.nameEn
+                                : bn
+                                  ? "সব বিষয়"
+                                  : "All subjects"}
+                            </td>
                             <td>{row.startsOn}</td>
                             <td>
                               <button
                                 className="button button-secondary"
                                 type="button"
-                                style={{ minHeight: "32px", padding: "4px 10px", fontSize: "12px" }}
+                                style={{
+                                  minHeight: "32px",
+                                  padding: "4px 10px",
+                                  fontSize: "12px",
+                                }}
                                 onClick={() =>
                                   setConfirmation({
-                                    title: bn ? "অ্যাসাইনমেন্ট শেষ করতে চান?" : "End assignment?",
+                                    title: bn
+                                      ? "অ্যাসাইনমেন্ট শেষ করতে চান?"
+                                      : "End assignment?",
                                     detail: bn
                                       ? "অ্যাসাইনমেন্টটি আজ শেষ করা হবে। এর সক্রিয় রুটিন থাকলে আগে তা বাতিল করতে হবে।"
                                       : "This teacher assignment will be marked as ended today. Any active weekly routines must be cancelled first.",
                                     work: () =>
                                       endAssignment({
                                         assignmentId: row._id,
-                                        endsOn: new Date().toISOString().slice(0, 10),
+                                        endsOn: new Date()
+                                          .toISOString()
+                                          .slice(0, 10),
                                       }),
                                   })
                                 }
@@ -323,13 +408,24 @@ export function AcademicOperations({
 
             {/* Active Routines */}
             <section className="section" style={{ paddingBlock: "24px" }}>
-              <h3 style={{ fontSize: "16px", fontWeight: 600, margin: "0 0 12px" }}>
+              <h3
+                style={{
+                  fontSize: "16px",
+                  fontWeight: 600,
+                  margin: "0 0 12px",
+                }}
+              >
                 {bn ? "সক্রিয় রুটিন" : "Active Weekly Routines"}
               </h3>
               {!activeSchedules ? (
-                <p style={{ fontSize: "13px", color: "var(--ink-mute)" }}>{bn ? "লোড হচ্ছে..." : "Loading schedules..."}</p>
+                <p style={{ fontSize: "13px", color: "var(--ink-mute)" }}>
+                  {bn ? "লোড হচ্ছে..." : "Loading schedules..."}
+                </p>
               ) : activeSchedules.page.length === 0 ? (
-                <p className="empty-panel" style={{ padding: "16px", fontSize: "13px" }}>
+                <p
+                  className="empty-panel"
+                  style={{ padding: "16px", fontSize: "13px" }}
+                >
                   {bn ? "কোনো সক্রিয় রুটিন নেই।" : "No active weekly routines."}
                 </p>
               ) : (
@@ -346,31 +442,82 @@ export function AcademicOperations({
                     </thead>
                     <tbody>
                       {activeSchedules.page.map((row) => {
-                        const sInfo = row.subjectId ? subjectMap.get(row.subjectId) : null;
-                        const dayNamesBn = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার", "শুক্রবার", "শনিবার"];
-                        const dayNamesEn = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-                        const start = `${Math.floor(row.startMinutes / 60).toString().padStart(2, "0")}:${(row.startMinutes % 60).toString().padStart(2, "0")}`;
-                        const end = `${Math.floor(row.endMinutes / 60).toString().padStart(2, "0")}:${(row.endMinutes % 60).toString().padStart(2, "0")}`;
+                        const sInfo = row.subjectId
+                          ? subjectMap.get(row.subjectId)
+                          : null;
+                        const dayNamesBn = [
+                          "রবিবার",
+                          "সোমবার",
+                          "মঙ্গলবার",
+                          "বুধবার",
+                          "বৃহস্পতিবার",
+                          "শুক্রবার",
+                          "শনিবার",
+                        ];
+                        const dayNamesEn = [
+                          "Sunday",
+                          "Monday",
+                          "Tuesday",
+                          "Wednesday",
+                          "Thursday",
+                          "Friday",
+                          "Saturday",
+                        ];
+                        const start = `${Math.floor(row.startMinutes / 60)
+                          .toString()
+                          .padStart(
+                            2,
+                            "0",
+                          )}:${(row.startMinutes % 60).toString().padStart(2, "0")}`;
+                        const end = `${Math.floor(row.endMinutes / 60)
+                          .toString()
+                          .padStart(
+                            2,
+                            "0",
+                          )}:${(row.endMinutes % 60).toString().padStart(2, "0")}`;
 
                         return (
                           <tr key={row._id}>
-                            <td>{bn ? dayNamesBn[row.weekday] : dayNamesEn[row.weekday]}</td>
-                            <td>{sInfo ? (bn ? sInfo.nameBn : sInfo.nameEn) : (bn ? "সব বিষয়" : "All subjects")}</td>
-                            <td>{start} – {end}</td>
-                            <td>{bn ? (row.roomBn ?? "—") : (row.roomEn ?? "—")}</td>
+                            <td>
+                              {bn
+                                ? dayNamesBn[row.weekday]
+                                : dayNamesEn[row.weekday]}
+                            </td>
+                            <td>
+                              {sInfo
+                                ? bn
+                                  ? sInfo.nameBn
+                                  : sInfo.nameEn
+                                : bn
+                                  ? "সব বিষয়"
+                                  : "All subjects"}
+                            </td>
+                            <td>
+                              {start} – {end}
+                            </td>
+                            <td>
+                              {bn ? (row.roomBn ?? "—") : (row.roomEn ?? "—")}
+                            </td>
                             <td>
                               <button
                                 className="button button-secondary"
                                 type="button"
-                                style={{ minHeight: "32px", padding: "4px 10px", fontSize: "12px" }}
+                                style={{
+                                  minHeight: "32px",
+                                  padding: "4px 10px",
+                                  fontSize: "12px",
+                                }}
                                 onClick={() =>
                                   setConfirmation({
-                                    title: bn ? "রুটিন বাতিল করতে চান?" : "Cancel weekly routine?",
+                                    title: bn
+                                      ? "রুটিন বাতিল করতে চান?"
+                                      : "Cancel weekly routine?",
                                     detail: bn
                                       ? "এই সাপ্তাহিক রুটিনটি আজ থেকে আর সক্রিয় থাকবে না।"
                                       : "This weekly schedule will be cancelled and will no longer take effect.",
                                     danger: true,
-                                    work: () => cancelSchedule({ scheduleId: row._id }),
+                                    work: () =>
+                                      cancelSchedule({ scheduleId: row._id }),
                                   })
                                 }
                               >
@@ -387,14 +534,28 @@ export function AcademicOperations({
             </section>
 
             {/* Collapsible Forms Grid */}
-            <div className="editor-grid" style={{ gridTemplateColumns: "1fr", gap: "16px", marginTop: "24px" }}>
+            <div
+              className="editor-grid"
+              style={{
+                gridTemplateColumns: "1fr",
+                gap: "16px",
+                marginTop: "24px",
+              }}
+            >
               <details className="editor-disclosure">
-                <summary>{bn ? "কোর্সে বিষয় যুক্ত করুন" : "Link subject to course"}</summary>
-                <AcademicForm title={bn ? "কোর্সে বিষয় সংযোগ" : "Subject Association"} onSubmit={handleLinkSubject}>
+                <summary>
+                  {bn ? "কোর্সে বিষয় যুক্ত করুন" : "Link subject to course"}
+                </summary>
+                <AcademicForm
+                  title={bn ? "কোর্সে বিষয় সংযোগ" : "Subject Association"}
+                  onSubmit={handleLinkSubject}
+                >
                   <label>
                     {bn ? "বিষয়" : "Subject"}
                     <select name="subjectId" required defaultValue="">
-                      <option value="" disabled>—</option>
+                      <option value="" disabled>
+                        —
+                      </option>
                       {availableSubjects.map((row) => (
                         <option key={row.subjectId} value={row.subjectId}>
                           {bn ? row.nameBn : row.nameEn}
@@ -404,7 +565,13 @@ export function AcademicOperations({
                   </label>
                   <label>
                     {bn ? "ক্রম" : "Sort Order"}
-                    <input name="sortOrder" type="number" min={0} defaultValue={0} required />
+                    <input
+                      name="sortOrder"
+                      type="number"
+                      min={0}
+                      defaultValue={0}
+                      required
+                    />
                   </label>
                   <button className="button button-primary" disabled={busy}>
                     {bn ? "সংযোগ করুন" : "Link Subject"}
@@ -413,12 +580,19 @@ export function AcademicOperations({
               </details>
 
               <details className="editor-disclosure">
-                <summary>{bn ? "শিক্ষক অ্যাসাইন করুন" : "Assign teacher"}</summary>
-                <AcademicForm title={bn ? "নতুন অ্যাসাইনমেন্ট" : "New Assignment"} onSubmit={handleAssignTeacher}>
+                <summary>
+                  {bn ? "শিক্ষক অ্যাসাইন করুন" : "Assign teacher"}
+                </summary>
+                <AcademicForm
+                  title={bn ? "নতুন অ্যাসাইনমেন্ট" : "New Assignment"}
+                  onSubmit={handleAssignTeacher}
+                >
                   <label>
                     {bn ? "শিক্ষক" : "Teacher"}
                     <select name="teacherId" required defaultValue="">
-                      <option value="" disabled>—</option>
+                      <option value="" disabled>
+                        —
+                      </option>
                       {workspace.teachers.map((row) => (
                         <option key={row.teacherId} value={row.teacherId}>
                           {row.displayName}
@@ -429,7 +603,9 @@ export function AcademicOperations({
                   <label>
                     {bn ? "বিষয়" : "Subject"}
                     <select name="subjectId" defaultValue="">
-                      <option value="">{bn ? "সব বিষয় (জেনারেল)" : "All subjects"}</option>
+                      <option value="">
+                        {bn ? "সব বিষয় (জেনারেল)" : "All subjects"}
+                      </option>
                       {courseSubjects?.map((cs) => {
                         const s = subjectMap.get(cs.subjectId);
                         return s ? (
@@ -457,12 +633,19 @@ export function AcademicOperations({
               </details>
 
               <details className="editor-disclosure">
-                <summary>{bn ? "সাপ্তাহিক রুটিন যোগ করুন" : "Add weekly routine"}</summary>
-                <AcademicForm title={bn ? "রুটিন শিডিউল" : "Routine Schedule"} onSubmit={handleAddRoutine}>
+                <summary>
+                  {bn ? "সাপ্তাহিক রুটিন যোগ করুন" : "Add weekly routine"}
+                </summary>
+                <AcademicForm
+                  title={bn ? "রুটিন শিডিউল" : "Routine Schedule"}
+                  onSubmit={handleAddRoutine}
+                >
                   <label>
                     {bn ? "শিক্ষক" : "Teacher"}
                     <select name="teacherId" required defaultValue="">
-                      <option value="" disabled>—</option>
+                      <option value="" disabled>
+                        —
+                      </option>
                       {workspace.teachers.map((row) => (
                         <option key={row.teacherId} value={row.teacherId}>
                           {row.displayName}
@@ -473,7 +656,9 @@ export function AcademicOperations({
                   <label>
                     {bn ? "বিষয়" : "Subject"}
                     <select name="subjectId" defaultValue="">
-                      <option value="">{bn ? "সব বিষয়" : "All subjects"}</option>
+                      <option value="">
+                        {bn ? "সব বিষয়" : "All subjects"}
+                      </option>
                       {courseSubjects?.map((cs) => {
                         const s = subjectMap.get(cs.subjectId);
                         return s ? (
@@ -487,27 +672,63 @@ export function AcademicOperations({
                   <label>
                     {bn ? "বার" : "Weekday"}
                     <select name="weekday" defaultValue="0">
-                      {["রবি / Sun", "সোম / Mon", "মঙ্গল / Tue", "বুধ / Wed", "বৃহঃ / Thu", "শুক্র / Fri", "শনি / Sat"].map((label, index) => (
-                        <option value={index} key={label}>{label}</option>
+                      {[
+                        "রবি / Sun",
+                        "সোম / Mon",
+                        "মঙ্গল / Tue",
+                        "বুধ / Wed",
+                        "বৃহঃ / Thu",
+                        "শুক্র / Fri",
+                        "শনি / Sat",
+                      ].map((label, index) => (
+                        <option value={index} key={label}>
+                          {label}
+                        </option>
                       ))}
                     </select>
                   </label>
                   <div className="form-grid">
                     <label>
                       {bn ? "শুরুর ঘণ্টা (0-23)" : "Start Hour (0-23)"}
-                      <input name="startHour" type="number" min={0} max={23} required />
+                      <input
+                        name="startHour"
+                        type="number"
+                        min={0}
+                        max={23}
+                        required
+                      />
                     </label>
                     <label>
                       {bn ? "মিনিট" : "Minute"}
-                      <input name="startMinute" type="number" min={0} max={59} defaultValue={0} required />
+                      <input
+                        name="startMinute"
+                        type="number"
+                        min={0}
+                        max={59}
+                        defaultValue={0}
+                        required
+                      />
                     </label>
                     <label>
                       {bn ? "শেষের ঘণ্টা" : "End Hour"}
-                      <input name="endHour" type="number" min={0} max={23} required />
+                      <input
+                        name="endHour"
+                        type="number"
+                        min={0}
+                        max={23}
+                        required
+                      />
                     </label>
                     <label>
                       {bn ? "মিনিট" : "Minute"}
-                      <input name="endMinute" type="number" min={0} max={59} defaultValue={0} required />
+                      <input
+                        name="endMinute"
+                        type="number"
+                        min={0}
+                        max={59}
+                        defaultValue={0}
+                        required
+                      />
                     </label>
                   </div>
                   <div className="form-grid">
@@ -535,12 +756,19 @@ export function AcademicOperations({
               </details>
 
               <details className="editor-disclosure">
-                <summary>{bn ? "ক্লাস সেশন তৈরি করুন" : "Create class session"}</summary>
-                <AcademicForm title={bn ? "ক্লাস সেশন তৈরি" : "Class Session Creation"} onSubmit={handleCreateClassSession}>
+                <summary>
+                  {bn ? "ক্লাস সেশন তৈরি করুন" : "Create class session"}
+                </summary>
+                <AcademicForm
+                  title={bn ? "ক্লাস সেশন তৈরি" : "Class Session Creation"}
+                  onSubmit={handleCreateClassSession}
+                >
                   <label>
                     {bn ? "শিক্ষক" : "Teacher"}
                     <select name="teacherId" required defaultValue="">
-                      <option value="" disabled>—</option>
+                      <option value="" disabled>
+                        —
+                      </option>
                       {workspace.teachers.map((row) => (
                         <option key={row.teacherId} value={row.teacherId}>
                           {row.displayName}
@@ -580,7 +808,11 @@ export function AcademicOperations({
               alignContent: "center",
             }}
           >
-            <p>{bn ? "যেকোনো অপারেশনের জন্য বাম পাশের তালিকা থেকে একটি ব্যাচ নির্বাচন করুন।" : "Select a batch from the list on the left to manage routines, assignments, and class sessions."}</p>
+            <p>
+              {bn
+                ? "যেকোনো অপারেশনের জন্য বাম পাশের তালিকা থেকে একটি ব্যাচ নির্বাচন করুন।"
+                : "Select a batch from the list on the left to manage routines, assignments, and class sessions."}
+            </p>
           </div>
         )}
       </section>

@@ -2,10 +2,11 @@
 
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { PortalPageState } from "./PortalPageState";
+import { useSearchParams } from "next/navigation";
 
 const localDate = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka", year: "numeric", month: "2-digit", day: "2-digit" }).format(Date.now());
 type Status = "present" | "late" | "absent";
@@ -23,7 +24,20 @@ function RosterForm({ locale, roster }: { locale: "bn" | "en"; roster: Roster })
 }
 
 export function AttendanceEditor({ locale }: { locale: "bn" | "en" }) {
-  const bn = locale === "bn"; const sessions = useQuery(api.attendance.functions.listMySessions, { sessionDate: localDate() }); const [selected, setSelected] = useState<Id<"classSessions"> | "">(""); const roster = useQuery(api.attendance.functions.getRoster, selected ? { sessionId: selected } : "skip");
+  const bn = locale === "bn";
+  const searchParams = useSearchParams();
+  const paramSessionId = searchParams?.get("session") || "";
+  const sessions = useQuery(api.attendance.functions.listMySessions, { sessionDate: localDate() });
+  const [selected, setSelected] = useState<Id<"classSessions"> | "">("");
+  const roster = useQuery(api.attendance.functions.getRoster, selected ? { sessionId: selected } : "skip");
+
+  useEffect(() => {
+    if (!sessions) return;
+    const matchingSession = sessions.find((session) => session.sessionId === paramSessionId);
+    const timeoutId = setTimeout(() => setSelected(matchingSession?.sessionId ?? ""), 0);
+    return () => clearTimeout(timeoutId);
+  }, [sessions, paramSessionId]);
+
   if (!sessions) return <PortalPageState state="loading" locale={locale} />;
   return <><header className="portal-page-header"><p className="eyebrow">{bn ? "আজ" : "Today"}</p><h1>{bn ? "উপস্থিতি রোস্টার" : "Attendance roster"}</h1><p>{bn ? "সবাইকে উপস্থিত চিহ্নিত করে শুধু ব্যতিক্রমগুলো পরিবর্তন করুন।" : "Start with everyone present, then change only exceptions."}</p></header><div className="master-detail"><section><div className="selection-list">{sessions.map((session) => <button key={session.sessionId} className={selected === session.sessionId ? "selected" : ""} onClick={() => setSelected(session.sessionId)}><strong>{new Date(session.startsAt).toLocaleTimeString()}</strong><span>{session.sessionDate} · {session.rosterCount} {bn ? "শিক্ষার্থী" : "students"} · {session.status}</span></button>)}</div>{sessions.length === 0 && <p className="empty-panel">{bn ? "আজ কোনো সেশন নেই।" : "No sessions today."}</p>}</section><section>{selected && roster === undefined ? <PortalPageState state="loading" locale={locale} /> : roster ? <RosterForm key={roster.session.sessionId} locale={locale} roster={roster} /> : <p className="empty-panel">{bn ? "একটি সেশন নির্বাচন করুন।" : "Select a session."}</p>}</section></div></>;
 }

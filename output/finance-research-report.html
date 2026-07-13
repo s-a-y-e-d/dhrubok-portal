@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Dhrubok Portal — Finance Research & Product Recommendations</title>
+  <style>
+    :root{--brand:#3ecf8e;--brand-deep:#24b47e;--ink:#171717;--muted:#737373;--line:#e5e5e5;--soft:#fafafa;--success:#15803d;--warning:#b45309;--danger:#b91c1c;--info:#1d4ed8;--radius:8px}
+    *{box-sizing:border-box} body{margin:0;background:#fff;color:var(--ink);font:14px/1.65 Inter,"Noto Sans Bengali",system-ui,sans-serif} a{color:var(--info)}
+    .wrap{max-width:1120px;margin:auto;padding:48px 28px 80px}.eyebrow{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--brand-deep)}
+    h1{font-size:42px;line-height:1.15;letter-spacing:-1px;margin:8px 0 16px;max-width:850px}h2{font-size:24px;margin:48px 0 16px}h3{font-size:16px;margin:0 0 8px}p{max-width:850px}.lead{font-size:17px;color:#404040}.meta{color:var(--muted);margin-top:20px}
+    .verdict{border-left:5px solid var(--brand);background:#ecfdf5;padding:20px 24px;margin:32px 0;border-radius:0 var(--radius) var(--radius) 0;font-size:16px}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.card{border:1px solid var(--line);border-radius:var(--radius);padding:20px;background:#fff}.card p{margin-bottom:0;color:#404040}.score{font:600 30px/1 ui-monospace,Consolas,monospace;margin:12px 0}.good{color:var(--success)}.warn{color:var(--warning)}.bad{color:var(--danger)}
+    table{width:100%;border-collapse:collapse;margin:16px 0 28px}th,td{text-align:left;vertical-align:top;padding:12px;border-bottom:1px solid var(--line)}th{font-size:12px;color:var(--muted);background:var(--soft)}td.money{font-family:ui-monospace,Consolas,monospace;text-align:right}.tag{display:inline-block;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;background:#f5f5f5}.p0{background:#fee2e2;color:var(--danger)}.p1{background:#fef3c7;color:var(--warning)}.p2{background:#dbeafe;color:var(--info)}
+    .roadmap{counter-reset:item;display:grid;gap:14px}.step{display:grid;grid-template-columns:48px 1fr;gap:16px;border:1px solid var(--line);border-radius:var(--radius);padding:18px}.step:before{counter-increment:item;content:counter(item);display:grid;place-items:center;width:40px;height:40px;background:var(--ink);color:white;border-radius:6px;font-weight:600}.step p{margin:3px 0;color:#404040}
+    .note{background:#fffbeb;border:1px solid #fef3c7;padding:16px;border-radius:var(--radius)}code{font-family:ui-monospace,Consolas,monospace;background:#f5f5f5;padding:1px 5px;border-radius:4px}.sources li{margin:9px 0}
+    @media(max-width:760px){.wrap{padding:28px 16px}h1{font-size:32px}.grid{grid-template-columns:1fr}.table-scroll{overflow-x:auto}table{min-width:720px}.step{grid-template-columns:40px 1fr}}
+    @media print{.wrap{max-width:none;padding:12mm}a{color:inherit;text-decoration:none}.card,.step,table{break-inside:avoid}h2{break-after:avoid}}
+  </style>
+</head>
+<body><main class="wrap">
+  <header><div class="eyebrow">Product research · 12 July 2026</div><h1>Make finance a daily operating system, not just a payment form</h1><p class="lead">A repo-grounded review of Dhrubok Portal’s finance module, compared with current education-management products in Bangladesh and internationally.</p><p class="meta">Scope: one coaching centre, manual/offline collection, Bangla-first bilingual UI, no payment gateway, owners only for finance.</p></header>
+  <div class="verdict"><strong>Executive verdict:</strong> the accounting core is unusually sound for this product stage. Dhrubok already protects history, allocates payments to charges, supports partials and advances, generates monthly dues idempotently, reconciles balances, produces receipts, and queues SMS. The largest opportunity is not more ledger machinery—it is a faster cashier workflow plus clearer collection control.</div>
+
+  <h2>1. What exists today</h2>
+  <div class="grid">
+    <article class="card"><h3>Transaction integrity</h3><div class="score good">Strong</div><p>Integer minor units, posted/voided history, reversal of allocations, audit events, owner-only reconciliation, and exactly-once-oriented generation keys.</p></article>
+    <article class="card"><h3>Billing flexibility</h3><div class="score good">Good</div><p>Fee plans, recurring and one-off charge types, discounts, custom charges, configurable due day, partial allocation, and advance credit.</p></article>
+    <article class="card"><h3>Front-desk usability</h3><div class="score warn">Basic</div><p>The owner selects one student, manually enters an amount and one allocation, then works through separate blocks. It lacks a unified cashier queue and guided allocation preview.</p></article>
+    <article class="card"><h3>Collections control</h3><div class="score warn">Basic</div><p>Overdue preview and bulk SMS exist, but there is no ageing segmentation, reminder history/suppression, promise-to-pay tracking, or collector worklist.</p></article>
+    <article class="card"><h3>Reporting</h3><div class="score warn">Moderate</div><p>Daily totals, payment methods, student statements and dues are present. Cash close, collector variance, ageing cohorts, concession analysis, and export workflows are missing.</p></article>
+    <article class="card"><h3>Local fit</h3><div class="score good">Strong</div><p>Cash, bKash, Nagad, bank, cheque and other methods; guardian SMS; bilingual receipts; Asia/Dhaka due logic; and an intentionally manual-payment model.</p></article>
+  </div>
+
+  <h2>2. What comparable products emphasize</h2>
+  <div class="table-scroll"><table><thead><tr><th>Pattern</th><th>Seen elsewhere</th><th>Dhrubok position</th><th>Decision</th></tr></thead><tbody>
+    <tr><td>Flexible fee heads, discounts, advance payments</td><td>Fedena and Teachmint advertise master fee particulars, discounts, installments and advance application.</td><td>Core support already exists.</td><td><strong>Polish the UI</strong>, do not rebuild the model.</td></tr>
+    <tr><td>Defaulter lists and parent reminders</td><td>Fedena, Teachmint, Elmify and local ASTGD all foreground dues plus SMS reminders.</td><td>Overdue preview and bulk queue exist.</td><td>Add ageing, targeting, preview, suppression and campaign outcomes.</td></tr>
+    <tr><td>Financial arrangements/installment plans</td><td>Classter treats individualized arrangements and bulk agreement changes as first-class.</td><td>A fee plan can be assigned and an agreed monthly amount exists, but exceptions are not an owner workflow.</td><td>Add a student fee agreement with effective dates and an audit trail.</td></tr>
+    <tr><td>Cash-flow and period comparison</td><td>Classter highlights real-time balances/forecasting; Fedena highlights period and payment-mode reports.</td><td>Daily and method reports exist, but no forecast or ageing movement.</td><td>Add receivable ageing, expected-this-month, collected-vs-target and trend views.</td></tr>
+    <tr><td>Refund/revert and controlled access</td><td>Fedena exposes privileged refund/revert and role-limited finance access.</td><td>Voids are sound; true partial refunds and cashier-level permissions are absent.</td><td>Add refund records later; introduce finance permissions before adding staff cashiers.</td></tr>
+    <tr><td>Spreadsheet import/export</td><td>Classter supports payment spreadsheet import; Fedena offers fee/data exports and accounting integrations.</td><td>No clear operational import/export flow.</td><td>Start with CSV export, then guarded payment import with dry-run validation.</td></tr>
+    <tr><td>Income and expense accounting</td><td>Bangladesh products commonly advertise “accounts & expense”; Fedena expands into full finance.</td><td>Product scope explicitly excludes a general ledger.</td><td><strong>Do not turn Dhrubok into accounting software.</strong> Offer collection exports and a small expense log only if owners prove the need.</td></tr>
+  </tbody></table></div>
+
+  <h2>3. Recommended product changes</h2>
+  <div class="table-scroll"><table><thead><tr><th>Priority</th><th>Change</th><th>Why it matters</th><th>Acceptance signal</th></tr></thead><tbody>
+    <tr><td><span class="tag p0">P0</span></td><td><strong>Cashier workspace</strong>: global student search, balance snapshot, overdue-first charge list, editable multi-allocation, amount tendered, payment method/reference, confirmation summary, receipt/SMS result.</td><td>Turns the most frequent task into one linear, phone-ready flow and reduces allocation mistakes.</td><td>A trained owner records a normal payment and prints a receipt in under 45 seconds.</td></tr>
+    <tr><td><span class="tag p0">P0</span></td><td><strong>Finance dashboard</strong>: today collected, month collected, expected this month, outstanding, overdue, advance credit, payment-method split, recent voids, failed payment SMS.</td><td>Owners need to know “what needs attention now” before drilling into records.</td><td>Every metric links to the filtered underlying records and reconciles exactly.</td></tr>
+    <tr><td><span class="tag p0">P0</span></td><td><strong>Ageing and collection worklist</strong>: current, 1–15, 16–30, 31–60, 61–90, 90+ days; filter by course/batch; rank by amount and age.</td><td>A single overdue total hides collection risk and gives no calling order.</td><td>Owners can produce a targeted list and see the amount/student count in each bucket.</td></tr>
+    <tr><td><span class="tag p1">P1</span></td><td><strong>Safer reminder campaigns</strong>: recipient selection, template preview, Bangla segment/cost estimate, last-reminded date, duplicate suppression, delivery summary and retry.</td><td>“Queue all” is fast but blunt, costly, and easy to repeat accidentally.</td><td>No student receives the same campaign twice; owners see queued/delivered/failed counts.</td></tr>
+    <tr><td><span class="tag p1">P1</span></td><td><strong>Student fee agreement</strong>: plan, negotiated amount, discounts/waivers, installment schedule, effective period, reason and approver.</td><td>Special arrangements otherwise become undocumented notes and later disputes.</td><td>A statement explains every difference from the standard fee plan.</td></tr>
+    <tr><td><span class="tag p1">P1</span></td><td><strong>Cash closing and reconciliation</strong>: opening float, cash collected, non-cash totals, voids/refunds, expected drawer cash, counted cash, variance, closer and timestamp.</td><td>Transaction reconciliation does not prove the physical cash drawer matches the system.</td><td>Each day can be closed once, variances require a reason, and owners can reopen only with audit.</td></tr>
+    <tr><td><span class="tag p1">P1</span></td><td><strong>Explicit adjustment documents</strong>: waiver, credit note, partial/full refund and write-off—never negative ad-hoc charges or edited history.</td><td>Each correction has different financial meaning and reporting treatment.</td><td>Original records remain unchanged and statements show the linked adjustment clearly.</td></tr>
+    <tr><td><span class="tag p2">P2</span></td><td><strong>Exports and guarded imports</strong>: CSV statements, collection register, outstanding list, payment methods; later a preview-first spreadsheet payment import.</td><td>Supports accountant handoff, backup and migration without building a general ledger.</td><td>Exports match UI totals; imports show row-level errors and are idempotent.</td></tr>
+    <tr><td><span class="tag p2">P2</span></td><td><strong>Promise-to-pay and follow-up notes</strong>.</td><td>Lets owners distinguish temporarily delayed families from chronic overdue accounts.</td><td>Promise dates appear in the worklist and missed promises are filterable.</td></tr>
+  </tbody></table></div>
+
+  <h2>4. Proposed owner information architecture</h2>
+  <div class="grid">
+    <article class="card"><h3>Overview</h3><p>Collection health, alerts, targets, ageing and recent activity.</p></article>
+    <article class="card"><h3>Collect payment</h3><p>Search-first cashier workflow with multi-allocation and receipt completion.</p></article>
+    <article class="card"><h3>Dues & follow-up</h3><p>Ageing worklist, reminder campaigns, promises and communication history.</p></article>
+    <article class="card"><h3>Charges & agreements</h3><p>Fee plans, student arrangements, concessions, waivers and bulk billing.</p></article>
+    <article class="card"><h3>Payments & adjustments</h3><p>Posted payments, voids, refunds, credits, references and audit detail.</p></article>
+    <article class="card"><h3>Reports & closing</h3><p>Daily register, cash close, methods, ageing, discounts and exports.</p></article>
+  </div>
+
+  <h2>5. Delivery roadmap</h2>
+  <div class="roadmap">
+    <section class="step"><div><h3>Make collection excellent</h3><p>Build the cashier workspace on the existing finance mutations. Add multi-allocation preview, financial summary, explicit confirmation, printable completion state, search shortcuts and focused tests.</p></div></section>
+    <section class="step"><div><h3>Make receivables actionable</h3><p>Add ageing calculations and indexed reporting, dashboard drill-downs, filtered reminder campaigns, deduplication and delivery outcomes.</p></div></section>
+    <section class="step"><div><h3>Make exceptions explainable</h3><p>Formalize fee agreements, waivers/credits/refunds, effective dates, reasons, approval and statement rendering.</p></div></section>
+    <section class="step"><div><h3>Make the desk auditable</h3><p>Add daily cash close, collector identity, drawer variance, exports and reconciliation alerts.</p></div></section>
+  </div>
+
+  <h2>6. Guardrails</h2>
+  <div class="note"><strong>Keep these boundaries:</strong> no payment gateway unless strategy changes; no teacher finance access; no floating-point storage; no editing/deleting posted transactions; no SMS failure rollback; no full general ledger; no colour-only status; and no finance dashboard metric that cannot drill down to its source records.</div>
+
+  <h2>7. Suggested success metrics</h2>
+  <ul><li>Median time to record a payment and reach receipt: &lt;45 seconds.</li><li>Payments needing later void/re-entry: &lt;0.5%.</li><li>Daily close variance: tracked and resolved before the next close.</li><li>Overdue amount and students by ageing bucket, measured monthly.</li><li>Reminder delivery rate and collection within 3/7 days of reminder.</li><li>100% reconciliation between charge balances, allocations, payments and student summaries.</li></ul>
+
+  <h2>Sources</h2>
+  <p>Market pages describe vendor capabilities, not independently verified product quality. They were used to identify recurring workflow patterns.</p>
+  <ol class="sources">
+    <li><a href="https://fedena.com/feature-tour/school-fees-management-system">Fedena — School Fees Management System</a>: fee structures, receipts, advance payments, defaulters, reminders, reports, discounts, fines, refunds and permissions.</li>
+    <li><a href="https://www.classter.com/product/modules/billing-and-payments/">Classter — Billing & Payments</a>: arrangements/installments, flexible pricing, mass billing, imports, cash-flow reporting and forecasting.</li>
+    <li><a href="https://blog.teachmint.com/features-of-school-fees-management-system/">Teachmint — Features of a School Fees Management System</a>: installments, discounts/fines, transaction filters, receipt customization and fee reports.</li>
+    <li><a href="https://astgd.com/coaching-center-management">ASTGD — Coaching Center Management, Bangladesh</a>: local positioning around fee collection, dues, SMS, expenses and analytics.</li>
+    <li><a href="https://elmify.app/">Elmify — Bangladesh School & Madrasa Management</a>: local bilingual positioning, online/offline collection, invoices and due tracking.</li>
+  </ol>
+  <p class="meta">Repo evidence reviewed: <code>AGENTS.md</code>, <code>DESIGN.md</code>, <code>IMPLEMENTATION_PLAN.md</code>, <code>convex/schema.ts</code>, <code>convex/finance/*</code>, finance tests, owner finance UI, student finance/statement UI, receipt routes and finance reports.</p>
+</main></body></html>

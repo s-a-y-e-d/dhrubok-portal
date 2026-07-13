@@ -119,6 +119,8 @@ export function normalizeSubmission(input: {
   guardianPhone: string;
   guardianRelationship: string;
   alternateGuardianPhone?: string;
+  motherName?: string;
+  motherPhone?: string;
   applicantNote?: string;
 }) {
   const studentEmail = requiredText(input.studentEmail, "Student Google email", 254);
@@ -140,6 +142,8 @@ export function normalizeSubmission(input: {
     normalizedGuardianPhone: normalizeBangladeshPhone(guardianPhone),
     guardianRelationship: requiredText(input.guardianRelationship, "Guardian relationship", 80),
     alternateGuardianPhone: normalizedOptionalPhone(input.alternateGuardianPhone),
+    motherName: optionalText(input.motherName, "Mother name", 120),
+    motherPhone: normalizedOptionalPhone(input.motherPhone),
     applicantNote: optionalText(input.applicantNote, "Applicant note", 1000),
   };
 }

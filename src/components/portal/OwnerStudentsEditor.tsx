@@ -1,17 +1,21 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { Search } from "lucide-react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { PortalPageState } from "./PortalPageState";
 import styles from "./portal.module.css";
+import { useSearchParams } from "next/navigation";
 
 const page = { numItems: 100, cursor: null } as const;
 
 export function OwnerStudentsEditor({ locale }: { locale: "bn" | "en" }) {
   const bn = locale === "bn";
+  const searchParams = useSearchParams();
+  const paramStudentId = searchParams?.get("student") || "";
+
   const students = useQuery(api.students.owner.listStudents, { status: "active", paginationOpts: page });
   const requests = useQuery(api.students.owner.listChangeRequests, { status: "pending", paginationOpts: page });
   const [selectedId, setSelectedId] = useState<Id<"students"> | null>(null);
@@ -21,6 +25,13 @@ export function OwnerStudentsEditor({ locale }: { locale: "bn" | "en" }) {
   const review = useMutation(api.students.owner.reviewChangeRequest);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!students) return;
+    const matchingStudent = students.page.find((student) => student.studentId === paramStudentId);
+    const timeoutId = setTimeout(() => setSelectedId(matchingStudent?.studentId ?? null), 0);
+    return () => clearTimeout(timeoutId);
+  }, [students, paramStudentId]);
 
   if (!students || !requests) return <PortalPageState state="loading" locale={locale} />;
 
@@ -55,6 +66,9 @@ export function OwnerStudentsEditor({ locale }: { locale: "bn" | "en" }) {
         guardianPhone: String(data.get("guardianPhone")),
         guardianRelationship: String(data.get("guardianRelationship")),
         alternateGuardianPhone: String(data.get("alternateGuardianPhone") || "") || null,
+        motherName: String(data.get("motherName")),
+        motherPhone: String(data.get("motherPhone")),
+        smsRecipient: data.get("smsRecipient") === "mother" ? "mother" : data.get("smsRecipient") === "both" ? "both" : "father",
         preferredSmsLocale: data.get("preferredSmsLocale") === "en" ? "en" : "bn",
         status: data.get("status") as "active" | "paused" | "completed" | "left" | "archived",
         internalNote: String(data.get("internalNote") || "") || null,
@@ -131,7 +145,7 @@ export function OwnerStudentsEditor({ locale }: { locale: "bn" | "en" }) {
       <div className="master-detail">
         <section>
           <h2>{bn ? "সক্রিয় শিক্ষার্থী" : "Active students"}</h2>
-          
+
           <div className={styles.studentSearchContainer}>
             <Search className={styles.studentSearchIcon} aria-hidden="true" />
             <input
@@ -220,24 +234,27 @@ export function OwnerStudentsEditor({ locale }: { locale: "bn" | "en" }) {
                 {/* Guardian Details */}
                 <div className={styles.premiumFormSection}>
                   <h3 className={styles.premiumFormSectionTitle}>
-                    {bn ? "অভিভাবকের বিবরণ" : "Guardian Details"}
+                    {bn ? "বাবা ও মায়ের বিবরণ" : "Father and Mother Details"}
                   </h3>
                   <div className="form-grid">
                     <label>
-                      {bn ? "অভিভাবকের নাম" : "Guardian name"}
+                      {bn ? "বাবার নাম" : "Father's name"}
                       <input name="guardianName" defaultValue={selected.guardianName} required />
                     </label>
                     <label>
-                      {bn ? "সম্পর্ক" : "Relationship"}
-                      <input name="guardianRelationship" defaultValue={selected.guardianRelationship} required />
+                      <input name="guardianRelationship" type="hidden" value="father" />
                     </label>
                     <label>
-                      {bn ? "অভিভাবকের ফোন" : "Guardian phone"}
+                      {bn ? "বাবার ফোন" : "Father's phone"}
                       <input name="guardianPhone" defaultValue={selected.guardianPhone} required />
                     </label>
                     <label>
-                      {bn ? "বিকল্প ফোন" : "Alternate phone"}
-                      <input name="alternateGuardianPhone" defaultValue={selected.alternateGuardianPhone ?? ""} />
+                      {bn ? "মায়ের নাম" : "Mother's name"}
+                      <input name="motherName" defaultValue={selected.motherName ?? ""} required />
+                    </label>
+                    <label>
+                      {bn ? "মায়ের ফোন" : "Mother's phone"}
+                      <input name="motherPhone" defaultValue={selected.motherPhone ?? ""} required />
                     </label>
                   </div>
                 </div>
@@ -248,6 +265,14 @@ export function OwnerStudentsEditor({ locale }: { locale: "bn" | "en" }) {
                     {bn ? "পোর্টাল ও SMS সেটিংস" : "Portal Settings"}
                   </h3>
                   <div className="form-grid">
+                    <label>
+                      {bn ? "SMS প্রাপক" : "SMS recipient"}
+                      <select name="smsRecipient" defaultValue={selected.smsRecipient}>
+                        <option value="father">{bn ? "বাবা" : "Father"}</option>
+                        <option value="mother">{bn ? "মা" : "Mother"}</option>
+                        <option value="both">{bn ? "বাবা ও মা দুজনই" : "Both father and mother"}</option>
+                      </select>
+                    </label>
                     <label>
                       {bn ? "SMS ভাষা" : "SMS locale"}
                       <select name="preferredSmsLocale" defaultValue={selected.preferredSmsLocale}>

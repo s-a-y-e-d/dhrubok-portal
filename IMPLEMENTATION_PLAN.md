@@ -71,20 +71,19 @@ The existing plan.md and product-structure.html are historical references. This 
 ### 2.5 Exam rules
 
 - Exams happen offline; the product does not deliver online exams or question papers.
-- An exam belongs to a course and may include students from one or more batches in that course.
-- An exam may reference multiple subjects, but each student receives one combined result.
-- Exam modes are MCQ, CQ/written, or both.
-- For MCQ-only exams, an MCQ score is entered.
-- For written-only exams, a written score is entered.
-- For combined exams, MCQ and written scores are entered separately and summed by the backend.
-- Each exam has full marks and pass marks. Combined component full marks must sum to total full marks.
-- Passing is based on the combined total unless this rule is deliberately changed later.
-- Teachers enter draft marks for assigned exams.
+- An exam belongs to one course and targets one batch, selected batches, or all eligible active batches in that course.
+- The candidate roster is previewed and frozen before marks entry; later enrolment changes do not alter the exam.
+- An exam may include multiple subjects, and every student receives a separate result for each included subject.
+- Each subject independently supports MCQ, CQ/written, or both, with its own component full marks, total full marks, overall pass mark, and optional component pass requirements.
+- Teachers enter and save draft marks only for assigned subject and batch scopes, then explicitly submit complete assignments for owner review.
 - Owners review and publish results.
-- Merit position is calculated across the course population included in the exam, not independently per batch.
+- Official merit position is calculated within the frozen exam candidate cohort: batch merit for a single-batch exam, selected-batches merit for a selected-batch exam, and course merit only when all course batches are included.
+- Multi-batch exams may additionally publish a secondary position within each student's own batch.
 - Equal total scores receive the same competition rank: 1, 2, 2, 4.
-- Published SMS messages include total marks, full marks, pass/fail, and course-based merit position.
+- Published SMS messages include total marks, full marks, pass/fail, and an unambiguous official merit scope/position/population, plus optional batch merit.
 - Draft or partially entered results never appear to students or guardians.
+
+The authoritative implementation and migration specification for the expanded exam model is [`EXAM_SECTION_IMPLEMENTATION_PLAN.md`](EXAM_SECTION_IMPLEMENTATION_PLAN.md).
 
 ### 2.6 Messaging rules
 
@@ -1007,6 +1006,8 @@ Indexes:
 All finance mutations update source records and the summary within the same transaction. Add reconciliation tests and an owner-only reconciliation query to detect drift.
 
 ### 9.6 Exams and results
+
+> **Expanded model:** This section records the original combined-result baseline. The target subject-level schema, frozen candidate roster, audience-scoped merit fields, migration compatibility rules, UX architecture, and delivery phases are defined in [`EXAM_SECTION_IMPLEMENTATION_PLAN.md`](EXAM_SECTION_IMPLEMENTATION_PLAN.md). New implementation must follow that document where the two differ.
 
 #### exams
 
@@ -2211,6 +2212,8 @@ Tests:
 
 ### Step 10 — Exams and results
 
+The detailed execution order, migration strategy, UX specification, and acceptance criteria for this step are defined in [`EXAM_SECTION_IMPLEMENTATION_PLAN.md`](EXAM_SECTION_IMPLEMENTATION_PLAN.md).
+
 Dependencies: Courses, batches, teachers, students, SMS outbox.
 
 Backend:
@@ -2554,7 +2557,7 @@ The product is complete only when:
 - Manual payments support all required fee types, discounts, partials, advances, voids, receipts, and automatic payment SMS.
 - Monthly fees use configurable due day with default 15.
 - Due reminders support safe filtered bulk sending.
-- Exams support multiple subject metadata, one combined result, MCQ/written/both, pass marks, course merit, teacher entry, owner publication, and result SMS.
+- Exams freeze an explicit audience, store subject-level MCQ/CQ results and pass rules, scope merit to that frozen audience with optional batch merit, preserve immutable publication versions, and send de-duplicated Mother/Father result SMS.
 - Students can view routine, attendance, finance, results, notices, materials, and permitted profile information.
 - Teachers can operate only in assigned scope.
 - Owners can manage public content and publish bilingual pages.

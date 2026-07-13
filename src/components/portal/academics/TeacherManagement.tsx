@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { PortalPageState } from "../PortalPageState";
@@ -24,12 +24,6 @@ export function TeacherManagement({
   // Pagination cursors stack
   const [cursors, setCursors] = useState<(string | null)[]>([null]);
   const [pageIndex, setPageIndex] = useState(0);
-
-  // Reset pagination when selected ID changes elsewhere or filters reset
-  useEffect(() => {
-    setCursors([null]);
-    setPageIndex(0);
-  }, []);
 
   const currentCursor = cursors[pageIndex];
 
@@ -75,7 +69,9 @@ export function TeacherManagement({
                   className={isSelected ? "selected" : ""}
                   onClick={() => onSelectTeacherId(isSelected ? null : row._id)}
                 >
-                  <strong style={{ fontSize: "14px" }}>{row.displayName}</strong>
+                  <strong style={{ fontSize: "14px" }}>
+                    {row.displayName}
+                  </strong>
                   <span style={{ fontSize: "11px", color: "var(--ink-mute)" }}>
                     {row.employeeCode} · {row.loginEmail}
                   </span>
@@ -116,7 +112,11 @@ export function TeacherManagement({
               alignContent: "center",
             }}
           >
-            <p>{bn ? "সম্পাদনা করার জন্য বাম পাশের তালিকা থেকে শিক্ষক নির্বাচন করুন।" : "Select a teacher from the list on the left to edit details."}</p>
+            <p>
+              {bn
+                ? "সম্পাদনা করার জন্য বাম পাশের তালিকা থেকে শিক্ষক নির্বাচন করুন।"
+                : "Select a teacher from the list on the left to edit details."}
+            </p>
           </div>
         )}
       </section>

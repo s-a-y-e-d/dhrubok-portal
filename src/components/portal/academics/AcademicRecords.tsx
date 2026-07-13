@@ -16,7 +16,9 @@ import {
 interface AcademicRecordsProps {
   locale: "bn" | "en";
   subTab: "sessions" | "courses" | "batches" | "subjects";
-  onSubTabChange: (tab: "sessions" | "courses" | "batches" | "subjects") => void;
+  onSubTabChange: (
+    tab: "sessions" | "courses" | "batches" | "subjects",
+  ) => void;
   selectedId: string | null;
   onSelectId: (id: string | null) => void;
 }
@@ -31,7 +33,9 @@ export function AcademicRecords({
   const bn = locale === "bn";
 
   // Scoped selections
-  const [filterSessionId, setFilterSessionId] = useState<Id<"academicSessions"> | "">("");
+  const [filterSessionId, setFilterSessionId] = useState<
+    Id<"academicSessions"> | ""
+  >("");
   const [filterCourseId, setFilterCourseId] = useState<Id<"courses"> | "">("");
 
   // Pagination cursor stacks
@@ -43,22 +47,19 @@ export function AcademicRecords({
 
   // Reset pagination when subTab or scoped filters change
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- external tab/filter props require resetting cursor state as one synchronization step */
     setCursors([null]);
     setPageIndex(0);
     onSelectId(null);
+    /* eslint-enable react-hooks/set-state-in-effect */
+    // onSelectId is an imperative parent reset callback; including unstable callback identities would re-run this reset.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subTab, filterSessionId, filterCourseId]);
 
-  // Set initial filters once workspaceOptions load
-  useEffect(() => {
-    if (workspaceOptions) {
-      if (workspaceOptions.sessions.length > 0 && !filterSessionId) {
-        setFilterSessionId(workspaceOptions.sessions[0].sessionId);
-      }
-      if (workspaceOptions.courses.length > 0 && !filterCourseId) {
-        setFilterCourseId(workspaceOptions.courses[0].courseId);
-      }
-    }
-  }, [workspaceOptions]);
+  const effectiveSessionId =
+    filterSessionId || workspaceOptions?.sessions[0]?.sessionId || "";
+  const effectiveCourseId =
+    filterCourseId || workspaceOptions?.courses[0]?.courseId || "";
 
   const currentCursor = cursors[pageIndex];
 
@@ -66,37 +67,43 @@ export function AcademicRecords({
   const sessionsQuery = useQuery(
     api.academics.sessions.list,
     subTab === "sessions"
-      ? { status: "active", paginationOpts: { numItems: 20, cursor: currentCursor } }
-      : "skip"
+      ? {
+          status: "active",
+          paginationOpts: { numItems: 20, cursor: currentCursor },
+        }
+      : "skip",
   );
 
   const coursesQuery = useQuery(
     api.academics.courses.list,
-    subTab === "courses" && filterSessionId
+    subTab === "courses" && effectiveSessionId
       ? {
-          academicSessionId: filterSessionId,
+          academicSessionId: effectiveSessionId,
           status: "active",
           paginationOpts: { numItems: 20, cursor: currentCursor },
         }
-      : "skip"
+      : "skip",
   );
 
   const batchesQuery = useQuery(
     api.academics.batches.list,
-    subTab === "batches" && filterCourseId
+    subTab === "batches" && effectiveCourseId
       ? {
-          courseId: filterCourseId,
+          courseId: effectiveCourseId,
           status: "active",
           paginationOpts: { numItems: 20, cursor: currentCursor },
         }
-      : "skip"
+      : "skip",
   );
 
   const subjectsQuery = useQuery(
     api.academics.subjects.list,
     subTab === "subjects"
-      ? { status: "active", paginationOpts: { numItems: 20, cursor: currentCursor } }
-      : "skip"
+      ? {
+          status: "active",
+          paginationOpts: { numItems: 20, cursor: currentCursor },
+        }
+      : "skip",
   );
 
   if (!workspaceOptions) {
@@ -104,7 +111,16 @@ export function AcademicRecords({
   }
 
   // Determine pagination helpers and page list
-  let pageList: any[] = [];
+  type PageRecord = {
+    _id: string;
+    nameBn: string;
+    nameEn: string;
+    status: string;
+    code?: string;
+    startDate?: string;
+    endDate?: string;
+  };
+  let pageList: PageRecord[] = [];
   let isDone = true;
   let continueCursor: string | null = null;
   let isLoadingData = false;
@@ -149,7 +165,11 @@ export function AcademicRecords({
   return (
     <div>
       {/* Sub tabs list */}
-      <div className="tab-list" role="tablist" aria-label={bn ? "রেকর্ড ফিল্টার" : "Filter records"}>
+      <div
+        className="tab-list"
+        role="tablist"
+        aria-label={bn ? "রেকর্ড ফিল্টার" : "Filter records"}
+      >
         {(["sessions", "courses", "batches", "subjects"] as const).map((t) => {
           const labels = {
             sessions: { bn: "সেশন", en: "Sessions" },
@@ -179,7 +199,9 @@ export function AcademicRecords({
                 {bn ? "সেশন অনুযায়ী ফিল্টার করুন" : "Filter by session"}
                 <select
                   value={filterSessionId}
-                  onChange={(e) => setFilterSessionId(e.target.value as Id<"academicSessions">)}
+                  onChange={(e) =>
+                    setFilterSessionId(e.target.value as Id<"academicSessions">)
+                  }
                 >
                   <option value="">—</option>
                   {workspaceOptions.sessions.map((s) => (
@@ -198,7 +220,9 @@ export function AcademicRecords({
                 {bn ? "কোর্স অনুযায়ী ফিল্টার করুন" : "Filter by course"}
                 <select
                   value={filterCourseId}
-                  onChange={(e) => setFilterCourseId(e.target.value as Id<"courses">)}
+                  onChange={(e) =>
+                    setFilterCourseId(e.target.value as Id<"courses">)
+                  }
                 >
                   <option value="">—</option>
                   {workspaceOptions.courses.map((c) => (
@@ -212,7 +236,9 @@ export function AcademicRecords({
           )}
 
           {isLoadingData ? (
-            <div style={{ padding: "20px 0" }}>{bn ? "লোড হচ্ছে..." : "Loading..."}</div>
+            <div style={{ padding: "20px 0" }}>
+              {bn ? "লোড হচ্ছে..." : "Loading..."}
+            </div>
           ) : pageList.length === 0 ? (
             <p className="empty-panel">
               {bn ? "কোনো রেকর্ড পাওয়া যায়নি।" : "No records found."}
@@ -229,13 +255,13 @@ export function AcademicRecords({
                   code = `${row.startDate} ~ ${row.endDate}`;
                 } else if (subTab === "courses") {
                   title = bn ? row.nameBn : row.nameEn;
-                  code = row.code;
+                  code = row.code ?? "";
                 } else if (subTab === "batches") {
                   title = bn ? row.nameBn : row.nameEn;
-                  code = row.code;
+                  code = row.code ?? "";
                 } else if (subTab === "subjects") {
                   title = bn ? row.nameBn : row.nameEn;
-                  code = row.code;
+                  code = row.code ?? "";
                 }
 
                 return (
@@ -245,7 +271,11 @@ export function AcademicRecords({
                     onClick={() => onSelectId(isSelected ? null : row._id)}
                   >
                     <strong style={{ fontSize: "14px" }}>{title}</strong>
-                    <span style={{ fontSize: "11px", color: "var(--ink-mute)" }}>{code}</span>
+                    <span
+                      style={{ fontSize: "11px", color: "var(--ink-mute)" }}
+                    >
+                      {code}
+                    </span>
                   </button>
                 );
               })}
@@ -306,7 +336,11 @@ export function AcademicRecords({
                 alignContent: "center",
               }}
             >
-              <p>{bn ? "সম্পাদনা করার জন্য বাম পাশের তালিকা থেকে একটি রেকর্ড নির্বাচন করুন।" : "Select a record from the list on the left to edit its details."}</p>
+              <p>
+                {bn
+                  ? "সম্পাদনা করার জন্য বাম পাশের তালিকা থেকে একটি রেকর্ড নির্বাচন করুন।"
+                  : "Select a record from the list on the left to edit its details."}
+              </p>
             </div>
           )}
         </section>

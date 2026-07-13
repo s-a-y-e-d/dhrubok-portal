@@ -29,8 +29,19 @@ import type * as attendance_functions from "../attendance/functions.js";
 import type * as crons from "../crons.js";
 import type * as devSeedData from "../devSeedData.js";
 import type * as devTesting from "../devTesting.js";
+import type * as exams_assignments from "../exams/assignments.js";
+import type * as exams_audience from "../exams/audience.js";
+import type * as exams_diagnostics from "../exams/diagnostics.js";
+import type * as exams_exams from "../exams/exams.js";
 import type * as exams_functions from "../exams/functions.js";
+import type * as exams_marks from "../exams/marks.js";
+import type * as exams_migrations from "../exams/migrations.js";
 import type * as exams_model from "../exams/model.js";
+import type * as exams_publication from "../exams/publication.js";
+import type * as exams_review from "../exams/review.js";
+import type * as exams_studentResults from "../exams/studentResults.js";
+import type * as exams_subjects from "../exams/subjects.js";
+import type * as exams_validators from "../exams/validators.js";
 import type * as finance_actions from "../finance/actions.js";
 import type * as finance_functions from "../finance/functions.js";
 import type * as finance_model from "../finance/model.js";
@@ -96,8 +107,19 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   devSeedData: typeof devSeedData;
   devTesting: typeof devTesting;
+  "exams/assignments": typeof exams_assignments;
+  "exams/audience": typeof exams_audience;
+  "exams/diagnostics": typeof exams_diagnostics;
+  "exams/exams": typeof exams_exams;
   "exams/functions": typeof exams_functions;
+  "exams/marks": typeof exams_marks;
+  "exams/migrations": typeof exams_migrations;
   "exams/model": typeof exams_model;
+  "exams/publication": typeof exams_publication;
+  "exams/review": typeof exams_review;
+  "exams/studentResults": typeof exams_studentResults;
+  "exams/subjects": typeof exams_subjects;
+  "exams/validators": typeof exams_validators;
   "finance/actions": typeof finance_actions;
   "finance/functions": typeof finance_functions;
   "finance/model": typeof finance_model;
@@ -162,4 +184,6 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: {
+  migrations: import("@convex-dev/migrations/_generated/component.js").ComponentApi<"migrations">;
+};

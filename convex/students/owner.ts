@@ -4,7 +4,7 @@ import { mutation, query } from "../_generated/server";
 import { requireOwner } from "../model/auth";
 import { writeAudit } from "../model/audit";
 import { localeValidator, paginationResultFields, studentStatusValidator } from "../model/validators";
-import { assertLocalDate } from "../model/dates";
+import { assertLocalDate, dhakaDate } from "../model/dates";
 import { normalizeBangladeshPhone } from "../model/normalization";
 import { optionalText, requiredText } from "../admissions/model";
 import { applySensitiveField, sensitiveFieldValidator, studentSearchText } from "./model";
@@ -38,6 +38,9 @@ const profileValidator = v.object({
   guardianPhone: v.string(),
   guardianRelationship: v.string(),
   alternateGuardianPhone: v.union(v.string(), v.null()),
+  motherName: v.union(v.string(), v.null()),
+  motherPhone: v.union(v.string(), v.null()),
+  smsRecipient: v.union(v.literal("father"), v.literal("mother"), v.literal("both")),
   preferredSmsLocale: localeValidator,
   admissionDate: v.string(),
   status: studentStatusValidator,
@@ -108,6 +111,9 @@ export const getStudent = query({
       guardianPhone: student.guardianPhone,
       guardianRelationship: student.guardianRelationship,
       alternateGuardianPhone: student.alternateGuardianPhone ?? null,
+      motherName: student.motherName ?? null,
+      motherPhone: student.motherPhone ?? null,
+      smsRecipient: student.smsRecipient ?? "father",
       preferredSmsLocale: student.preferredSmsLocale,
       admissionDate: student.admissionDate,
       status: student.status,
@@ -144,6 +150,9 @@ export const updateStudent = mutation({
     guardianPhone: v.optional(v.string()),
     guardianRelationship: v.optional(v.string()),
     alternateGuardianPhone: v.optional(v.union(v.string(), v.null())),
+    motherName: v.optional(v.string()),
+    motherPhone: v.optional(v.string()),
+    smsRecipient: v.optional(v.union(v.literal("father"), v.literal("mother"), v.literal("both"))),
     preferredSmsLocale: v.optional(localeValidator),
     admissionDate: v.optional(v.string()),
     status: v.optional(studentStatusValidator),
@@ -180,9 +189,42 @@ export const updateStudent = mutation({
     if (args.schoolCollege !== undefined) patch.schoolCollege = requiredText(args.schoolCollege, "School or college", 160);
     if (args.currentClass !== undefined) patch.currentClass = requiredText(args.currentClass, "Current class", 80);
     if (args.address !== undefined) patch.address = args.address === null ? undefined : optionalText(args.address, "Address", 500);
+    if (args.motherName !== undefined) patch.motherName = requiredText(args.motherName, "Mother name", 120);
+    if (args.motherPhone !== undefined) patch.motherPhone = normalizeBangladeshPhone(requiredText(args.motherPhone, "Mother phone", 32));
+    if (args.smsRecipient !== undefined) patch.smsRecipient = args.smsRecipient;
     if (args.preferredSmsLocale !== undefined) patch.preferredSmsLocale = args.preferredSmsLocale;
     if (args.admissionDate !== undefined) patch.admissionDate = assertLocalDate(args.admissionDate);
-    if (args.status !== undefined) patch.status = args.status;
+
+    let statusTransitionPatch = null;
+    if (args.status !== undefined && args.status !== student.status) {
+      patch.status = args.status;
+      const summary = await ctx.db.query("studentFinancialSummaries").withIndex("by_studentId", (q) => q.eq("studentId", student._id)).unique();
+      const outstanding = summary?.outstandingMinor ?? 0;
+      const overdue = summary?.overdueMinor ?? 0;
+      const isOverdue = overdue > 0;
+
+      let diffOutstanding = 0;
+      let diffOverdue = 0;
+      let diffOverdueCount = 0;
+      let diffStudentCount = 0;
+
+      if (student.status === "active" && args.status !== "active") {
+        diffOutstanding = -outstanding;
+        diffOverdue = -overdue;
+        diffOverdueCount = isOverdue ? -1 : 0;
+        diffStudentCount = -1;
+      } else if (student.status !== "active" && args.status === "active") {
+        diffOutstanding = outstanding;
+        diffOverdue = overdue;
+        diffOverdueCount = isOverdue ? 1 : 0;
+        diffStudentCount = 1;
+      }
+
+      if (diffOutstanding !== 0 || diffOverdue !== 0 || diffOverdueCount !== 0 || diffStudentCount !== 0) {
+        statusTransitionPatch = { diffOutstanding, diffOverdue, diffOverdueCount, diffStudentCount };
+      }
+    }
+
     if (args.internalNote !== undefined) patch.internalNote = args.internalNote === null ? undefined : optionalText(args.internalNote, "Internal note", 2000);
     if (Object.keys(patch).length > 0) {
       const merged = { ...current, ...patch };
@@ -190,6 +232,20 @@ export const updateStudent = mutation({
       patch.updatedAt = Date.now();
       patch.updatedByAccountId = account._id;
       await ctx.db.patch("students", student._id, patch);
+    }
+
+    if (statusTransitionPatch) {
+      const today = dhakaDate();
+      const dailySummary = await ctx.db.query("dailyOperationalSummaries").withIndex("by_date", (q) => q.eq("date", today)).unique();
+      if (dailySummary) {
+        await ctx.db.patch(dailySummary._id, {
+          activeStudentCount: Math.max(0, dailySummary.activeStudentCount + statusTransitionPatch.diffStudentCount),
+          overdueMinor: Math.max(0, dailySummary.overdueMinor + statusTransitionPatch.diffOverdue),
+          overdueStudentsCount: Math.max(0, dailySummary.overdueStudentsCount + statusTransitionPatch.diffOverdueCount),
+          activeOutstandingMinor: Math.max(0, (dailySummary.activeOutstandingMinor ?? 0) + statusTransitionPatch.diffOutstanding),
+          updatedAt: Date.now(),
+        });
+      }
     }
     await writeAudit(ctx, {
       actorAccountId: account._id,
@@ -279,5 +335,99 @@ export const reviewChangeRequest = mutation({
       metadata: { studentId: student._id, fieldKey: request.fieldKey },
     });
     return null;
+  },
+});
+
+export const searchStudentsForOwner = query({
+  args: { queryText: v.string() },
+  returns: v.array(
+    v.object({
+      studentId: v.id("students"),
+      studentNumber: v.string(),
+      displayName: v.string(),
+      status: studentStatusValidator,
+      phone: v.union(v.string(), v.null()),
+      guardianPhone: v.string(),
+      coursesAndBatches: v.array(v.object({ courseName: v.string(), batchName: v.string() })),
+      outstandingMinor: v.number(),
+      overdueMinor: v.number(),
+      portalAccountStatus: v.union(v.literal("reserved"), v.literal("active"), v.literal("suspended"), v.literal("revoked"), v.null()),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const { account } = await requireOwner(ctx);
+    const text = args.queryText.trim().toLowerCase();
+    if (text.length < 2) return [];
+
+    const statuses = ["active", "paused", "completed", "left", "archived"] as const;
+    const searchPromises = statuses.map((status) =>
+      ctx.db
+        .query("students")
+        .withSearchIndex("search_searchText", (q) =>
+          q.search("searchText", text).eq("status", status)
+        )
+        .take(10)
+    );
+    const searchResults = await Promise.all(searchPromises);
+    const matchedStudents = searchResults.flat();
+
+    const statusOrder: Record<string, number> = { active: 0, paused: 1, completed: 2, left: 3, archived: 4 };
+    matchedStudents.sort((a, b) => {
+      const orderA = statusOrder[a.status] ?? 99;
+      const orderB = statusOrder[b.status] ?? 99;
+      if (orderA !== orderB) return orderA - orderB;
+      return a.displayName.localeCompare(b.displayName);
+    });
+
+    const limitedStudents = matchedStudents.slice(0, 20);
+    const localized = (locale: "bn" | "en", bn: string | null | undefined, en: string | null | undefined) =>
+      locale === "bn" ? bn || en || "" : en || bn || "";
+
+    const results = [];
+    for (const student of limitedStudents) {
+      const enrolments = await ctx.db
+        .query("enrolments")
+        .withIndex("by_studentId_and_status", (q) => q.eq("studentId", student._id).eq("status", "active"))
+        .take(5);
+
+      const coursesAndBatches = [];
+      for (const enrolment of enrolments) {
+        const [course, batch] = await Promise.all([
+          ctx.db.get("courses", enrolment.courseId),
+          ctx.db.get("batches", enrolment.batchId),
+        ]);
+        if (course && batch) {
+          coursesAndBatches.push({
+            courseName: localized(account.locale, course.nameBn, course.nameEn),
+            batchName: localized(account.locale, batch.nameBn, batch.nameEn),
+          });
+        }
+      }
+
+      const summary = await ctx.db
+        .query("studentFinancialSummaries")
+        .withIndex("by_studentId", (q) => q.eq("studentId", student._id))
+        .unique();
+
+      const portalAccount = await ctx.db
+        .query("portalAccounts")
+        .withIndex("by_studentId", (q) => q.eq("studentId", student._id))
+        .unique();
+
+      results.push({
+        studentId: student._id,
+        studentNumber: student.studentNumber,
+        displayName: student.displayName,
+        status: student.status,
+        phone: student.phone ?? null,
+        guardianPhone: student.guardianPhone,
+        coursesAndBatches,
+        outstandingMinor: summary?.outstandingMinor ?? 0,
+        overdueMinor: summary?.overdueMinor ?? 0,
+        portalAccountStatus: portalAccount?.status ?? null,
+      });
+    }
+
+    return results;
   },
 });

@@ -111,6 +111,8 @@ export const submissionArgs = {
     guardianPhone: v.string(),
     guardianRelationship: v.string(),
     alternateGuardianPhone: v.optional(v.string()),
+    motherName: v.optional(v.string()),
+    motherPhone: v.optional(v.string()),
     preferredSmsLocale: localeValidator,
     requestedCourseId: v.id("courses"),
     requestedBatchId: v.id("batches"),

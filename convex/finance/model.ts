@@ -26,7 +26,33 @@ export async function computeFinancialSummary(ctx: DbCtx, studentId: Id<"student
 export async function refreshFinancialSummary(ctx: MutationCtx, studentId: Id<"students">) {
   const summary = await computeFinancialSummary(ctx, studentId);
   const existing = await ctx.db.query("studentFinancialSummaries").withIndex("by_studentId", (q) => q.eq("studentId", studentId)).unique();
+
+  const diffOutstanding = summary.outstandingMinor - (existing?.outstandingMinor ?? 0);
+  const diffOverdue = summary.overdueMinor - (existing?.overdueMinor ?? 0);
+
+  let diffOverdueCount = 0;
+  const wasOverdue = (existing?.overdueMinor ?? 0) > 0;
+  const isOverdue = summary.overdueMinor > 0;
+  if (wasOverdue !== isOverdue) {
+    diffOverdueCount = isOverdue ? 1 : -1;
+  }
+
   if (existing) await ctx.db.patch("studentFinancialSummaries", existing._id, { ...summary, updatedAt: Date.now() });
   else await ctx.db.insert("studentFinancialSummaries", { studentId, ...summary, updatedAt: Date.now() });
+
+  const student = await ctx.db.get("students", studentId);
+  if (student?.status === "active") {
+    const today = dhakaDate();
+    const dailySummary = await ctx.db.query("dailyOperationalSummaries").withIndex("by_date", (q) => q.eq("date", today)).unique();
+    if (dailySummary) {
+      await ctx.db.patch("dailyOperationalSummaries", dailySummary._id, {
+        overdueMinor: Math.max(0, dailySummary.overdueMinor + diffOverdue),
+        overdueStudentsCount: Math.max(0, dailySummary.overdueStudentsCount + diffOverdueCount),
+        activeOutstandingMinor: Math.max(0, (dailySummary.activeOutstandingMinor ?? 0) + diffOutstanding),
+        updatedAt: Date.now(),
+      });
+    }
+  }
+
   return summary;
 }

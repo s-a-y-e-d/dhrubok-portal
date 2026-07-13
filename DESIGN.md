@@ -1092,6 +1092,24 @@ See "Print Design" section below.
 
 ---
 
+## Exam Operations Patterns
+
+- The exam creation wizard uses five numbered steps, a single primary action per
+  step, and a read-only confirmation summary before the roster is frozen.
+- Dense marks tables keep the student identity column sticky, use compact 40px
+  desktop cells, show a visible focus ring, and retain 44px toolbar and mobile
+  controls. Mobile may scroll the table horizontally; never compress Bangla
+  student names or mark inputs below a usable width.
+- Progress matrices lead with missing and invalid work. Counts must open or sit
+  beside the scope that owns the problem; colour is always paired with text.
+- Publication uses an amber bordered summary panel containing version, result
+  counts, merit population, recipient count, exact bilingual SMS previews, and
+  an explicit acknowledgement. It is never a browser confirmation dialog.
+- Published merit is academic metadata. Do not introduce podiums, confetti,
+  celebratory animation, or decorative rank treatments.
+
+---
+
 ## Iteration Guide
 
 1. Focus on one component at a time. Reference tokens by name.

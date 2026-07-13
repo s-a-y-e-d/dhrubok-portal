@@ -71,6 +71,32 @@ async function seed(t: ReturnType<typeof convexTest>): Promise<Fixture> {
 }
 
 describe("reporting summaries and authorization", () => {
+  it("returns the latest posted payment and newest notice first", async () => {
+    const t = convexTest(schema, modules);
+    const data = await seed(t);
+    const base = Date.parse("2026-07-11T06:00:00+06:00");
+    await t.run(async (ctx) => {
+      await ctx.db.insert("payments", {
+        paymentNumber: "P-VOID-NEWER", receiptNumber: "R-VOID-NEWER", studentId: data.studentOneId,
+        amountMinor: 99900, allocatedAmountMinor: 0, advanceAmountMinor: 99900, method: "cash",
+        paidAt: base + 2_000, status: "voided", collectedByAccountId: data.ownerAccountId,
+        voidedAt: base + 3_000, voidedByAccountId: data.ownerAccountId, voidReason: "Correction", createdAt: base + 2_000,
+      });
+      for (const [suffix, publishedAt] of [["old", base + 1_000], ["new", base + 4_000]] as const) {
+        const noticeId = await ctx.db.insert("notices", {
+          audienceType: "all_students", titleBn: suffix, titleEn: suffix, bodyBn: suffix, bodyEn: suffix,
+          status: "published", sendSms: false, publishedAt, createdAt: publishedAt, updatedAt: publishedAt,
+          createdByAccountId: data.ownerAccountId,
+        });
+        await ctx.db.insert("noticeRecipients", { noticeId, studentId: data.studentOneId });
+      }
+    });
+
+    const dashboard = await t.withIdentity({ tokenIdentifier: data.studentOneToken }).query(studentDashboard, {});
+    expect(dashboard.lastPayment).toMatchObject({ amountMinor: 12500 });
+    expect(dashboard.recentNotices.map((notice: { title: string }) => notice.title)).toEqual(["new", "old"]);
+  });
+
   it("shows current active student and batch counts before the daily summary runs", async () => {
     const t = convexTest(schema, modules);
     const data = await seed(t);

@@ -6,18 +6,22 @@ import type { MutationCtx } from "../_generated/server";
 import { requireOwner } from "../model/auth";
 import { assertDateRange, DASHBOARD_ROW_LIMIT, dhakaDayBounds } from "./shared";
 
+const FINANCIAL_AGGREGATE_REBUILD_LIMIT = 500;
+
 async function buildDailySummary(ctx: MutationCtx, date: string) {
   assertDateRange(date, date);
   const { start, end } = dhakaDayBounds(date);
-  const [students, batches, openSessions, submittedSessions, payments, overdue] = await Promise.all([
-    ctx.db.query("students").withIndex("by_status_and_admissionDate", (q) => q.eq("status", "active")).take(DASHBOARD_ROW_LIMIT + 1),
+  const [students, batches, openSessions, submittedSessions, payments] = await Promise.all([
+    ctx.db.query("students").withIndex("by_status_and_admissionDate", (q) => q.eq("status", "active")).take(FINANCIAL_AGGREGATE_REBUILD_LIMIT + 1),
     ctx.db.query("batches").withIndex("by_status", (q) => q.eq("status", "active")).take(DASHBOARD_ROW_LIMIT + 1),
     ctx.db.query("classSessions").withIndex("by_status_and_sessionDate", (q) => q.eq("status", "open").eq("sessionDate", date)).take(DASHBOARD_ROW_LIMIT + 1),
     ctx.db.query("classSessions").withIndex("by_status_and_sessionDate", (q) => q.eq("status", "submitted").eq("sessionDate", date)).take(DASHBOARD_ROW_LIMIT + 1),
     ctx.db.query("payments").withIndex("by_status_and_paidAt", (q) => q.eq("status", "posted").gte("paidAt", start).lt("paidAt", end)).take(DASHBOARD_ROW_LIMIT + 1),
-    ctx.db.query("studentFinancialSummaries").withIndex("by_overdueMinor", (q) => q.gt("overdueMinor", 0)).take(DASHBOARD_ROW_LIMIT + 1),
   ]);
-  const bounded = [students, batches, openSessions, submittedSessions, payments, overdue];
+  if (students.length > FINANCIAL_AGGREGATE_REBUILD_LIMIT) {
+    throw new Error(`Financial aggregate rebuild exceeded the ${FINANCIAL_AGGREGATE_REBUILD_LIMIT}-student safety limit`);
+  }
+  const bounded = [batches, openSessions, submittedSessions, payments];
   if (bounded.some((rows) => rows.length > DASHBOARD_ROW_LIMIT)) {
     throw new Error(`Daily summary exceeded the ${DASHBOARD_ROW_LIMIT}-row rebuild safety limit`);
   }
@@ -29,6 +33,24 @@ async function buildDailySummary(ctx: MutationCtx, date: string) {
     }),
     { present: 0, late: 0, absent: 0 },
   );
+
+  let activeOutstandingMinor = 0;
+  let activeOverdueMinor = 0;
+  let activeOverdueStudentsCount = 0;
+
+  for (const student of students) {
+    const summary = await ctx.db.query("studentFinancialSummaries")
+      .withIndex("by_studentId", (q) => q.eq("studentId", student._id))
+      .unique();
+    if (summary) {
+      activeOutstandingMinor += summary.outstandingMinor;
+      if (summary.overdueMinor > 0) {
+        activeOverdueMinor += summary.overdueMinor;
+        activeOverdueStudentsCount += 1;
+      }
+    }
+  }
+
   const value = {
     date,
     activeStudentCount: students.length,
@@ -40,8 +62,9 @@ async function buildDailySummary(ctx: MutationCtx, date: string) {
     absentCount: attendance.absent,
     paymentsCount: payments.length,
     collectedMinor: payments.reduce((sum, payment) => sum + payment.amountMinor, 0),
-    overdueStudentsCount: overdue.length,
-    overdueMinor: overdue.reduce((sum, summary) => sum + summary.overdueMinor, 0),
+    overdueStudentsCount: activeOverdueStudentsCount,
+    overdueMinor: activeOverdueMinor,
+    activeOutstandingMinor,
     updatedAt: Date.now(),
   };
   const existing = await ctx.db.query("dailyOperationalSummaries").withIndex("by_date", (q) => q.eq("date", date)).unique();
@@ -55,7 +78,7 @@ export const refreshDaily = mutation({
   returns: v.object({
     date: v.string(), activeStudentCount: v.number(), activeBatchCount: v.number(), scheduledSessionCount: v.number(), submittedSessionCount: v.number(),
     presentCount: v.number(), lateCount: v.number(), absentCount: v.number(), paymentsCount: v.number(), collectedMinor: v.number(),
-    overdueStudentsCount: v.number(), overdueMinor: v.number(), updatedAt: v.number(),
+    overdueStudentsCount: v.number(), overdueMinor: v.number(), activeOutstandingMinor: v.optional(v.number()), updatedAt: v.number(),
   }),
   handler: async (ctx, args) => {
     await requireOwner(ctx);
