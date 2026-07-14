@@ -6,7 +6,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { PortalPageState } from "../../PortalPageState";
 import { MarksWorkspace } from "../marks/MarksWorkspace";
-import { DialogModal } from "../DialogModal";
+import { DialogModal } from "../../DialogModal";
 
 export function OwnerReviewWorkspace({
   locale,

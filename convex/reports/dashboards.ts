@@ -207,7 +207,6 @@ const sessionCardValidator = v.object({
   endsAt: v.number(),
   status: v.string(),
   subjectName: v.string(),
-  room: v.string(),
   rosterCount: v.number(),
 });
 
@@ -249,7 +248,6 @@ export const teacher = query({
         endsAt: session.endsAt,
         status: session.status,
         subjectName: subject ? localized(account.locale, subject.nameBn, subject.nameEn) : "—",
-        room: localized(account.locale, session.roomBn ?? batch?.roomBn ?? "", session.roomEn ?? batch?.roomEn ?? ""),
         rosterCount: session.rosterCount,
       };
     }));
@@ -303,7 +301,7 @@ function addLocalDays(date: string, days: number) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka", year: "numeric", month: "2-digit", day: "2-digit" }).format(timestamp);
 }
 
-const nextClassValidator = v.union(v.object({ batchId: v.id("batches"), batchName: v.string(), subjectName: v.string(), teacherName: v.string(), date: v.string(), weekday: v.number(), startMinutes: v.number(), endMinutes: v.number(), room: v.string() }), v.null());
+const nextClassValidator = v.union(v.object({ batchId: v.id("batches"), batchName: v.string(), subjectName: v.string(), teacherName: v.string(), date: v.string(), weekday: v.number(), startMinutes: v.number(), endMinutes: v.number() }), v.null());
 
 export const student = query({
   args: {},
@@ -330,7 +328,6 @@ export const student = query({
         weekday: v.number(),
         startMinutes: v.number(),
         endMinutes: v.number(),
-        room: v.string(),
       })
     ),
     recentResults: v.array(
@@ -392,7 +389,6 @@ export const student = query({
         weekday: next.schedule.weekday,
         startMinutes: next.schedule.startMinutes,
         endMinutes: next.schedule.endMinutes,
-        room: localized(account.locale, next.schedule.roomBn ?? next.batch.roomBn, next.schedule.roomEn ?? next.batch.roomEn),
       };
     }
     const thisWeekClasses = [];
@@ -407,7 +403,6 @@ export const student = query({
         weekday: cand.schedule.weekday,
         startMinutes: cand.schedule.startMinutes,
         endMinutes: cand.schedule.endMinutes,
-        room: localized(account.locale, cand.schedule.roomBn ?? cand.batch.roomBn, cand.schedule.roomEn ?? cand.batch.roomEn),
       });
     }
     const usedAttendance = attendance.slice(0, DASHBOARD_ROW_LIMIT);

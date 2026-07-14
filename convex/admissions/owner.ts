@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import { requireOwner } from "../model/auth";
 import { writeAudit } from "../model/audit";
+import { scheduleCourseSnapshot } from "../academics/snapshotHooks";
 import { assertLocalDate, dhakaDate } from "../model/dates";
 import { assertMinorUnits, percentageDiscount } from "../model/money";
 import { nextIdentifier } from "../model/identifiers";
@@ -418,6 +419,7 @@ export const acceptApplication = mutation({
       if (rendered.missingVariables.length === 0) await enqueueSms(ctx, { idempotencyKey: `admission:${application._id}:accepted`, eventType: "admission_accepted", relatedEntityType: "admissionApplication", relatedEntityId: application._id, studentId, guardianPhone: application.guardianPhone, locale: application.preferredSmsLocale, body: rendered.body });
     }
     await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: "admission.accepted", entityType: "admissionApplication", entityId: application._id, summary: "Application converted to an active student", metadata: { studentId, enrolmentId, courseId: course._id, batchId: batch._id } });
+    await scheduleCourseSnapshot(ctx, course._id);
     return { studentId, enrolmentId, replayed: false };
   },
 });
@@ -474,6 +476,7 @@ export const createDirectAdmission = mutation({
       agreedMonthlyAmountMinor: args.agreedMonthlyAmountMinor, agreedCourseAmountMinor: args.agreedCourseAmountMinor,
       createdAt: now, updatedAt: now, createdByAccountId: account._id,
     });
+    await scheduleCourseSnapshot(ctx, course._id);
     await ctx.db.insert("portalAccounts", {
       role: "student", status: "reserved", loginEmail: profile.studentEmail, normalizedLoginEmail: profile.normalizedStudentEmail,
       studentId, locale: args.preferredSmsLocale, createdAt: now, updatedAt: now, createdByAccountId: account._id,

@@ -10,6 +10,9 @@
 
 import type * as academics_assignments from "../academics/assignments.js";
 import type * as academics_batches from "../academics/batches.js";
+import type * as academics_courseReadiness from "../academics/courseReadiness.js";
+import type * as academics_courseSnapshots from "../academics/courseSnapshots.js";
+import type * as academics_courseWorkspace from "../academics/courseWorkspace.js";
 import type * as academics_courses from "../academics/courses.js";
 import type * as academics_options from "../academics/options.js";
 import type * as academics_public from "../academics/public.js";
@@ -17,6 +20,7 @@ import type * as academics_readModels from "../academics/readModels.js";
 import type * as academics_schedules from "../academics/schedules.js";
 import type * as academics_sessions from "../academics/sessions.js";
 import type * as academics_shared from "../academics/shared.js";
+import type * as academics_snapshotHooks from "../academics/snapshotHooks.js";
 import type * as academics_subjects from "../academics/subjects.js";
 import type * as academics_teachers from "../academics/teachers.js";
 import type * as accounts from "../accounts.js";
@@ -57,6 +61,7 @@ import type * as messaging_functions from "../messaging/functions.js";
 import type * as messaging_model from "../messaging/model.js";
 import type * as messaging_templateFunctions from "../messaging/templateFunctions.js";
 import type * as messaging_templates from "../messaging/templates.js";
+import type * as migrations from "../migrations.js";
 import type * as model_audit from "../model/audit.js";
 import type * as model_auth from "../model/auth.js";
 import type * as model_dates from "../model/dates.js";
@@ -92,6 +97,9 @@ import type {
 declare const fullApi: ApiFromModules<{
   "academics/assignments": typeof academics_assignments;
   "academics/batches": typeof academics_batches;
+  "academics/courseReadiness": typeof academics_courseReadiness;
+  "academics/courseSnapshots": typeof academics_courseSnapshots;
+  "academics/courseWorkspace": typeof academics_courseWorkspace;
   "academics/courses": typeof academics_courses;
   "academics/options": typeof academics_options;
   "academics/public": typeof academics_public;
@@ -99,6 +107,7 @@ declare const fullApi: ApiFromModules<{
   "academics/schedules": typeof academics_schedules;
   "academics/sessions": typeof academics_sessions;
   "academics/shared": typeof academics_shared;
+  "academics/snapshotHooks": typeof academics_snapshotHooks;
   "academics/subjects": typeof academics_subjects;
   "academics/teachers": typeof academics_teachers;
   accounts: typeof accounts;
@@ -139,6 +148,7 @@ declare const fullApi: ApiFromModules<{
   "messaging/model": typeof messaging_model;
   "messaging/templateFunctions": typeof messaging_templateFunctions;
   "messaging/templates": typeof messaging_templates;
+  migrations: typeof migrations;
   "model/audit": typeof model_audit;
   "model/auth": typeof model_auth;
   "model/dates": typeof model_dates;

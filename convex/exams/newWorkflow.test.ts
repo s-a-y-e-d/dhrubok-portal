@@ -15,6 +15,9 @@ const modules = Object.fromEntries(
 const createDraft = makeFunctionReference<"mutation">(
   "exams/exams:createDraft",
 );
+const updateDraft = makeFunctionReference<"mutation">(
+  "exams/exams:updateDraft",
+);
 const freezeRoster = makeFunctionReference<"mutation">(
   "exams/audience:freezeRoster",
 );
@@ -52,6 +55,34 @@ const listCandidates = makeFunctionReference<"query">(
   "exams/audience:listCandidates",
 );
 const entryGrid = makeFunctionReference<"query">("exams/marks:entryGrid");
+
+it("preserves required exam fields when partially updating a draft", async () => {
+  const t = convexTest(schema, modules);
+  const data = await seedMultiBatch(t);
+  const owner = t.withIdentity({ tokenIdentifier: "owner-multi" });
+  const examId = await owner.mutation(createDraft, {
+    courseId: data.courseId,
+    nameBn: "মাসিক পরীক্ষা",
+    nameEn: "Monthly exam",
+    examDate: "2026-07-14",
+    examType: "monthly",
+    audienceMode: "single_batch",
+  });
+
+  await owner.mutation(updateDraft, {
+    examId,
+    setupDraftJson: JSON.stringify({ step: 5 }),
+  });
+
+  const exam = await t.run((ctx) => ctx.db.get("exams", examId));
+  expect(exam).toMatchObject({
+    courseId: data.courseId,
+    nameBn: "মাসিক পরীক্ষা",
+    nameEn: "Monthly exam",
+    examDate: "2026-07-14",
+    setupDraftJson: JSON.stringify({ step: 5 }),
+  });
+});
 
 async function seedMultiBatch(t: ReturnType<typeof convexTest>) {
   const now = Date.now();

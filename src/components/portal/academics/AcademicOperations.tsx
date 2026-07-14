@@ -143,8 +143,6 @@ export function AcademicOperations({
       Number(data.get("startHour")) * 60 + Number(data.get("startMinute"));
     const endMinutes =
       Number(data.get("endHour")) * 60 + Number(data.get("endMinute"));
-    const roomBn = String(data.get("roomBn")) || undefined;
-    const roomEn = String(data.get("roomEn")) || undefined;
     const effectiveFrom = String(data.get("effectiveFrom"));
     const effectiveUntil = String(data.get("effectiveUntil")) || undefined;
 
@@ -157,8 +155,6 @@ export function AcademicOperations({
           weekday,
           startMinutes,
           endMinutes,
-          roomBn,
-          roomEn,
           effectiveFrom,
           effectiveUntil,
         }),
@@ -436,7 +432,6 @@ export function AcademicOperations({
                         <th>{bn ? "বার" : "Day"}</th>
                         <th>{bn ? "বিষয়" : "Subject"}</th>
                         <th>{bn ? "সময়" : "Time"}</th>
-                        <th>{bn ? "রুম" : "Room"}</th>
                         <th>{bn ? "কাজ" : "Action"}</th>
                       </tr>
                     </thead>
@@ -494,9 +489,6 @@ export function AcademicOperations({
                             </td>
                             <td>
                               {start} – {end}
-                            </td>
-                            <td>
-                              {bn ? (row.roomBn ?? "—") : (row.roomEn ?? "—")}
                             </td>
                             <td>
                               <button
@@ -739,14 +731,6 @@ export function AcademicOperations({
                     <label>
                       {bn ? "কার্যকর শেষ" : "Effective Until"}
                       <input name="effectiveUntil" type="date" />
-                    </label>
-                    <label>
-                      {bn ? "রুম (বাংলা)" : "Room (Bangla)"}
-                      <input name="roomBn" />
-                    </label>
-                    <label>
-                      Room (English)
-                      <input name="roomEn" />
                     </label>
                   </div>
                   <button className="button button-primary" disabled={busy}>

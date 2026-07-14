@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useId } from "react";
 
 interface ConfirmModalProps {
   title: string;
@@ -9,21 +9,40 @@ interface ConfirmModalProps {
   onCancel: () => void;
   onConfirm: () => void;
   locale: "bn" | "en";
+  confirmLabel?: string;
+  cancelLabel?: string;
+  disabled?: boolean;
 }
 
-export function ConfirmModal({ title, detail, danger, onCancel, onConfirm, locale }: ConfirmModalProps) {
+export function ConfirmModal({
+  title,
+  detail,
+  danger,
+  onCancel,
+  onConfirm,
+  locale,
+  confirmLabel,
+  cancelLabel,
+  disabled
+}: ConfirmModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const cancelBtnRef = useRef<HTMLButtonElement>(null);
   const bn = locale === "bn";
+  const titleId = useId();
+  const detailId = useId();
 
   useEffect(() => {
     const dialog = dialogRef.current;
+    const previousFocus = document.activeElement as HTMLElement | null;
     if (dialog) {
       if (!dialog.open) {
         dialog.showModal();
       }
       cancelBtnRef.current?.focus();
     }
+    return () => {
+      previousFocus?.focus();
+    };
   }, []);
 
   return (
@@ -31,11 +50,11 @@ export function ConfirmModal({ title, detail, danger, onCancel, onConfirm, local
       ref={dialogRef}
       className="operation-form compact-form"
       role="alertdialog"
-      aria-labelledby="confirm-title"
-      aria-describedby="confirm-detail"
+      aria-labelledby={titleId}
+      aria-describedby={detailId}
       onCancel={(e) => {
         e.preventDefault();
-        onCancel();
+        if (!disabled) onCancel();
       }}
       style={{
         border: "1px solid var(--border-strong)",
@@ -49,23 +68,25 @@ export function ConfirmModal({ title, detail, danger, onCancel, onConfirm, local
         margin: "auto",
       }}
     >
-      <h2 id="confirm-title" style={{ marginTop: 0, fontSize: "18px", fontWeight: 600 }}>{title}</h2>
-      <p id="confirm-detail" style={{ margin: "12px 0 24px", color: "var(--ink-secondary)", fontSize: "14px", lineHeight: "1.5" }}>{detail}</p>
+      <h2 id={titleId} style={{ marginTop: 0, fontSize: "18px", fontWeight: 600 }}>{title}</h2>
+      <p id={detailId} style={{ margin: "12px 0 24px", color: "var(--ink-secondary)", fontSize: "14px", lineHeight: "1.5" }}>{detail}</p>
       <div className="form-actions" style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
         <button
           ref={cancelBtnRef}
           className="button button-secondary"
           type="button"
           onClick={onCancel}
+          disabled={disabled}
         >
-          {bn ? "বাতিল" : "Cancel"}
+          {cancelLabel || (bn ? "বাতিল" : "Cancel")}
         </button>
         <button
           className={`button ${danger ? "button-danger" : "button-primary"}`}
           type="button"
           onClick={onConfirm}
+          disabled={disabled}
         >
-          {bn ? "নিশ্চিত করুন" : "Confirm"}
+          {confirmLabel || (bn ? "নিশ্চিত করুন" : "Confirm")}
         </button>
       </div>
     </dialog>

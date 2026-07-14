@@ -19,6 +19,7 @@ import { nextIdentifier } from "../model/identifiers";
 import { writeAudit } from "../model/audit";
 import { enqueueSms } from "../messaging/model";
 import { computeFinancialSummary, refreshFinancialSummary } from "./model";
+import { scheduleCourseSnapshot, scheduleBatchCourseSnapshot } from "../academics/snapshotHooks";
 
 export const listFeePlans = query({
   args: {},
@@ -106,12 +107,15 @@ export const createFeePlan = mutation({
     if (!args.courseId && !args.batchId)
       throw new Error("Fee plan must belong to a course or batch");
     const now = Date.now();
-    return await ctx.db.insert("feePlans", {
+    const id = await ctx.db.insert("feePlans", {
       ...args,
       status: "active",
       createdAt: now,
       updatedAt: now,
     });
+    if (args.courseId) await scheduleCourseSnapshot(ctx, args.courseId);
+    else if (args.batchId) await scheduleBatchCourseSnapshot(ctx, args.batchId);
+    return id;
   },
 });
 
@@ -139,12 +143,15 @@ export const addFeePlanItem = mutation({
     if (!plan || plan.status !== "active")
       throw new Error("Fee plan is not active");
     const now = Date.now();
-    return await ctx.db.insert("feePlanItems", {
+    const id = await ctx.db.insert("feePlanItems", {
       ...args,
       status: "active",
       createdAt: now,
       updatedAt: now,
     });
+    if (plan.courseId) await scheduleCourseSnapshot(ctx, plan.courseId);
+    else if (plan.batchId) await scheduleBatchCourseSnapshot(ctx, plan.batchId);
+    return id;
   },
 });
 
@@ -224,6 +231,7 @@ export const assignFeePlan = mutation({
       summary: "Assigned fee plan to enrolment",
       metadata: { feePlanId: plan._id },
     });
+    await scheduleCourseSnapshot(ctx, enrolment.courseId);
     return null;
   },
 });

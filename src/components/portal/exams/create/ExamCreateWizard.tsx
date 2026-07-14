@@ -53,7 +53,6 @@ export function ExamCreateWizard({
   const [batchIds, setBatchIds] = useState<Id<"batches">[]>([]);
   const [rules, setRules] = useState<Rule[]>([]);
   const [exclusions, setExclusions] = useState<Record<string, string>>({});
-  const [candidateSearch, setCandidateSearch] = useState("");
   const [merit, setMerit] = useState<
     "official_only" | "official_and_batch" | "none"
   >("official_only");
@@ -99,14 +98,17 @@ export function ExamCreateWizard({
   const configureAssignments = useMutation(api.exams.assignments.configure);
   const open = useMutation(api.exams.assignments.openMarksEntry);
   const detail = useQuery(api.exams.exams.detail, examId ? { examId } : "skip");
+  const audienceSelectionValid =
+    audience === "all_course_batches" ||
+    (audience === "single_batch" && batchIds.length === 1) ||
+    (audience === "selected_batches" && batchIds.length >= 2);
   const preview = useQuery(
     api.exams.audience.preview,
-    examId && step >= 2
+    examId && step >= 2 && audienceSelectionValid
       ? {
           examId,
           batchIds,
-          search: candidateSearch || undefined,
-          paginationOpts: { numItems: 8, cursor: null },
+          paginationOpts: { numItems: 500, cursor: null },
         }
       : "skip",
   );
@@ -571,25 +573,7 @@ export function ExamCreateWizard({
               })}
             </div>
           )}
-          <p>
-            {preview
-              ? `${preview.candidateCount} ${bn ? "জন প্রার্থী" : "candidates"}`
-              : bn
-                ? "ব্যাচ বাছুন"
-                : "Select batches"}
-          </p>
-          {preview && (
-            <label>
-              {bn ? "প্রার্থী খুঁজুন" : "Search candidates"}
-              <input
-                value={candidateSearch}
-                onChange={(event) => setCandidateSearch(event.target.value)}
-                placeholder={
-                  bn ? "নাম বা শিক্ষার্থী নম্বর" : "Name or student number"
-                }
-              />
-            </label>
-          )}
+          {!preview && <p>{bn ? "ব্যাচ বাছুন" : "Select batches"}</p>}
           {preview?.duplicateStudents.length ? (
             <p className="form-message error">
               {bn
@@ -598,12 +582,12 @@ export function ExamCreateWizard({
             </p>
           ) : null}
           {preview?.page.length ? (
-            <div className="candidate-preview">
-              <strong>
-                {bn
-                  ? "প্রার্থী প্রিভিউ ও বাদ দেওয়া"
-                  : "Candidate preview and exclusions"}
-              </strong>
+            <details className="editor-disclosure candidate-preview">
+              <summary>
+                {bn ? "শিক্ষার্থী বাদ দিন (ঐচ্ছিক)" : "Exclude students (optional)"}
+                {Object.keys(exclusions).length > 0 &&
+                  ` · ${Object.keys(exclusions).length} ${bn ? "জন বাদ" : "excluded"}`}
+              </summary>
               {preview.page.map(({ student }) => {
                 const excluded = Object.hasOwn(exclusions, student._id);
                 return (
@@ -622,7 +606,8 @@ export function ExamCreateWizard({
                         }
                       />
                       <span>
-                        {student.studentNumber} · {student.displayName}
+                        {bn ? "বাদ দিন:" : "Exclude:"} {student.studentNumber} ·{" "}
+                        {student.displayName}
                       </span>
                     </label>
                     {excluded && (
@@ -644,7 +629,7 @@ export function ExamCreateWizard({
                   </div>
                 );
               })}
-            </div>
+            </details>
           ) : null}
           <div className="form-actions">
             <button

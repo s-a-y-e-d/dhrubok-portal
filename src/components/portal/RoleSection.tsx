@@ -15,7 +15,7 @@ import { api } from "@convex/_generated/api";
 import { PortalPageState } from "./PortalPageState";
 import { OwnerWebsiteEditor } from "./OwnerEditors";
 import { OwnerSettingsEditor } from "./OwnerWorkspaces";
-import { AcademicEditor } from "./academics";
+import { CoursesWorkspace } from "./courses";
 import { FinanceEditor } from "./FinanceWorkspace";
 import { AdmissionsEditor as AdmissionsWorkflow } from "./AdmissionsEditor";
 import { AttendanceEditor as AttendanceWorkflow } from "./AttendanceEditor";
@@ -974,8 +974,7 @@ function TeacherDashboard({ locale }: { locale: "bn" | "en" }) {
                 {nextClass.batchName}
               </h2>
               <p style={{ margin: 0 }}>
-                {nextClass.subjectName} · {bn ? "রুম" : "Room"}:{" "}
-                {nextClass.room} · {nextClass.rosterCount}{" "}
+                {nextClass.subjectName} · {nextClass.rosterCount}{" "}
                 {bn ? "জন শিক্ষার্থী" : "students"}
               </p>
               <p
@@ -1078,7 +1077,6 @@ function TeacherDashboard({ locale }: { locale: "bn" | "en" }) {
                     <span
                       style={{ fontSize: "12px", color: "var(--ink-mute)" }}
                     >
-                      {bn ? "রুম" : "Room"}: {s.room} ·{" "}
                       {new Date(s.startsAt).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
@@ -1299,7 +1297,7 @@ function StudentDashboard({ locale }: { locale: "bn" | "en" }) {
                 marginTop: "4px",
               }}
             >
-              {bn ? "রুম" : "Room"}: {d.nextClass.room} · {d.nextClass.date} (
+              {d.nextClass.date} (
               {Math.floor(d.nextClass.startMinutes / 60)
                 .toString()
                 .padStart(2, "0")}
@@ -1423,7 +1421,7 @@ function StudentDashboard({ locale }: { locale: "bn" | "en" }) {
                     }}
                   >
                     <p className="eyebrow" style={{ margin: 0 }}>
-                      {c.subjectName} · {bn ? "রুম" : "Room"}: {c.room}
+                      {c.subjectName}
                     </p>
                     <span
                       className="status-pill present"
@@ -1692,7 +1690,7 @@ export function RoleSection({
       );
     if (section === "materials")
       return <ContentEditor locale={locale} role="owner" />;
-    if (section === "courses") return <AcademicEditor locale={locale} />;
+    if (section === "courses") return <CoursesWorkspace locale={locale} />;
     if (section === "attendance") return <AttendanceWorkflow locale={locale} />;
     if (section === "finance") return <FinanceEditor locale={locale} />;
     if (section === "exams") return <ExamEditor locale={locale} role="owner" />;

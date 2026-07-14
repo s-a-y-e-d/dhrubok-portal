@@ -1,0 +1,1 @@
+export { CoursesWorkspace } from "./CoursesWorkspace";

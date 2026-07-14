@@ -19,7 +19,7 @@ export const subjectDoc = v.object({
 });
 export const courseDoc = v.object({
   _id: v.id("courses"), _creationTime: v.number(), academicSessionId: v.id("academicSessions"), code: v.string(), slug: v.string(),
-  nameBn: v.string(), nameEn: v.string(), shortDescriptionBn: v.string(), shortDescriptionEn: v.string(),
+  nameBn: v.string(), nameEn: v.string(), searchText: v.optional(v.string()), shortDescriptionBn: v.string(), shortDescriptionEn: v.string(),
   descriptionBn: v.string(), descriptionEn: v.string(), status: courseStatus, isPublic: v.boolean(), publicSortOrder: v.number(),
   coverStorageId: v.optional(v.id("_storage")), createdAt: v.number(), updatedAt: v.number(),
   createdByAccountId: v.id("portalAccounts"), updatedByAccountId: v.id("portalAccounts"),

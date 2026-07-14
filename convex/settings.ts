@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, env } from "./_generated/server";
 import { localeValidator } from "./model/validators";
 import { requireOwner } from "./model/auth";
 import { writeAudit } from "./model/audit";
@@ -15,6 +15,7 @@ const ownerSettingsValidator = v.object({
   settingsId: v.id("coachingSettings"), nameBn: v.string(), nameEn: v.string(), shortNameBn: v.string(), shortNameEn: v.string(),
   monthlyDueDay: v.number(), defaultLocale: localeValidator, defaultGuardianSmsLocale: localeValidator,
   publicAdmissionsOpen: v.boolean(), smsEnabled: v.boolean(), receiptFooterBn: v.string(), receiptFooterEn: v.string(), updatedAt: v.number(),
+  smsConfigured: v.boolean(), smsSenderIdConfigured: v.boolean(),
 });
 
 export const getOwner = query({
@@ -22,7 +23,23 @@ export const getOwner = query({
   handler: async (ctx) => {
     await requireOwner(ctx);
     const current = (await ctx.db.query("coachingSettings").take(1))[0];
-    return current ? { settingsId: current._id, nameBn: current.nameBn, nameEn: current.nameEn, shortNameBn: current.shortNameBn, shortNameEn: current.shortNameEn, monthlyDueDay: current.monthlyDueDay, defaultLocale: current.defaultLocale, defaultGuardianSmsLocale: current.defaultGuardianSmsLocale, publicAdmissionsOpen: current.publicAdmissionsOpen, smsEnabled: current.smsEnabled, receiptFooterBn: current.receiptFooterBn, receiptFooterEn: current.receiptFooterEn, updatedAt: current.updatedAt } : null;
+    return current ? {
+      settingsId: current._id,
+      nameBn: current.nameBn,
+      nameEn: current.nameEn,
+      shortNameBn: current.shortNameBn,
+      shortNameEn: current.shortNameEn,
+      monthlyDueDay: current.monthlyDueDay,
+      defaultLocale: current.defaultLocale,
+      defaultGuardianSmsLocale: current.defaultGuardianSmsLocale,
+      publicAdmissionsOpen: current.publicAdmissionsOpen,
+      smsEnabled: current.smsEnabled,
+      receiptFooterBn: current.receiptFooterBn,
+      receiptFooterEn: current.receiptFooterEn,
+      updatedAt: current.updatedAt,
+      smsConfigured: Boolean(env.SMS_BD_API_KEY?.trim()),
+      smsSenderIdConfigured: Boolean(env.SMS_BD_SENDER_ID?.trim()),
+    } : null;
   },
 });
 
@@ -77,6 +94,7 @@ export const initialize = mutation({
 
 export const updateOperations = mutation({
   args: {
+    expectedUpdatedAt: v.number(),
     monthlyDueDay: v.number(), defaultLocale: localeValidator, defaultGuardianSmsLocale: localeValidator,
     publicAdmissionsOpen: v.boolean(), smsEnabled: v.boolean(), receiptFooterBn: v.string(), receiptFooterEn: v.string(),
   },
@@ -86,7 +104,17 @@ export const updateOperations = mutation({
     if (!Number.isInteger(args.monthlyDueDay) || args.monthlyDueDay < 1 || args.monthlyDueDay > 28) throw new Error("Monthly due day must be between 1 and 28");
     const settings = (await ctx.db.query("coachingSettings").take(1))[0];
     if (!settings) throw new Error("Coaching settings are not initialized");
-    await ctx.db.patch("coachingSettings", settings._id, { ...args, updatedAt: Date.now(), updatedByAccountId: account._id });
+    if (settings.updatedAt !== args.expectedUpdatedAt) throw new Error("Settings have been modified by another owner. Please reload and try again.");
+    const updateData = {
+      monthlyDueDay: args.monthlyDueDay,
+      defaultLocale: args.defaultLocale,
+      defaultGuardianSmsLocale: args.defaultGuardianSmsLocale,
+      publicAdmissionsOpen: args.publicAdmissionsOpen,
+      smsEnabled: args.smsEnabled,
+      receiptFooterBn: args.receiptFooterBn,
+      receiptFooterEn: args.receiptFooterEn,
+    };
+    await ctx.db.patch("coachingSettings", settings._id, { ...updateData, updatedAt: Date.now(), updatedByAccountId: account._id });
     await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: "settings.operations_updated", entityType: "coachingSettings", entityId: settings._id, summary: "Operational settings updated" });
     return null;
   },

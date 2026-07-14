@@ -20,7 +20,7 @@ async function eligibleEnrolments(ctx: Pick<MutationCtx | QueryCtx, "db">, batch
 }
 
 export const createSession = mutation({
-  args: { batchId: v.id("batches"), teacherId: v.id("teachers"), subjectId: v.optional(v.id("subjects")), scheduleId: v.optional(v.id("batchSchedules")), sessionDate: v.string(), startsAt: v.number(), endsAt: v.number(), roomBn: v.optional(v.string()), roomEn: v.optional(v.string()) },
+  args: { batchId: v.id("batches"), teacherId: v.id("teachers"), subjectId: v.optional(v.id("subjects")), scheduleId: v.optional(v.id("batchSchedules")), sessionDate: v.string(), startsAt: v.number(), endsAt: v.number() },
   returns: v.id("classSessions"),
   handler: async (ctx, args) => {
     assertLocalDate(args.sessionDate);

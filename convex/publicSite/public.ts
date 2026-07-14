@@ -55,7 +55,6 @@ const noticeCardValidator = v.object({
 
 const scheduleSummaryValidator = v.object({
   id: v.id("batchSchedules"), batchId: v.id("batches"), weekday: v.number(), startMinutes: v.number(), endMinutes: v.number(),
-  room: localizedTextValidator,
 });
 
 export const getContentBlock = query({
@@ -122,7 +121,7 @@ export const getCourse = query({
     subjects: v.array(v.object({ id: v.id("subjects"), name: localizedTextValidator, sortOrder: v.number() })),
     batches: v.array(v.object({
       id: v.id("batches"), slug: v.string(), name: localizedTextValidator,
-      room: localizedTextValidator, admissionOpen: v.boolean(), publicSortOrder: v.number(),
+      admissionOpen: v.boolean(), publicSortOrder: v.number(),
     })),
     schedules: v.array(scheduleSummaryValidator),
   }), v.null()),
@@ -141,7 +140,7 @@ export const getCourse = query({
       .sort((a, b) => a.publicSortOrder - b.publicSortOrder)
       .map((batch) => ({
         id: batch._id, slug: batch.slug, name: localize(batch.nameBn, batch.nameEn, args.locale),
-        room: localize(batch.roomBn, batch.roomEn, args.locale), admissionOpen: batch.admissionOpen, publicSortOrder: batch.publicSortOrder,
+        admissionOpen: batch.admissionOpen, publicSortOrder: batch.publicSortOrder,
       }));
     const schedules = (await Promise.all(batches.map(async (batch) => {
       const rows = await ctx.db.query("batchSchedules")
@@ -149,7 +148,6 @@ export const getCourse = query({
         .take(20);
       return rows.map((row) => ({
         id: row._id, batchId: row.batchId, weekday: row.weekday, startMinutes: row.startMinutes, endMinutes: row.endMinutes,
-        room: localize(row.roomBn, row.roomEn, args.locale),
       }));
     }))).flat();
     return {
@@ -166,7 +164,7 @@ export const listOpenBatches = query({
   args: { locale: localeValidator, limit: v.number() },
   returns: v.array(v.object({
     id: v.id("batches"), courseId: v.id("courses"), courseSlug: v.string(), courseName: localizedTextValidator,
-    name: localizedTextValidator, room: localizedTextValidator, publicSortOrder: v.number(),
+    name: localizedTextValidator, publicSortOrder: v.number(),
   })),
   handler: async (ctx, args) => {
     const limit = boundedLimit(args.limit, 50);
@@ -180,8 +178,7 @@ export const listOpenBatches = query({
       return {
         id: batch._id, courseId: course._id, courseSlug: course.slug,
         courseName: localize(course.nameBn, course.nameEn, args.locale),
-        name: localize(batch.nameBn, batch.nameEn, args.locale),
-        room: localize(batch.roomBn, batch.roomEn, args.locale), publicSortOrder: batch.publicSortOrder,
+        name: localize(batch.nameBn, batch.nameEn, args.locale), publicSortOrder: batch.publicSortOrder,
       };
     }))).filter((batch) => batch !== null);
   },

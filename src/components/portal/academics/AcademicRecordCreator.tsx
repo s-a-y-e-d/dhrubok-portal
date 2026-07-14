@@ -1,13 +1,12 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { PortalPageState } from "../PortalPageState";
 import { AcademicForm } from "./shared/AcademicForm";
 import { FeedbackMessage, type Feedback } from "./shared/FeedbackMessage";
-import { executeMutation } from "./shared/utils";
 
 const pagination = { numItems: 200, cursor: null } as const;
 
@@ -121,8 +120,6 @@ export function AcademicRecordCreator({ locale, onCreationSuccess }: AcademicRec
     const slug = String(data.get("slug"));
     const nameBn = String(data.get("nameBn"));
     const nameEn = String(data.get("nameEn"));
-    const roomBn = String(data.get("roomBn")) || undefined;
-    const roomEn = String(data.get("roomEn")) || undefined;
     const capacity = Number(data.get("capacity")) || undefined;
     const isPublic = data.get("isPublic") === "on";
     const admissionOpen = data.get("admissionOpen") === "on";
@@ -144,8 +141,6 @@ export function AcademicRecordCreator({ locale, onCreationSuccess }: AcademicRec
         slug,
         nameBn,
         nameEn,
-        roomBn,
-        roomEn,
         capacity,
         status: "active",
         isPublic,
@@ -386,16 +381,6 @@ export function AcademicRecordCreator({ locale, onCreationSuccess }: AcademicRec
               <label>
                 {bn ? "নাম (ইংরেজি)" : "Name (English)"}
                 <input name="nameEn" required />
-              </label>
-            </div>
-            <div className="form-grid">
-              <label>
-                {bn ? "রুম (বাংলা)" : "Room (Bangla)"}
-                <input name="roomBn" />
-              </label>
-              <label>
-                Room (English)
-                <input name="roomEn" />
               </label>
             </div>
             <div className="form-grid">

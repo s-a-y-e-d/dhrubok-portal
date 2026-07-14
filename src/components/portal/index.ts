@@ -4,3 +4,4 @@ export { PortalPageState } from "./PortalPageState";
 export { AccessResolver } from "./AccessResolver";
 export { DevAccountSwitcher } from "./DevAccountSwitcher";
 export { RoleSection } from "./RoleSection";
+export { DialogModal } from "./DialogModal";

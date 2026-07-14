@@ -1,5 +1,6 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
+import type { Doc } from "../_generated/dataModel";
 import { mutation, query } from "../_generated/server";
 import { requireAccount, requireOwner } from "../model/auth";
 import { assertLocalDate } from "../model/dates";
@@ -154,25 +155,26 @@ export const updateDraft = mutation({
           ? "selected_batches"
           : "course"
       : undefined;
-    const patch = {
-      nameBn: args.nameBn,
-      nameEn: args.nameEn,
-      examDate: args.examDate,
-      examType: args.examType,
-      startsAtMinutes: args.startsAtMinutes,
-      endsAtMinutes: args.endsAtMinutes,
-      venue: args.venue,
-      meritMode: args.meritMode,
-      setupDraftJson: args.setupDraftJson,
-      courseId: args.courseId,
-      audienceMode: args.audienceMode,
-      officialMeritScope,
-    };
+    const patch: Partial<Doc<"exams">> = {};
+    if (args.nameBn !== undefined) patch.nameBn = args.nameBn.trim();
+    if (args.nameEn !== undefined) patch.nameEn = args.nameEn.trim();
+    if (args.examDate !== undefined) patch.examDate = args.examDate;
+    if (args.examType !== undefined) patch.examType = args.examType;
+    if (args.startsAtMinutes !== undefined)
+      patch.startsAtMinutes = args.startsAtMinutes;
+    if (args.endsAtMinutes !== undefined)
+      patch.endsAtMinutes = args.endsAtMinutes;
+    if (args.venue !== undefined) patch.venue = args.venue.trim() || undefined;
+    if (args.meritMode !== undefined) patch.meritMode = args.meritMode;
+    if (args.setupDraftJson !== undefined)
+      patch.setupDraftJson = args.setupDraftJson;
+    if (args.courseId !== undefined) patch.courseId = args.courseId;
+    if (args.audienceMode !== undefined) {
+      patch.audienceMode = args.audienceMode;
+      patch.officialMeritScope = officialMeritScope;
+    }
     await ctx.db.patch("exams", exam._id, {
       ...patch,
-      nameBn: patch.nameBn?.trim(),
-      nameEn: patch.nameEn?.trim(),
-      venue: patch.venue?.trim() || undefined,
       updatedAt: Date.now(),
     });
     await ctx.db.insert("examAuditEvents", {

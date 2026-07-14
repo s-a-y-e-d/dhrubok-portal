@@ -1,8 +1,10 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { mutation, query } from "../_generated/server";
+import { mutation, query, type MutationCtx } from "../_generated/server";
+import { internal } from "../_generated/api";
 import { requireOwner } from "../model/auth";
 import { writeAudit } from "../model/audit";
+import { computeCourseReadiness, readinessIssue } from "./courseReadiness";
 import { cleanRequired, courseDoc, courseStatus, courseSubjectDoc, mustGet, normalizeCode, normalizeSlug, paginationResult } from "./shared";
 
 const courseFields = {
@@ -10,6 +12,10 @@ const courseFields = {
   shortDescriptionBn: v.string(), shortDescriptionEn: v.string(), descriptionBn: v.string(), descriptionEn: v.string(),
   status: courseStatus, isPublic: v.boolean(), publicSortOrder: v.number(), coverStorageId: v.optional(v.id("_storage")),
 };
+
+const detailsFields = { academicSessionId: v.id("academicSessions"), code: v.string(), slug: v.string(), nameBn: v.string(), nameEn: v.string() };
+const searchTextFor = (code: string, nameBn: string, nameEn: string) => `${code} ${nameBn} ${nameEn}`.trim().toLowerCase();
+const refreshSnapshot = async (ctx: MutationCtx, courseId: Parameters<typeof mustGet<"courses">>[2]) => { await ctx.scheduler.runAfter(0, internal.academics.courseSnapshots.refresh, { courseId }); };
 
 async function validateCourseRelations(ctx: Parameters<typeof mustGet>[0], args: { academicSessionId: Parameters<typeof mustGet<"academicSessions">>[2]; status: "draft" | "active" | "completed" | "archived" }) {
   const session = await mustGet(ctx, "academicSessions", args.academicSessionId, "Academic session");
@@ -24,7 +30,8 @@ export const create = mutation({ args: courseFields, returns: v.id("courses"), h
   if (await ctx.db.query("courses").withIndex("by_code", q => q.eq("code", code)).unique()) throw new Error("Course code already exists");
   if (await ctx.db.query("courses").withIndex("by_slug", q => q.eq("slug", slug)).unique()) throw new Error("Course slug already exists");
   if (args.isPublic && args.status !== "active") throw new Error("Only active courses may be public");
-  const now = Date.now(); const id = await ctx.db.insert("courses", { ...args, code, slug, nameBn: cleanRequired(args.nameBn, "Bangla name"), nameEn: cleanRequired(args.nameEn, "English name"), createdAt: now, updatedAt: now, createdByAccountId: account._id, updatedByAccountId: account._id });
+  const nameBn = cleanRequired(args.nameBn, "Bangla name"); const nameEn = cleanRequired(args.nameEn, "English name");
+  const now = Date.now(); const id = await ctx.db.insert("courses", { ...args, code, slug, nameBn, nameEn, searchText: searchTextFor(code, nameBn, nameEn), createdAt: now, updatedAt: now, createdByAccountId: account._id, updatedByAccountId: account._id });
   await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: "course.created", entityType: "course", entityId: id, summary: "Course created" }); return id;
 } });
 
@@ -33,13 +40,27 @@ export const update = mutation({ args: { courseId: v.id("courses"), ...courseFie
   const code = normalizeCode(args.code); const slug = normalizeSlug(args.slug); const byCode = await ctx.db.query("courses").withIndex("by_code", q => q.eq("code", code)).unique(); const bySlug = await ctx.db.query("courses").withIndex("by_slug", q => q.eq("slug", slug)).unique();
   if (byCode && byCode._id !== args.courseId) throw new Error("Course code already exists"); if (bySlug && bySlug._id !== args.courseId) throw new Error("Course slug already exists"); if (args.isPublic && args.status !== "active") throw new Error("Only active courses may be public");
   if (current.academicSessionId !== args.academicSessionId) { const childStatuses = ["planned", "active", "completed", "archived"] as const; const children = await Promise.all(childStatuses.map(status => ctx.db.query("batches").withIndex("by_courseId_and_status", q => q.eq("courseId", args.courseId).eq("status", status)).take(1))); if (children.some(rows => rows.length)) throw new Error("A course with batches cannot change academic session"); }
-  const { courseId, ...patch } = args; await ctx.db.patch("courses", courseId, { ...patch, code, slug, nameBn: cleanRequired(args.nameBn, "Bangla name"), nameEn: cleanRequired(args.nameEn, "English name"), updatedAt: Date.now(), updatedByAccountId: account._id }); return null;
+  const nameBn = cleanRequired(args.nameBn, "Bangla name"); const nameEn = cleanRequired(args.nameEn, "English name"); const { courseId, ...patch } = args; await ctx.db.patch("courses", courseId, { ...patch, code, slug, nameBn, nameEn, searchText: searchTextFor(code, nameBn, nameEn), updatedAt: Date.now(), updatedByAccountId: account._id }); return null;
 } });
 
-export const archive = mutation({ args: { courseId: v.id("courses") }, returns: v.null(), handler: async (ctx, args) => { const { account } = await requireOwner(ctx); const course = await mustGet(ctx, "courses", args.courseId, "Course"); if (course.status === "archived") return null; const children = await Promise.all(["planned", "active", "completed"].map(status => ctx.db.query("batches").withIndex("by_courseId_and_status", q => q.eq("courseId", args.courseId).eq("status", status as "planned" | "active" | "completed")).take(1))); if (children.some(rows => rows.length)) throw new Error("Course with non-archived batches cannot be archived"); await ctx.db.patch("courses", args.courseId, { status: "archived", isPublic: false, updatedAt: Date.now(), updatedByAccountId: account._id }); await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: "course.archived", entityType: "course", entityId: args.courseId, summary: "Course archived" }); return null; } });
+export const createDraft = mutation({ args: detailsFields, returns: v.id("courses"), handler: async (ctx, args) => {
+  const { account } = await requireOwner(ctx); await validateCourseRelations(ctx, { academicSessionId: args.academicSessionId, status: "draft" }); const code = normalizeCode(args.code); const slug = normalizeSlug(args.slug); const nameBn = cleanRequired(args.nameBn, "Bangla name"); const nameEn = cleanRequired(args.nameEn, "English name");
+  if (await ctx.db.query("courses").withIndex("by_code", q => q.eq("code", code)).unique()) throw new Error("Course code already exists"); if (await ctx.db.query("courses").withIndex("by_slug", q => q.eq("slug", slug)).unique()) throw new Error("Course slug already exists"); const now = Date.now();
+  const id = await ctx.db.insert("courses", { ...args, code, slug, nameBn, nameEn, searchText: searchTextFor(code, nameBn, nameEn), shortDescriptionBn: "", shortDescriptionEn: "", descriptionBn: "", descriptionEn: "", status: "draft", isPublic: false, publicSortOrder: 0, createdAt: now, updatedAt: now, createdByAccountId: account._id, updatedByAccountId: account._id }); await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: "course.draft_created", entityType: "course", entityId: id, summary: "Course draft created" }); await refreshSnapshot(ctx, id); return id;
+} });
+
+export const updateDetails = mutation({ args: { courseId: v.id("courses"), ...detailsFields }, returns: v.null(), handler: async (ctx, args) => {
+  const { account } = await requireOwner(ctx); const current = await mustGet(ctx, "courses", args.courseId, "Course"); if (current.status === "archived") throw new Error("Archived courses cannot be edited"); const code = normalizeCode(args.code); const slug = normalizeSlug(args.slug); const nameBn = cleanRequired(args.nameBn, "Bangla name"); const nameEn = cleanRequired(args.nameEn, "English name"); const byCode = await ctx.db.query("courses").withIndex("by_code", q => q.eq("code", code)).unique(); const bySlug = await ctx.db.query("courses").withIndex("by_slug", q => q.eq("slug", slug)).unique(); if (byCode && byCode._id !== args.courseId) throw new Error("Course code already exists"); if (bySlug && bySlug._id !== args.courseId) throw new Error("Course slug already exists"); await ctx.db.patch("courses", args.courseId, { academicSessionId: args.academicSessionId, code, slug, nameBn, nameEn, searchText: searchTextFor(code, nameBn, nameEn), updatedAt: Date.now(), updatedByAccountId: account._id }); await refreshSnapshot(ctx, args.courseId); return null;
+} });
+
+export const activate = mutation({ args: { courseId: v.id("courses") }, returns: v.object({ activated: v.boolean(), issues: v.array(readinessIssue) }), handler: async (ctx, { courseId }) => { const { account } = await requireOwner(ctx); const course = await mustGet(ctx, "courses", courseId, "Course"); if (course.status !== "draft") throw new Error("Only draft courses can be activated"); const readiness = await computeCourseReadiness(ctx, courseId); if (!readiness.ready) return { activated: false, issues: readiness.issues }; await ctx.db.patch("courses", courseId, { status: "active", updatedAt: Date.now(), updatedByAccountId: account._id }); await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: "course.activated", entityType: "course", entityId: courseId, summary: "Course activated" }); await refreshSnapshot(ctx, courseId); return { activated: true, issues: [] }; } });
+
+export const complete = mutation({ args: { courseId: v.id("courses") }, returns: v.null(), handler: async (ctx, { courseId }) => { const { account } = await requireOwner(ctx); const course = await mustGet(ctx, "courses", courseId, "Course"); if (course.status !== "active") throw new Error("Only active courses can be completed"); const open = await Promise.all(["planned", "active"].map(status => ctx.db.query("batches").withIndex("by_courseId_and_status", q => q.eq("courseId", courseId).eq("status", status as "planned" | "active")).take(1))); if (open.some(rows => rows.length)) throw new Error("Complete active and planned batches first"); await ctx.db.patch("courses", courseId, { status: "completed", isPublic: false, updatedAt: Date.now(), updatedByAccountId: account._id }); await refreshSnapshot(ctx, courseId); return null; } });
+
+export const archive = mutation({ args: { courseId: v.id("courses") }, returns: v.null(), handler: async (ctx, args) => { const { account } = await requireOwner(ctx); const course = await mustGet(ctx, "courses", args.courseId, "Course"); if (course.status === "archived") return null; const children = await Promise.all(["planned", "active", "completed"].map(status => ctx.db.query("batches").withIndex("by_courseId_and_status", q => q.eq("courseId", args.courseId).eq("status", status as "planned" | "active" | "completed")).take(1))); if (children.some(rows => rows.length)) throw new Error("Course with non-archived batches cannot be archived"); await ctx.db.patch("courses", args.courseId, { status: "archived", isPublic: false, updatedAt: Date.now(), updatedByAccountId: account._id }); await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: "course.archived", entityType: "course", entityId: args.courseId, summary: "Course archived" }); await refreshSnapshot(ctx, args.courseId); return null; } });
 
 export const listSubjects = query({ args: { courseId: v.id("courses") }, returns: v.array(courseSubjectDoc), handler: async (ctx, args) => { await requireOwner(ctx); await mustGet(ctx, "courses", args.courseId, "Course"); return await ctx.db.query("courseSubjects").withIndex("by_courseId_and_sortOrder", q => q.eq("courseId", args.courseId)).take(200); } });
-export const addSubject = mutation({ args: { courseId: v.id("courses"), subjectId: v.id("subjects"), sortOrder: v.number() }, returns: v.id("courseSubjects"), handler: async (ctx, args) => { await requireOwner(ctx); const course = await mustGet(ctx, "courses", args.courseId, "Course"); const subject = await mustGet(ctx, "subjects", args.subjectId, "Subject"); if (course.status === "archived" || subject.status === "archived") throw new Error("Archived records cannot receive course-subject links"); if (!Number.isSafeInteger(args.sortOrder) || args.sortOrder < 0) throw new Error("Sort order must be a non-negative integer"); if (await ctx.db.query("courseSubjects").withIndex("by_courseId_and_subjectId", q => q.eq("courseId", args.courseId).eq("subjectId", args.subjectId)).unique()) throw new Error("Subject is already linked to course"); return await ctx.db.insert("courseSubjects", { ...args, createdAt: Date.now() }); } });
+export const addSubject = mutation({ args: { courseId: v.id("courses"), subjectId: v.id("subjects"), sortOrder: v.number() }, returns: v.id("courseSubjects"), handler: async (ctx, args) => { await requireOwner(ctx); const course = await mustGet(ctx, "courses", args.courseId, "Course"); const subject = await mustGet(ctx, "subjects", args.subjectId, "Subject"); if (course.status === "archived" || subject.status === "archived") throw new Error("Archived records cannot receive course-subject links"); if (!Number.isSafeInteger(args.sortOrder) || args.sortOrder < 0) throw new Error("Sort order must be a non-negative integer"); if (await ctx.db.query("courseSubjects").withIndex("by_courseId_and_subjectId", q => q.eq("courseId", args.courseId).eq("subjectId", args.subjectId)).unique()) throw new Error("Subject is already linked to course"); const id = await ctx.db.insert("courseSubjects", { ...args, createdAt: Date.now() }); await refreshSnapshot(ctx, args.courseId); return id; } });
 export const removeSubject = mutation({
   args: { courseSubjectId: v.id("courseSubjects") },
   returns: v.null(),
@@ -69,6 +90,7 @@ export const removeSubject = mutation({
       }
     }
     await ctx.db.delete(link._id);
+    await refreshSnapshot(ctx, link.courseId);
     return null;
   },
 });

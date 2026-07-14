@@ -1,6 +1,8 @@
 import { v } from "convex/values";
-import { env, mutation } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import type { GenericId } from "convex/values";
+import type { TableNamesInDataModel } from "convex/server";
+import { env, internalMutation, mutation } from "./_generated/server";
+import type { DataModel, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 
 async function requireDevOwner(ctx: MutationCtx) {
@@ -46,12 +48,12 @@ export const seedAcademics = mutation({
     }
     const batchIds: Id<"batches">[] = [];
     for (let index = 0; index < 6; index++) {
-      batchIds.push(await ctx.db.insert("batches", { academicSessionId, courseId: courseIds[index % 3], code: `TEST-B${index + 1}`, slug: `test-batch-${index + 1}-2026`, nameBn: `ব্যাচ ${index + 1} — ${index % 2 ? "সন্ধ্যা" : "সকাল"}`, nameEn: `Batch ${index + 1} — ${index % 2 ? "Evening" : "Morning"}`, roomBn: `কক্ষ ${1 + index % 3}`, roomEn: `Room ${1 + index % 3}`, startDate: "2026-01-10", endDate: "2026-12-15", capacity: 30, status: "active", admissionOpen: index < 4, isPublic: index < 4, publicSortOrder: index + 1, createdAt: now, updatedAt: now }));
+      batchIds.push(await ctx.db.insert("batches", { academicSessionId, courseId: courseIds[index % 3], code: `TEST-B${index + 1}`, slug: `test-batch-${index + 1}-2026`, nameBn: `ব্যাচ ${index + 1} — ${index % 2 ? "সন্ধ্যা" : "সকাল"}`, nameEn: `Batch ${index + 1} — ${index % 2 ? "Evening" : "Morning"}`, startDate: "2026-01-10", endDate: "2026-12-15", capacity: 30, status: "active", admissionOpen: index < 4, isPublic: index < 4, publicSortOrder: index + 1, createdAt: now, updatedAt: now }));
     }
     for (let index = 0; index < teacherAccounts.length; index++) {
       const account = teacherAccounts[index]; if (account.role !== "teacher") continue; const batchId = batchIds[index % batchIds.length];
       await ctx.db.insert("teacherBatchAssignments", { teacherId: account.teacherId, batchId, subjectId: subjectIds[index % subjectIds.length], startsOn: "2026-01-10", status: "active", createdAt: now, createdByAccountId: owner._id });
-      await ctx.db.insert("batchSchedules", { batchId, teacherId: account.teacherId, subjectId: subjectIds[index % subjectIds.length], weekday: 1 + index % 6, startMinutes: index % 2 ? 1020 : 480, endMinutes: index % 2 ? 1110 : 570, roomBn: `কক্ষ ${1 + index % 3}`, roomEn: `Room ${1 + index % 3}`, effectiveFrom: "2026-01-10", status: "active", createdAt: now, updatedAt: now });
+      await ctx.db.insert("batchSchedules", { batchId, teacherId: account.teacherId, subjectId: subjectIds[index % subjectIds.length], weekday: 1 + index % 6, startMinutes: index % 2 ? 1020 : 480, endMinutes: index % 2 ? 1110 : 570, effectiveFrom: "2026-01-10", status: "active", createdAt: now, updatedAt: now });
     }
     const feePlanIds: Id<"feePlans">[] = [];
     for (let index = 0; index < courseIds.length; index++) feePlanIds.push(await ctx.db.insert("feePlans", { courseId: courseIds[index], nameBn: `${courseSpecs[index].nameBn} মাসিক ফি`, nameEn: `${courseSpecs[index].nameEn} monthly fees`, status: "active", defaultDueDay: 15, createdAt: now, updatedAt: now }));
@@ -99,7 +101,7 @@ export const seedOperations = mutation({
     }
     for (let batchIndex = 0; batchIndex < batchIds.length; batchIndex++) {
       const roster = testEnrolments.filter(row => row.batchId === batchIds[batchIndex]); const teacherId = teacherIds[batchIndex]; const teacherAccountId = teacherAccountIds.get(teacherId) ?? owner._id;
-      const classSessionId = await ctx.db.insert("classSessions", { sessionKey: `test:${batchIds[batchIndex]}:2026-07-10`, batchId: batchIds[batchIndex], teacherId, subjectId: subjectIds[batchIndex], sessionDate: "2026-07-10", startsAt: Date.parse("2026-07-10T08:00:00+06:00"), endsAt: Date.parse("2026-07-10T09:30:00+06:00"), roomBn: `কক্ষ ${1 + batchIndex % 3}`, roomEn: `Room ${1 + batchIndex % 3}`, topicBn: "অধ্যায় পুনরালোচনা", topicEn: "Chapter revision", status: "submitted", submittedAt: now, submittedByAccountId: teacherAccountId, rosterCount: roster.length, presentCount: roster.filter((_, index) => index % 7 !== 0).length, lateCount: roster.filter((_, index) => index % 7 === 0 && index % 2 === 0).length, absentCount: roster.filter((_, index) => index % 7 === 0 && index % 2 !== 0).length, createdAt: now });
+      const classSessionId = await ctx.db.insert("classSessions", { sessionKey: `test:${batchIds[batchIndex]}:2026-07-10`, batchId: batchIds[batchIndex], teacherId, subjectId: subjectIds[batchIndex], sessionDate: "2026-07-10", startsAt: Date.parse("2026-07-10T08:00:00+06:00"), endsAt: Date.parse("2026-07-10T09:30:00+06:00"), topicBn: "অধ্যায় পুনরালোচনা", topicEn: "Chapter revision", status: "submitted", submittedAt: now, submittedByAccountId: teacherAccountId, rosterCount: roster.length, presentCount: roster.filter((_, index) => index % 7 !== 0).length, lateCount: roster.filter((_, index) => index % 7 === 0 && index % 2 === 0).length, absentCount: roster.filter((_, index) => index % 7 === 0 && index % 2 !== 0).length, createdAt: now });
       for (let index = 0; index < roster.length; index++) { await ctx.db.insert("attendanceRecords", { sessionId: classSessionId, batchId: batchIds[batchIndex], studentId: roster[index].studentId, enrolmentId: roster[index]._id, status: index % 7 !== 0 ? "present" : index % 2 === 0 ? "late" : "absent", submittedAt: now, submittedByAccountId: teacherAccountId }); attendanceRecords++; }
     }
     for (let courseIndex = 0; courseIndex < courseIds.length; courseIndex++) {
@@ -112,5 +114,213 @@ export const seedOperations = mutation({
     await ctx.db.insert("notices", { titleBn: "মডেল টেস্টের সময়সূচি", titleEn: "Model test schedule", bodyBn: "আগামী সপ্তাহে মডেল টেস্ট অনুষ্ঠিত হবে।", bodyEn: "The model test will be held next week.", audienceType: "all_students", status: "published", sendSms: false, publishedAt: now, createdByAccountId: owner._id, createdAt: now, updatedAt: now });
     await ctx.db.insert("notices", { titleBn: "অভিভাবক সভা", titleEn: "Guardian meeting", bodyBn: "শনিবার অভিভাবক সভা অনুষ্ঠিত হবে।", bodyEn: "A guardian meeting will be held on Saturday.", audienceType: "course", courseId: courseIds[0], status: "published", sendSms: false, publishedAt: now, createdByAccountId: owner._id, createdAt: now, updatedAt: now });
     return { created: true, attendanceRecords, charges, payments, results, materials: 6, notices: 2 };
+  },
+});
+
+const TEST_COURSE_CODES = ["TEST-SSC", "TEST-HSC", "TEST-JSC"] as const;
+const TEST_BATCH_CODES = ["TEST-B1", "TEST-B2", "TEST-B3", "TEST-B4", "TEST-B5", "TEST-B6"] as const;
+const TEST_EXAM_NUMBERS = ["TEST-EX-1", "TEST-EX-2", "TEST-EX-3"] as const;
+
+/**
+ * Removes only the academic graph created by seedAcademics/seedOperations.
+ * This is internal so it can only be invoked from the Convex dashboard/CLI or
+ * another trusted backend function. Run it with dryRun=true before deleting.
+ */
+export const removeMockAcademics = internalMutation({
+  args: { dryRun: v.boolean() },
+  returns: v.object({
+    dryRun: v.boolean(),
+    matched: v.number(),
+    deleted: v.number(),
+    academicSessionDeleted: v.boolean(),
+  }),
+  handler: async (ctx, { dryRun }) => {
+    const courseRows = [];
+    for (const code of TEST_COURSE_CODES) {
+      const row = await ctx.db.query("courses").withIndex("by_code", q => q.eq("code", code)).unique();
+      if (row) courseRows.push(row);
+    }
+    const seedSession = await ctx.db.query("academicSessions").withIndex("by_startDate", q => q.eq("startDate", "2026-01-01")).unique();
+    if (seedSession && seedSession.endDate === "2026-12-31" && seedSession.nameEn === "Academic Year 2026") {
+      for (const status of ["draft", "active", "completed", "archived"] as const) {
+        const rows = await ctx.db.query("courses").withIndex("by_academicSessionId_and_status", q => q.eq("academicSessionId", seedSession._id).eq("status", status)).take(100);
+        courseRows.push(...rows.filter(row =>
+          row.createdAt === seedSession.createdAt
+          && row.code.startsWith("TEST-")
+          && row.descriptionEn === "Complete academic preparation course.",
+        ));
+      }
+    }
+    const uniqueCourseRows = [...new Map(courseRows.map(row => [String(row._id), row])).values()];
+    courseRows.length = 0;
+    courseRows.push(...uniqueCourseRows);
+    const courseIds = new Set(courseRows.map(row => String(row._id)));
+    const sessionIds = new Set(courseRows.map(row => String(row.academicSessionId)));
+
+    const batchRows = [];
+    for (const code of TEST_BATCH_CODES) {
+      const row = await ctx.db.query("batches").withIndex("by_code", q => q.eq("code", code)).unique();
+      if (row && courseIds.has(String(row.courseId))) batchRows.push(row);
+    }
+    for (const course of courseRows) {
+      for (const status of ["active", "completed", "archived"] as const) {
+        batchRows.push(...await ctx.db.query("batches").withIndex("by_courseId_and_status", q => q.eq("courseId", course._id).eq("status", status)).take(100));
+      }
+    }
+    const uniqueBatchRows = [...new Map(batchRows.map(row => [String(row._id), row])).values()];
+    batchRows.length = 0;
+    batchRows.push(...uniqueBatchRows);
+    const enrolmentRows = [];
+    for (const course of courseRows) {
+      for (const status of ["active", "completed", "withdrawn", "transferred"] as const) {
+        const rows = await ctx.db.query("enrolments").withIndex("by_courseId_and_status", q => q.eq("courseId", course._id).eq("status", status)).take(200);
+        enrolmentRows.push(...rows);
+      }
+    }
+    const studentIds = new Set(enrolmentRows.map(row => String(row.studentId)));
+
+    const examRows = [];
+    for (const examNumber of TEST_EXAM_NUMBERS) {
+      const row = await ctx.db.query("exams").withIndex("by_examNumber", q => q.eq("examNumber", examNumber)).unique();
+      if (row && courseIds.has(String(row.courseId))) examRows.push(row);
+    }
+
+    type TableId = GenericId<TableNamesInDataModel<DataModel>>;
+    const rowsToDelete: Array<{ _id: TableId }> = [];
+    const add = <T extends { _id: TableId }>(rows: T[]) => rowsToDelete.push(...rows);
+
+    for (const exam of examRows) {
+      const candidates = [];
+      for (const status of ["included", "excluded"] as const) {
+        candidates.push(...await ctx.db.query("examCandidates").withIndex("by_examId_and_status", q => q.eq("examId", exam._id).eq("status", status)).take(200));
+      }
+      for (const candidate of candidates) {
+        add(await ctx.db.query("examSubjectResults").withIndex("by_candidateId", q => q.eq("candidateId", candidate._id)).take(20));
+      }
+      const publications = [];
+      for (const status of ["processing", "published", "superseded"] as const) {
+        publications.push(...await ctx.db.query("examPublications").withIndex("by_examId_and_status", q => q.eq("examId", exam._id).eq("status", status)).take(20));
+      }
+      for (const publication of publications) {
+        const publishedResults = await ctx.db.query("examPublishedResults").withIndex("by_examId_and_version", q => q.eq("examId", exam._id).eq("version", publication.version)).take(200);
+        for (const result of publishedResults) {
+          add(await ctx.db.query("examPublishedSubjectResults").withIndex("by_publishedResultId_and_sortOrder", q => q.eq("publishedResultId", result._id)).take(20));
+        }
+        add(publishedResults);
+      }
+      add(publications);
+      add(await ctx.db.query("examAuditEvents").withIndex("by_examId_and_createdAt", q => q.eq("examId", exam._id)).take(100));
+      add(await ctx.db.query("examResults").withIndex("by_examId_and_studentId", q => q.eq("examId", exam._id)).take(200));
+      add(await ctx.db.query("examTeacherAssignments").withIndex("by_examId", q => q.eq("examId", exam._id)).take(50));
+      add(await ctx.db.query("examBatches").withIndex("by_examId", q => q.eq("examId", exam._id)).take(20));
+      add(await ctx.db.query("examSubjects").withIndex("by_examId_and_sortOrder", q => q.eq("examId", exam._id)).take(20));
+      add(candidates);
+      add([exam]);
+    }
+
+    for (const batch of batchRows) {
+      const sessions = await ctx.db.query("classSessions").withIndex("by_batchId_and_sessionDate", q => q.eq("batchId", batch._id).eq("sessionDate", "2026-07-10")).take(20);
+      for (const session of sessions.filter(row => row.sessionKey.startsWith("test:"))) {
+        add(await ctx.db.query("attendanceRecords").withIndex("by_sessionId", q => q.eq("sessionId", session._id)).take(200));
+        add([session]);
+      }
+      for (const status of ["active", "ended"] as const) add(await ctx.db.query("teacherBatchAssignments").withIndex("by_batchId_and_status", q => q.eq("batchId", batch._id).eq("status", status)).take(50));
+      for (const status of ["active", "cancelled"] as const) add(await ctx.db.query("batchSchedules").withIndex("by_batchId_and_status", q => q.eq("batchId", batch._id).eq("status", status)).take(50));
+    }
+
+    for (const enrolment of enrolmentRows) {
+      for (const status of ["active", "ended"] as const) add(await ctx.db.query("discountPolicies").withIndex("by_enrolmentId_and_status", q => q.eq("enrolmentId", enrolment._id).eq("status", status)).take(20));
+      const charges = await ctx.db.query("studentCharges").withIndex("by_enrolmentId_and_periodKey", q => q.eq("enrolmentId", enrolment._id).eq("periodKey", "2026-07")).take(10);
+      for (const charge of charges.filter(row => row.chargeNumber.startsWith("TEST-CH-"))) {
+        add(await ctx.db.query("paymentAllocations").withIndex("by_chargeId", q => q.eq("chargeId", charge._id)).take(10));
+        add([charge]);
+      }
+    }
+
+    for (let index = 1; index <= 65; index++) {
+      const paymentNumber = `TEST-PAY-${String(index).padStart(4, "0")}`;
+      const payment = await ctx.db.query("payments").withIndex("by_paymentNumber", q => q.eq("paymentNumber", paymentNumber)).unique();
+      if (payment && studentIds.has(String(payment.studentId))) {
+        add(await ctx.db.query("paymentAllocations").withIndex("by_paymentId", q => q.eq("paymentId", payment._id)).take(10));
+        add([payment]);
+      }
+    }
+
+    for (const course of courseRows) {
+      add(await ctx.db.query("courseOperationalSnapshots").withIndex("by_courseId", q => q.eq("courseId", course._id)).take(5));
+      add(await ctx.db.query("courseSubjects").withIndex("by_courseId_and_sortOrder", q => q.eq("courseId", course._id)).take(50));
+      for (const status of ["active", "archived"] as const) {
+        const plans = await ctx.db.query("feePlans").withIndex("by_courseId_and_status", q => q.eq("courseId", course._id).eq("status", status)).take(20);
+        for (const plan of plans) {
+          add(await ctx.db.query("feePlanItems").withIndex("by_feePlanId_and_sortOrder", q => q.eq("feePlanId", plan._id)).take(50));
+        }
+        add(plans);
+      }
+      for (const status of ["draft", "published", "archived"] as const) {
+        add(await ctx.db.query("materials").withIndex("by_courseId_and_status", q => q.eq("courseId", course._id).eq("status", status)).take(100));
+        const notices = await ctx.db.query("notices").withIndex("by_courseId_and_status", q => q.eq("courseId", course._id).eq("status", status)).take(50);
+        for (const notice of notices) add(await ctx.db.query("noticeRecipients").withIndex("by_noticeId", q => q.eq("noticeId", notice._id)).take(200));
+        add(notices);
+      }
+    }
+
+    const globalSeedNotices = (await ctx.db.query("notices").withIndex("by_audienceType_and_status", q => q.eq("audienceType", "all_students").eq("status", "published")).take(100))
+      .filter(row => row.titleEn === "Model test schedule" && row.bodyEn === "The model test will be held next week.");
+    for (const notice of globalSeedNotices) add(await ctx.db.query("noticeRecipients").withIndex("by_noticeId", q => q.eq("noticeId", notice._id)).take(200));
+    add(globalSeedNotices);
+
+    const seededStudents = (await ctx.db.query("students").withIndex("by_status_and_admissionDate", q => q.eq("status", "active")).take(200))
+      .filter(row => row.normalizedLoginEmail.endsWith("@test.dhrubok.local"));
+    for (const student of seededStudents) {
+      let hasEnrolment = false;
+      for (const status of ["active", "completed", "withdrawn", "transferred"] as const) {
+        hasEnrolment ||= Boolean(await ctx.db.query("enrolments").withIndex("by_studentId_and_status", q => q.eq("studentId", student._id).eq("status", status)).first());
+      }
+      if (!hasEnrolment) {
+        const charges = await ctx.db.query("studentCharges").withIndex("by_studentId_and_dueDate", q => q.eq("studentId", student._id)).take(50);
+        for (const charge of charges) {
+          add(await ctx.db.query("paymentAllocations").withIndex("by_chargeId", q => q.eq("chargeId", charge._id)).take(20));
+        }
+        add(charges);
+        const payments = await ctx.db.query("payments").withIndex("by_studentId_and_paidAt", q => q.eq("studentId", student._id)).take(50);
+        for (const payment of payments) {
+          add(await ctx.db.query("paymentAllocations").withIndex("by_paymentId", q => q.eq("paymentId", payment._id)).take(20));
+        }
+        add(payments);
+        const summary = await ctx.db.query("studentFinancialSummaries").withIndex("by_studentId", q => q.eq("studentId", student._id)).unique();
+        if (summary) add([summary]);
+      }
+    }
+
+    add(enrolmentRows);
+    add(batchRows);
+    add(courseRows);
+
+    const uniqueRows = [...new Map(rowsToDelete.map(row => [String(row._id), row])).values()];
+    if (!dryRun) {
+      for (const row of uniqueRows) await ctx.db.delete(row._id);
+    }
+
+    let academicSessionDeleted = false;
+    if (!dryRun) {
+      for (const sessionId of sessionIds) {
+        const session = await ctx.db.get(sessionId as Id<"academicSessions">);
+        if (!session || session.startDate !== "2026-01-01" || session.endDate !== "2026-12-31" || session.nameEn !== "Academic Year 2026") continue;
+        let hasCourse = false;
+        let hasBatch = false;
+        for (const status of ["draft", "active", "completed", "archived"] as const) {
+          hasCourse ||= Boolean(await ctx.db.query("courses").withIndex("by_academicSessionId_and_status", q => q.eq("academicSessionId", session._id).eq("status", status)).first());
+        }
+        for (const status of ["active", "completed", "archived"] as const) {
+          hasBatch ||= Boolean(await ctx.db.query("batches").withIndex("by_academicSessionId_and_status", q => q.eq("academicSessionId", session._id).eq("status", status)).first());
+        }
+        if (!hasCourse && !hasBatch) {
+          await ctx.db.delete(session._id);
+          academicSessionDeleted = true;
+        }
+      }
+    }
+
+    return { dryRun, matched: uniqueRows.length, deleted: dryRun ? 0 : uniqueRows.length, academicSessionDeleted };
   },
 });

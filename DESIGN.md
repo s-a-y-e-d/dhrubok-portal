@@ -666,6 +666,12 @@ and the alternate is optional, place the optional field in a collapsible
 - Do not block typing — never use alert() or modal validation.
 - Submit button stays enabled but shows a validation summary if errors exist.
 
+#### Form Grid Layouts
+
+- **`.form-grid`** — 2-column grid for standard labels and inputs. Collapses to 1-column on mobile viewports.
+- **`.form-grid-thirds`** — 3-column responsive layout grid for settings and small inputs. Collapses to 2-columns on tablet, and 1-column on mobile.
+- **`.feature-option-card`** — 2-column layout wrapper card (natively mapped via `<label>` elements) for accessible checkbox/radio settings with description text. Support hover state, `:focus-within` outlines, checked active states (`brand-muted` background + `brand` border), and disabled states.
+
 ### Data Display
 
 #### Data Table
@@ -734,13 +740,13 @@ When tables collapse on mobile, each row becomes a card:
 - Text: `{typography.label-sm}`.
 - Background and text colour determined by semantic state.
 
-| State                            | Background      | Text           |
-| -------------------------------- | --------------- | -------------- |
-| Success (present, paid, active)  | `success-soft`  | `success-deep` |
-| Warning (late, due, pending)     | `warning-soft`  | `warning-deep` |
-| Danger (absent, overdue, failed) | `danger-soft`   | `danger-deep`  |
-| Info (published, new, queued)    | `info-soft`     | `info-deep`    |
-| Neutral (draft, archived)        | `canvas-subtle` | `ink-mute`     |
+| State                            | Background      | Text           | CSS Classes |
+| -------------------------------- | --------------- | -------------- | ----------- |
+| Success (present, paid, active)  | `success-soft`  | `success-deep` | `.status-pill.active` (Accounts), `.status-pill.present` (Attendance), etc. |
+| Warning (late, due, pending)     | `warning-soft`  | `warning-deep` | `.status-pill.reserved` (Accounts), `.status-pill.late` / `.status-pill.queued` |
+| Danger (absent, overdue, failed) | `danger-soft`   | `danger-deep`  | `.status-pill.suspended` / `.status-pill.revoked`, `.status-pill.absent` |
+| Info (published, new, queued)    | `info-soft`     | `info-deep`    | `.status-pill.info` / `.status-pill.published` / `.status-pill.new` |
+| Neutral (draft, archived)        | `canvas-subtle` | `ink-mute`     | `.status-pill` (default) |
 
 #### Status Dot
 
@@ -969,6 +975,15 @@ See "Print Design" section below.
 ## Portal-Specific Guidelines
 
 ### Owner Portal
+
+#### Course Operational Workspace
+
+- Use a master-detail layout: a compact searchable course list beside one selected course workspace. Collapse to a single column below tablet width.
+- The workspace header combines identity, lifecycle, academic readiness, fee readiness, and website publication; status must use text as well as semantic colour.
+- Readiness checklists use one actionable row per server-owned issue and link to the exact resolving section. Clients never infer activation permission.
+- Coverage matrices place subjects on rows and qualifying batches on columns. Every cell names assigned teachers or says `Missing`; narrow screens use horizontally scrollable or linear cards without shrinking touch targets.
+- Weekly agendas lead with weekday and time, then batch, subject, and teacher. Schedule conflicts use an icon, text, the colliding resource, time, and effective range.
+- Operational drawers are right-aligned, trap focus, restore focus on close, and warn before discarding dirty input. Drawer footer actions remain visible on long forms.
 
 - **Density:** compact. Tables show 20 rows by default with tight row height.
 - **Quick actions:** persistent toolbar or floating action button for the five

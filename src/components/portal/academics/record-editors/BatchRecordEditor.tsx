@@ -34,8 +34,6 @@ export function BatchRecordEditor({ locale, batchId, onArchiveSuccess }: BatchRe
     const slug = String(data.get("slug"));
     const nameBn = String(data.get("nameBn"));
     const nameEn = String(data.get("nameEn"));
-    const roomBn = String(data.get("roomBn")) || undefined;
-    const roomEn = String(data.get("roomEn")) || undefined;
     const startDate = String(data.get("startDate")) || undefined;
     const endDate = String(data.get("endDate")) || undefined;
     const capacity = Number(data.get("capacity")) || undefined;
@@ -54,8 +52,6 @@ export function BatchRecordEditor({ locale, batchId, onArchiveSuccess }: BatchRe
           slug,
           nameBn,
           nameEn,
-          roomBn,
-          roomEn,
           startDate,
           endDate,
           capacity,
@@ -109,16 +105,6 @@ export function BatchRecordEditor({ locale, batchId, onArchiveSuccess }: BatchRe
           <label>
             {bn ? "নাম (ইংরেজি)" : "Name (English)"}
             <input name="nameEn" defaultValue={row.nameEn} required />
-          </label>
-        </div>
-        <div className="form-grid">
-          <label>
-            {bn ? "রুম (বাংলা)" : "Room (Bangla)"}
-            <input name="roomBn" defaultValue={row.roomBn} />
-          </label>
-          <label>
-            Room (English)
-            <input name="roomEn" defaultValue={row.roomEn} />
           </label>
         </div>
         <div className="form-grid">

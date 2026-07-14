@@ -31,6 +31,7 @@ export default defineSchema({
   coachingSettings: defineTable({
     nameBn: v.string(),
     nameEn: v.string(),
+    searchText: v.optional(v.string()),
     shortNameBn: v.string(),
     shortNameEn: v.string(),
     addressBn: v.string(),
@@ -150,12 +151,38 @@ export default defineSchema({
     .index("by_code", ["code"])
     .index("by_status", ["status"]),
 
+  courseOperationalSnapshots: defineTable({
+    courseId: v.id("courses"),
+    academicSessionId: v.id("academicSessions"),
+    lifecycleStatus: v.union(v.literal("draft"), v.literal("active"), v.literal("completed"), v.literal("archived")),
+    qualifyingBatchCount: v.number(),
+    activeBatchCount: v.number(),
+    plannedBatchCount: v.number(),
+    completedBatchCount: v.number(),
+    archivedBatchCount: v.number(),
+    activeEnrolmentCount: v.number(),
+    totalCapacity: v.number(),
+    academicReady: v.boolean(),
+    feeConfigured: v.boolean(),
+    missingBatchCount: v.number(),
+    missingTeacherCount: v.number(),
+    missingRoutineCount: v.number(),
+    missingFeeCount: v.number(),
+    websitePublished: v.boolean(),
+    nextRoutineWeekday: v.optional(v.number()),
+    nextRoutineStartMinutes: v.optional(v.number()),
+    updatedAt: v.number(),
+  })
+    .index("by_courseId", ["courseId"])
+    .index("by_academicSessionId_and_lifecycleStatus", ["academicSessionId", "lifecycleStatus"]),
+
   courses: defineTable({
     academicSessionId: v.id("academicSessions"),
     code: v.string(),
     slug: v.string(),
     nameBn: v.string(),
     nameEn: v.string(),
+    searchText: v.optional(v.string()),
     shortDescriptionBn: v.string(),
     shortDescriptionEn: v.string(),
     descriptionBn: v.string(),
@@ -183,7 +210,11 @@ export default defineSchema({
       "publicSortOrder",
     ])
     .index("by_code", ["code"])
-    .index("by_status", ["status"]),
+    .index("by_status", ["status"])
+    .searchIndex("search_searchText", {
+      searchField: "searchText",
+      filterFields: ["academicSessionId", "status"],
+    }),
 
   courseSubjects: defineTable({
     courseId: v.id("courses"),
@@ -236,6 +267,7 @@ export default defineSchema({
     slug: v.string(),
     nameBn: v.string(),
     nameEn: v.string(),
+    // Deprecated during the room-removal widen/migrate/narrow rollout.
     roomBn: v.optional(v.string()),
     roomEn: v.optional(v.string()),
     startDate: v.optional(v.string()),
@@ -282,6 +314,7 @@ export default defineSchema({
     weekday: v.number(),
     startMinutes: v.number(),
     endMinutes: v.number(),
+    // Deprecated during the room-removal widen/migrate/narrow rollout.
     roomBn: v.optional(v.string()),
     roomEn: v.optional(v.string()),
     effectiveFrom: v.string(),
@@ -292,6 +325,7 @@ export default defineSchema({
   })
     .index("by_batchId_and_status", ["batchId", "status"])
     .index("by_teacherId_and_status", ["teacherId", "status"])
+    .index("by_status", ["status"])
     .index("by_weekday_and_status", ["weekday", "status"])
     .index("by_batchId_and_weekday_and_status", [
       "batchId",
@@ -457,6 +491,7 @@ export default defineSchema({
     sessionDate: v.string(),
     startsAt: v.number(),
     endsAt: v.number(),
+    // Deprecated during the room-removal widen/migrate/narrow rollout.
     roomBn: v.optional(v.string()),
     roomEn: v.optional(v.string()),
     topicBn: v.optional(v.string()),
