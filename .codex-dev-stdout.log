@@ -1,0 +1,21 @@
+
+> dhrubok-portal@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.10 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.102:3000
+- Environments: .env.local
+✓ Ready in 724ms
+- Experiments (use with caution):
+  · serverActions
+
+Attention: Clerk collects telemetry data from its SDKs when connected to development instances.
+The data collected is used to inform Clerk's product roadmap.
+To learn more, including how to opt-out from the telemetry program, visit: https://clerk.com/docs/telemetry.
+
+ GET /bn/sign-in 200 in 5.6s (next.js: 5.0s, application-code: 592ms)
+ GET /bn/sign-in 200 in 69ms (next.js: 13ms, application-code: 55ms)
+ GET /bn/sign-in/SignIn_clerk_catchall_check_1784109269762 200 in 78ms (next.js: 5ms, application-code: 73ms)
+ GET /bn/access 200 in 762ms (next.js: 706ms, generate-params: 661ms, application-code: 56ms)
+ GET /bn/owner 200 in 3.8s (next.js: 796ms, proxy.ts: 3.0s, application-code: 46ms)
