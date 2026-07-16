@@ -68,7 +68,6 @@ export const listOpenBatches = query({
     nameBn: v.string(),
     nameEn: v.string(),
     startDate: v.union(v.string(), v.null()),
-    endDate: v.union(v.string(), v.null()),
   })),
   handler: async (ctx, args) => {
     const course = await ctx.db.get("courses", args.courseId);
@@ -84,8 +83,7 @@ export const listOpenBatches = query({
         slug: batch.slug,
         nameBn: batch.nameBn,
         nameEn: batch.nameEn,
-        startDate: batch.startDate ?? null,
-        endDate: batch.endDate ?? null,
+        startDate: batch.startDate,
       }));
   },
 });

@@ -243,7 +243,6 @@ export const listManaged = query({
     status: v.optional(v.string()),
     search: v.optional(v.string()),
     needsMyAction: v.optional(v.boolean()),
-    academicSessionId: v.optional(v.id("academicSessions")),
     courseId: v.optional(v.id("courses")),
     dateFrom: v.optional(v.string()),
     dateTo: v.optional(v.string()),
@@ -307,17 +306,7 @@ export const listManaged = query({
         return false;
       return true;
     });
-    const courseSession = new Map<string, string>();
-    if (args.academicSessionId)
-      for (const row of unique) {
-        const course = await ctx.db.get("courses", row.courseId);
-        if (course) courseSession.set(row._id, course.academicSessionId);
-      }
-    const filtered = unique.filter(
-      (row) =>
-        !args.academicSessionId ||
-        courseSession.get(row._id) === args.academicSessionId,
-    );
+    const filtered = unique;
     const urgency: Record<string, number> = {
       ready_for_review: 0,
       publication_processing: 0,

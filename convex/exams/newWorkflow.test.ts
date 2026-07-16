@@ -105,7 +105,7 @@ async function seedMultiBatch(t: ReturnType<typeof convexTest>) {
       createdAt: now,
       updatedAt: now,
     });
-    const academicSessionId = await ctx.db.insert("academicSessions", {
+    const removedSession = ({
       nameBn: "২০২৬",
       nameEn: "2026",
       startDate: "2026-01-01",
@@ -115,7 +115,6 @@ async function seedMultiBatch(t: ReturnType<typeof convexTest>) {
       updatedAt: now,
     });
     const courseId = await ctx.db.insert("courses", {
-      academicSessionId,
       code: "MULTI",
       slug: "multi",
       nameBn: "বহু ব্যাচ কোর্স",
@@ -150,12 +149,12 @@ async function seedMultiBatch(t: ReturnType<typeof convexTest>) {
     for (let index = 0; index < 2; index++) {
       batchIds.push(
         await ctx.db.insert("batches", {
-          academicSessionId,
           courseId,
           code: `MB${index}`,
           slug: `mb-${index}`,
           nameBn: `ব্যাচ ${index + 1}`,
           nameEn: `Batch ${index + 1}`,
+          startDate: "2026-01-01",
           status: "active",
           admissionOpen: true,
           isPublic: true,
@@ -232,7 +231,6 @@ async function seedMultiBatch(t: ReturnType<typeof convexTest>) {
         studentId,
         courseId,
         batchId: batchIds[index < 2 ? 0 : 1],
-        academicSessionId,
         enrolledOn: "2026-01-01",
         status: "active",
         createdAt: now,
@@ -243,7 +241,6 @@ async function seedMultiBatch(t: ReturnType<typeof convexTest>) {
     }
     return {
       ownerAccountId,
-      academicSessionId,
       courseId,
       subjectId,
       batchIds,
@@ -275,17 +272,7 @@ it("runs the frozen subject-level workflow through immutable publication", async
       createdAt: now,
       updatedAt: now,
     });
-    const sessionId = await ctx.db.insert("academicSessions", {
-      nameBn: "২০২৬",
-      nameEn: "2026",
-      startDate: "2026-01-01",
-      endDate: "2026-12-31",
-      status: "active",
-      createdAt: now,
-      updatedAt: now,
-    });
     const courseId = await ctx.db.insert("courses", {
-      academicSessionId: sessionId,
       code: "C",
       slug: "c",
       nameBn: "কোর্স",
@@ -317,12 +304,12 @@ it("runs the frozen subject-level workflow through immutable publication", async
       createdAt: now,
     });
     const batchId = await ctx.db.insert("batches", {
-      academicSessionId: sessionId,
       courseId,
       code: "B",
       slug: "b",
       nameBn: "ব্যাচ",
       nameEn: "Batch",
+      startDate: "2026-01-01",
       status: "active",
       admissionOpen: true,
       isPublic: true,
@@ -397,7 +384,6 @@ it("runs the frozen subject-level workflow through immutable publication", async
         studentId,
         courseId,
         batchId,
-        academicSessionId: sessionId,
         enrolledOn: "2026-01-01",
         status: "active",
         createdAt: now,
@@ -716,7 +702,6 @@ it("freezes all active course batches and ignores later enrolments", async () =>
       studentId: lateStudentId,
       courseId: data.courseId,
       batchId: data.batchIds[0],
-      academicSessionId: data.academicSessionId,
       enrolledOn: "2026-07-13",
       status: "active",
       createdAt: now,
@@ -750,7 +735,6 @@ it("blocks duplicate roster enrolments and cross-teacher marks access", async ()
       studentId: data.studentIds[0],
       courseId: data.courseId,
       batchId: data.batchIds[1],
-      academicSessionId: data.academicSessionId,
       enrolledOn: "2026-07-13",
       status: "active",
       createdAt: now,
@@ -910,7 +894,6 @@ it("initializes cohorts over one thousand subject rows in bounded jobs", async (
           studentId,
           courseId: data.courseId,
           batchId: data.batchIds[index % 2],
-          academicSessionId: data.academicSessionId,
           enrolledOn: "2026-01-01",
           status: "active",
           createdAt: now,

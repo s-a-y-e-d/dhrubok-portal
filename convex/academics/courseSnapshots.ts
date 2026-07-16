@@ -15,10 +15,10 @@ export const refresh = internalMutation({
     const readiness = await computeCourseReadiness(ctx, courseId);
     const routines = (await Promise.all(qualifying.map(batch => ctx.db.query("batchSchedules").withIndex("by_batchId_and_status", q => q.eq("batchId", batch._id).eq("status", "active")).take(100)))).flat().sort((a, b) => a.weekday - b.weekday || a.startMinutes - b.startMinutes);
     const value = {
-      courseId, academicSessionId: course.academicSessionId, lifecycleStatus: course.status,
+      courseId, lifecycleStatus: course.status,
       qualifyingBatchCount: qualifying.length, plannedBatchCount: grouped[0].length, activeBatchCount: grouped[1].length,
       completedBatchCount: grouped[2].length, archivedBatchCount: grouped[3].length,
-      activeEnrolmentCount: enrolments.length, totalCapacity: qualifying.reduce((sum, batch) => sum + (batch.capacity ?? 0), 0),
+      activeEnrolmentCount: enrolments.length,
       academicReady: readiness.ready, feeConfigured: readiness.feesConfigured,
       missingBatchCount: readiness.issues.filter(issue => issue.code === "NO_QUALIFYING_BATCH").length,
       missingTeacherCount: readiness.issues.filter(issue => issue.code === "BATCH_SUBJECT_TEACHER_MISSING").length,

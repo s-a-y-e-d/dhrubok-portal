@@ -439,6 +439,14 @@ export function PortalShell({
     queueMicrotask(() => setTheme(preferredTheme));
   }, []);
 
+  useEffect(() => {
+    const root = document.documentElement;
+    root.dataset.portalTheme = theme;
+    return () => {
+      delete root.dataset.portalTheme;
+    };
+  }, [theme]);
+
   const toggleTheme = () => {
     setTheme((current) => {
       const next = current === "dark" ? "light" : "dark";

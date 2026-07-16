@@ -54,7 +54,6 @@ export default defineSchema({
     smsSenderId: v.optional(v.string()),
     smsEnabled: v.boolean(),
     publicAdmissionsOpen: v.boolean(),
-    activeAcademicSessionId: v.optional(v.id("academicSessions")),
     createdAt: v.number(),
     updatedAt: v.number(),
     updatedByAccountId: v.optional(v.id("portalAccounts")),
@@ -128,18 +127,6 @@ export default defineSchema({
     .index("by_key", ["key"])
     .index("by_key_and_yearScope", ["key", "yearScope"]),
 
-  academicSessions: defineTable({
-    nameBn: v.string(),
-    nameEn: v.string(),
-    startDate: v.string(),
-    endDate: v.string(),
-    status: academicStatusValidator,
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_status", ["status"])
-    .index("by_startDate", ["startDate"]),
-
   subjects: defineTable({
     code: v.string(),
     nameBn: v.string(),
@@ -153,15 +140,13 @@ export default defineSchema({
 
   courseOperationalSnapshots: defineTable({
     courseId: v.id("courses"),
-    academicSessionId: v.id("academicSessions"),
-    lifecycleStatus: v.union(v.literal("draft"), v.literal("active"), v.literal("completed"), v.literal("archived")),
+    lifecycleStatus: v.union(v.literal("active"), v.literal("archived")),
     qualifyingBatchCount: v.number(),
     activeBatchCount: v.number(),
     plannedBatchCount: v.number(),
     completedBatchCount: v.number(),
     archivedBatchCount: v.number(),
     activeEnrolmentCount: v.number(),
-    totalCapacity: v.number(),
     academicReady: v.boolean(),
     feeConfigured: v.boolean(),
     missingBatchCount: v.number(),
@@ -173,11 +158,9 @@ export default defineSchema({
     nextRoutineStartMinutes: v.optional(v.number()),
     updatedAt: v.number(),
   })
-    .index("by_courseId", ["courseId"])
-    .index("by_academicSessionId_and_lifecycleStatus", ["academicSessionId", "lifecycleStatus"]),
+    .index("by_courseId", ["courseId"]),
 
   courses: defineTable({
-    academicSessionId: v.id("academicSessions"),
     code: v.string(),
     slug: v.string(),
     nameBn: v.string(),
@@ -187,12 +170,7 @@ export default defineSchema({
     shortDescriptionEn: v.string(),
     descriptionBn: v.string(),
     descriptionEn: v.string(),
-    status: v.union(
-      v.literal("draft"),
-      v.literal("active"),
-      v.literal("completed"),
-      v.literal("archived"),
-    ),
+    status: v.union(v.literal("active"), v.literal("archived")),
     isPublic: v.boolean(),
     publicSortOrder: v.number(),
     coverStorageId: v.optional(v.id("_storage")),
@@ -201,7 +179,6 @@ export default defineSchema({
     createdByAccountId: v.id("portalAccounts"),
     updatedByAccountId: v.id("portalAccounts"),
   })
-    .index("by_academicSessionId_and_status", ["academicSessionId", "status"])
     .index("by_slug", ["slug"])
     .index("by_isPublic_and_publicSortOrder", ["isPublic", "publicSortOrder"])
     .index("by_isPublic_and_status_and_publicSortOrder", [
@@ -213,7 +190,7 @@ export default defineSchema({
     .index("by_status", ["status"])
     .searchIndex("search_searchText", {
       searchField: "searchText",
-      filterFields: ["academicSessionId", "status"],
+      filterFields: ["status"],
     }),
 
   courseSubjects: defineTable({
@@ -225,6 +202,21 @@ export default defineSchema({
     .index("by_courseId_and_sortOrder", ["courseId", "sortOrder"])
     .index("by_subjectId", ["subjectId"])
     .index("by_courseId_and_subjectId", ["courseId", "subjectId"]),
+
+  courseTeacherDefaults: defineTable({
+    courseId: v.id("courses"),
+    subjectId: v.id("subjects"),
+    teacherId: v.id("teachers"),
+    status: v.union(v.literal("active"), v.literal("ended")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    createdByAccountId: v.id("portalAccounts"),
+    updatedByAccountId: v.id("portalAccounts"),
+  })
+    .index("by_courseId_and_status", ["courseId", "status"])
+    .index("by_courseId_and_subjectId", ["courseId", "subjectId"])
+    .index("by_teacherId_and_status", ["teacherId", "status"])
+    .index("by_subjectId_and_status", ["subjectId", "status"]),
 
   teachers: defineTable({
     employeeCode: v.string(),
@@ -261,7 +253,6 @@ export default defineSchema({
     ]),
 
   batches: defineTable({
-    academicSessionId: v.id("academicSessions"),
     courseId: v.id("courses"),
     code: v.string(),
     slug: v.string(),
@@ -270,9 +261,7 @@ export default defineSchema({
     // Deprecated during the room-removal widen/migrate/narrow rollout.
     roomBn: v.optional(v.string()),
     roomEn: v.optional(v.string()),
-    startDate: v.optional(v.string()),
-    endDate: v.optional(v.string()),
-    capacity: v.optional(v.number()),
+    startDate: v.string(),
     status: academicStatusValidator,
     admissionOpen: v.boolean(),
     isPublic: v.boolean(),
@@ -281,7 +270,6 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_courseId_and_status", ["courseId", "status"])
-    .index("by_academicSessionId_and_status", ["academicSessionId", "status"])
     .index("by_slug", ["slug"])
     .index("by_isPublic_and_publicSortOrder", ["isPublic", "publicSortOrder"])
     .index("by_code", ["code"])
@@ -439,7 +427,6 @@ export default defineSchema({
     studentId: v.id("students"),
     courseId: v.id("courses"),
     batchId: v.id("batches"),
-    academicSessionId: v.id("academicSessions"),
     enrolledOn: v.string(),
     endedOn: v.optional(v.string()),
     status: v.union(
@@ -497,6 +484,7 @@ export default defineSchema({
     topicBn: v.optional(v.string()),
     topicEn: v.optional(v.string()),
     status: v.union(
+      v.literal("scheduled"),
       v.literal("open"),
       v.literal("submitted"),
       v.literal("cancelled"),
@@ -585,7 +573,6 @@ export default defineSchema({
     feePlanItemId: v.optional(v.id("feePlanItems")),
     courseId: v.optional(v.id("courses")),
     batchId: v.optional(v.id("batches")),
-    academicSessionId: v.optional(v.id("academicSessions")),
     agreementId: v.optional(v.id("studentFeeAgreements")),
     sourceAdjustmentId: v.optional(v.id("financeAdjustments")),
     type: chargeTypeValidator,
@@ -629,7 +616,6 @@ export default defineSchema({
       "status",
       "dueDate",
     ])
-    .index("by_academicSessionId_and_dueDate", ["academicSessionId", "dueDate"])
     .index("by_generationKey", ["generationKey"]),
 
   payments: defineTable({
@@ -725,7 +711,6 @@ export default defineSchema({
     enrolmentId: v.optional(v.id("enrolments")),
     courseId: v.optional(v.id("courses")),
     batchId: v.optional(v.id("batches")),
-    academicSessionId: v.optional(v.id("academicSessions")),
     outstandingMinor: v.number(),
     overdueMinor: v.number(),
     currentMinor: v.number(),
@@ -750,10 +735,6 @@ export default defineSchema({
     .index("by_batchId_and_oldestUnpaidDueDate", [
       "batchId",
       "oldestUnpaidDueDate",
-    ])
-    .index("by_academicSessionId_and_overdueMinor", [
-      "academicSessionId",
-      "overdueMinor",
     ]),
 
   financeDailySnapshots: defineTable({
@@ -799,7 +780,6 @@ export default defineSchema({
     ),
     courseId: v.optional(v.id("courses")),
     batchId: v.optional(v.id("batches")),
-    academicSessionId: v.optional(v.id("academicSessions")),
     ageingBuckets: v.array(
       v.union(
         v.literal("1_15"),

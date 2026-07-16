@@ -3,23 +3,116 @@
 :root {
   --brand: #3ecf8e;
   --brand-deep: #24b47e;
+  --brand-soft: #a7f3d0;
   --brand-muted: #ecfdf5;
   --success: #16a34a;
+  --success-deep: #15803d;
+  --success-soft: #dcfce7;
+  --success-muted: #f0fdf4;
   --warning: #d97706;
+  --warning-deep: #b45309;
+  --warning-soft: #fef3c7;
+  --warning-muted: #fffbeb;
   --danger: #dc2626;
+  --danger-deep: #b91c1c;
+  --danger-soft: #fee2e2;
+  --danger-muted: #fef2f2;
   --info: #2563eb;
   --info-soft: #dbeafe;
+  --info-muted: #eff6ff;
   --info-deep: #1d4ed8;
   --ink: #171717;
   --on-brand: #171717;
+  --on-dark: #fafafa;
   --ink-secondary: #404040;
   --ink-mute: #737373;
+  --ink-faint: #a3a3a3;
+  --ink-disabled: #d4d4d4;
   --canvas: #ffffff;
   --canvas-soft: #fafafa;
   --canvas-subtle: #f5f5f5;
+  --canvas-dark: #171717;
+  --canvas-dark-soft: #262626;
   --border: #e5e5e5;
   --border-strong: #d4d4d4;
+  --border-muted: #f0f0f0;
   --focus: #3ecf8e;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-3: 0 12px 32px rgba(0, 0, 0, 0.12);
+}
+
+/* Development showcase theme. Portal dark mode remains scoped to PortalShell. */
+html[data-ui-showcase-theme="dark"] {
+  color-scheme: dark;
+  --ink: #f5f5f5;
+  --ink-secondary: #d4d4d4;
+  --ink-mute: #a3a3a3;
+  --ink-faint: #737373;
+  --ink-disabled: #525252;
+  --canvas: #171717;
+  --canvas-soft: #111111;
+  --canvas-subtle: #262626;
+  --border: #333333;
+  --border-strong: #525252;
+  --border-muted: #2b2b2b;
+  --brand-muted: #12382b;
+  --success-muted: #10271a;
+  --warning-muted: #2c210d;
+  --danger-muted: #321515;
+  --info-muted: #14213d;
+  --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.32);
+  --shadow-2: 0 6px 18px rgba(0, 0, 0, 0.4);
+  --shadow-3: 0 18px 48px rgba(0, 0, 0, 0.5);
+}
+
+/* Radix overlays render under document.body, outside PortalShell. Mirror the
+   active portal theme here so dialogs, sheets, selects, and menus inherit the
+   same semantic tokens as the portal that opened them. */
+html[data-portal-theme="dark"] {
+  color-scheme: dark;
+  --ink: #fafafa;
+  --ink-secondary: #d4d4d4;
+  --ink-mute: #a3a3a3;
+  --ink-faint: #737373;
+  --ink-disabled: #525252;
+  --canvas: #141414;
+  --canvas-soft: #1a1a1a;
+  --canvas-subtle: #252525;
+  --border: #2e2e2e;
+  --border-strong: #404040;
+  --border-muted: #2b2b2b;
+  --brand-muted: #122e22;
+  --success-muted: #10271a;
+  --warning-muted: #2c210d;
+  --danger-muted: #321515;
+  --info-muted: #14213d;
+  --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.32);
+  --shadow-2: 0 6px 18px rgba(0, 0, 0, 0.4);
+  --shadow-3: 0 18px 48px rgba(0, 0, 0, 0.5);
+}
+
+@theme inline {
+  --color-background: var(--canvas);
+  --color-foreground: var(--ink);
+  --color-primary: var(--brand);
+  --color-primary-foreground: var(--on-brand);
+  --color-secondary: var(--canvas-subtle);
+  --color-secondary-foreground: var(--ink);
+  --color-muted: var(--canvas-subtle);
+  --color-muted-foreground: var(--ink-mute);
+  --color-destructive: var(--danger);
+  --color-border: var(--border);
+  --color-input: var(--border-strong);
+  --color-ring: var(--focus);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
 }
 
 * {
@@ -29,6 +122,10 @@
 html {
   background: var(--canvas);
   color: var(--ink);
+}
+
+html[data-ui-showcase-theme="dark"] body {
+  background: var(--canvas-soft);
 }
 
 body {
@@ -58,6 +155,13 @@ a {
 :focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
+}
+
+[data-slot="input"]:focus-visible,
+[data-slot="textarea"]:focus-visible,
+[data-slot="select-trigger"]:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .skip-link {

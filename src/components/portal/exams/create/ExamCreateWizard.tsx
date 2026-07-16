@@ -47,7 +47,6 @@ export function ExamCreateWizard({
     venue: "",
   });
   const [examId, setExamId] = useState<Id<"exams"> | null>(null);
-  const [sessionId, setSessionId] = useState<Id<"academicSessions"> | "">("");
   const [courseId, setCourseId] = useState<Id<"courses"> | "">("");
   const [audience, setAudience] = useState<Audience>("single_batch");
   const [batchIds, setBatchIds] = useState<Id<"batches">[]>([]);
@@ -61,21 +60,10 @@ export function ExamCreateWizard({
   const [draftMessage, setDraftMessage] = useState<string | null>(null);
   const [initializingMarks, setInitializingMarks] = useState(false);
   const [restoredExamId, setRestoredExamId] = useState<string | null>(null);
-  const sessions = useQuery(api.academics.sessions.list, {
+  const courses = useQuery(api.academics.courses.list, {
     status: "active",
     paginationOpts: page,
   });
-  const activeSession = sessionId || sessions?.page[0]?._id || "";
-  const courses = useQuery(
-    api.academics.courses.list,
-    activeSession
-      ? {
-          academicSessionId: activeSession,
-          status: "active",
-          paginationOpts: page,
-        }
-      : "skip",
-  );
   const activeCourse = courseId || courses?.page[0]?._id || "";
   const batches = useQuery(
     api.academics.batches.list,
@@ -300,7 +288,7 @@ export function ExamCreateWizard({
       setDraftMessage(bn ? "খসড়া সংরক্ষিত হয়েছে।" : "Draft saved.");
     });
   }
-  if (!sessions || !subjects || !teachers)
+  if (!courses || !subjects || !teachers)
     return <PortalPageState state="loading" locale={locale} />;
   if (step === 6)
     return (
@@ -368,14 +356,15 @@ export function ExamCreateWizard({
               <label>
                 {bn ? "সেশন" : "Session"}
                 <select
-                  value={activeSession}
+                  value=""
+                  hidden
+                  disabled
                   onChange={(event) => {
-                    setSessionId(event.target.value as Id<"academicSessions">);
                     setCourseId("");
                   }}
                 >
                   <option value="">—</option>
-                  {sessions.page.map((row) => (
+                  {([] as Array<{ _id: string; nameBn: string; nameEn: string }>).map((row) => (
                     <option key={row._id} value={row._id}>
                       {bn ? row.nameBn : row.nameEn}
                     </option>

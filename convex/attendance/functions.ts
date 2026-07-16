@@ -10,7 +10,7 @@ import { enqueueSms } from "../messaging/model";
 
 const sessionSummary = v.object({
   sessionId: v.id("classSessions"), batchId: v.id("batches"), teacherId: v.id("teachers"), sessionDate: v.string(),
-  startsAt: v.number(), endsAt: v.number(), status: v.union(v.literal("open"), v.literal("submitted"), v.literal("cancelled")),
+  startsAt: v.number(), endsAt: v.number(), status: v.union(v.literal("scheduled"), v.literal("open"), v.literal("submitted"), v.literal("cancelled")),
   rosterCount: v.number(), presentCount: v.union(v.number(), v.null()), lateCount: v.union(v.number(), v.null()), absentCount: v.union(v.number(), v.null()),
 });
 

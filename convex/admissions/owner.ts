@@ -374,7 +374,7 @@ export const acceptApplication = mutation({
       createdAt: now, updatedAt: now, createdByAccountId: account._id, updatedByAccountId: account._id,
     });
     const enrolmentId = await ctx.db.insert("enrolments", {
-      studentId, courseId: course._id, batchId: batch._id, academicSessionId: batch.academicSessionId,
+      studentId, courseId: course._id, batchId: batch._id,
       enrolledOn: args.admissionDate, status: "active", feePlanId: args.feePlanId,
       agreedMonthlyAmountMinor: args.agreedMonthlyAmountMinor, agreedCourseAmountMinor: args.agreedCourseAmountMinor,
       createdAt: now, updatedAt: now, createdByAccountId: account._id,
@@ -471,7 +471,7 @@ export const createDirectAdmission = mutation({
       createdAt: now, updatedAt: now, createdByAccountId: account._id, updatedByAccountId: account._id,
     });
     const enrolmentId = await ctx.db.insert("enrolments", {
-      studentId, courseId: course._id, batchId: batch._id, academicSessionId: batch.academicSessionId,
+      studentId, courseId: course._id, batchId: batch._id,
       enrolledOn: args.admissionDate, status: "active", feePlanId: args.feePlanId,
       agreedMonthlyAmountMinor: args.agreedMonthlyAmountMinor, agreedCourseAmountMinor: args.agreedCourseAmountMinor,
       createdAt: now, updatedAt: now, createdByAccountId: account._id,

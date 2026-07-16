@@ -10,15 +10,16 @@
 
 import type * as academics_assignments from "../academics/assignments.js";
 import type * as academics_batches from "../academics/batches.js";
+import type * as academics_classOccurrenceMaterializer from "../academics/classOccurrenceMaterializer.js";
 import type * as academics_courseReadiness from "../academics/courseReadiness.js";
 import type * as academics_courseSnapshots from "../academics/courseSnapshots.js";
+import type * as academics_courseTeacherDefaults from "../academics/courseTeacherDefaults.js";
 import type * as academics_courseWorkspace from "../academics/courseWorkspace.js";
 import type * as academics_courses from "../academics/courses.js";
 import type * as academics_options from "../academics/options.js";
 import type * as academics_public from "../academics/public.js";
 import type * as academics_readModels from "../academics/readModels.js";
 import type * as academics_schedules from "../academics/schedules.js";
-import type * as academics_sessions from "../academics/sessions.js";
 import type * as academics_shared from "../academics/shared.js";
 import type * as academics_snapshotHooks from "../academics/snapshotHooks.js";
 import type * as academics_subjects from "../academics/subjects.js";
@@ -31,6 +32,7 @@ import type * as admissions_public from "../admissions/public.js";
 import type * as admissions_turnstile from "../admissions/turnstile.js";
 import type * as attendance_functions from "../attendance/functions.js";
 import type * as crons from "../crons.js";
+import type * as devReset from "../devReset.js";
 import type * as devSeedData from "../devSeedData.js";
 import type * as devTesting from "../devTesting.js";
 import type * as exams_assignments from "../exams/assignments.js";
@@ -97,15 +99,16 @@ import type {
 declare const fullApi: ApiFromModules<{
   "academics/assignments": typeof academics_assignments;
   "academics/batches": typeof academics_batches;
+  "academics/classOccurrenceMaterializer": typeof academics_classOccurrenceMaterializer;
   "academics/courseReadiness": typeof academics_courseReadiness;
   "academics/courseSnapshots": typeof academics_courseSnapshots;
+  "academics/courseTeacherDefaults": typeof academics_courseTeacherDefaults;
   "academics/courseWorkspace": typeof academics_courseWorkspace;
   "academics/courses": typeof academics_courses;
   "academics/options": typeof academics_options;
   "academics/public": typeof academics_public;
   "academics/readModels": typeof academics_readModels;
   "academics/schedules": typeof academics_schedules;
-  "academics/sessions": typeof academics_sessions;
   "academics/shared": typeof academics_shared;
   "academics/snapshotHooks": typeof academics_snapshotHooks;
   "academics/subjects": typeof academics_subjects;
@@ -118,6 +121,7 @@ declare const fullApi: ApiFromModules<{
   "admissions/turnstile": typeof admissions_turnstile;
   "attendance/functions": typeof attendance_functions;
   crons: typeof crons;
+  devReset: typeof devReset;
   devSeedData: typeof devSeedData;
   devTesting: typeof devTesting;
   "exams/assignments": typeof exams_assignments;

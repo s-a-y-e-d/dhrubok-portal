@@ -41,7 +41,6 @@ export const createPreview = mutation({
     scopeType: scopeValidator,
     courseId: v.optional(v.id("courses")),
     batchId: v.optional(v.id("batches")),
-    academicSessionId: v.optional(v.id("academicSessions")),
     studentIds: v.optional(v.array(v.id("students"))),
     ageingBuckets: v.array(bucketValidator),
     minimumOverdueMinor: v.optional(v.number()),
@@ -107,12 +106,6 @@ export const createPreview = mutation({
     const byStudent = new Map<string, Audience>();
     for (const summary of summaries) {
       if (requested && !requested.has(summary.studentId)) continue;
-      if (
-        args.academicSessionId &&
-        "academicSessionId" in summary &&
-        summary.academicSessionId !== args.academicSessionId
-      )
-        continue;
       const current = byStudent.get(summary.studentId) ?? {
         studentId: summary.studentId,
         currentMinor: 0,
@@ -152,7 +145,6 @@ export const createPreview = mutation({
       scopeType: args.scopeType,
       courseId: args.courseId,
       batchId: args.batchId,
-      academicSessionId: args.academicSessionId,
       ageingBuckets: args.ageingBuckets,
       minimumOverdueMinor: args.minimumOverdueMinor,
       maximumOverdueMinor: args.maximumOverdueMinor,

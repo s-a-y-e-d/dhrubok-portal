@@ -38,17 +38,7 @@ async function fixture(t: ReturnType<typeof convexTest>) {
       createdAt: now,
       updatedAt: now,
     });
-    const academicSessionId = await ctx.db.insert("academicSessions", {
-      nameBn: "2026",
-      nameEn: "2026",
-      startDate: "2026-01-01",
-      endDate: "2026-12-31",
-      status: "active",
-      createdAt: now,
-      updatedAt: now,
-    });
     const courseId = await ctx.db.insert("courses", {
-      academicSessionId,
       code: "HSC",
       slug: "hsc",
       nameBn: "HSC",
@@ -66,12 +56,12 @@ async function fixture(t: ReturnType<typeof convexTest>) {
       updatedByAccountId: ownerAccountId,
     });
     const batchId = await ctx.db.insert("batches", {
-      academicSessionId,
       courseId,
       code: "B1",
       slug: "b1",
       nameBn: "Batch",
       nameEn: "Batch",
+      startDate: "2026-01-01",
       status: "active",
       admissionOpen: true,
       isPublic: true,
@@ -140,7 +130,6 @@ async function fixture(t: ReturnType<typeof convexTest>) {
       studentId,
       courseId,
       batchId,
-      academicSessionId,
       enrolledOn: "2026-01-01",
       status: "active",
       feePlanId,
@@ -154,7 +143,6 @@ async function fixture(t: ReturnType<typeof convexTest>) {
       enrolmentId,
       feePlanId,
       feePlanItemId,
-      academicSessionId,
       courseId,
       batchId,
     };
@@ -679,12 +667,12 @@ describe("finance invariants", () => {
     const second = await t.run(async (ctx) => {
       const now = Date.now();
       const batchId = await ctx.db.insert("batches", {
-        academicSessionId: data.academicSessionId,
         courseId: data.courseId,
         code: "B2",
         slug: "b2",
         nameBn: "Batch 2",
         nameEn: "Batch 2",
+        startDate: "2026-01-01",
         status: "active",
         admissionOpen: true,
         isPublic: true,
@@ -696,7 +684,6 @@ describe("finance invariants", () => {
         studentId: data.studentId,
         courseId: data.courseId,
         batchId,
-        academicSessionId: data.academicSessionId,
         enrolledOn: "2026-01-01",
         status: "active",
         createdAt: now,

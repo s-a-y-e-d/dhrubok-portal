@@ -4,21 +4,17 @@ import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 
 export const academicStatus = v.union(v.literal("planned"), v.literal("active"), v.literal("completed"), v.literal("archived"));
-export const courseStatus = v.union(v.literal("draft"), v.literal("active"), v.literal("completed"), v.literal("archived"));
+export const courseStatus = v.union(v.literal("active"), v.literal("archived"));
 export const teacherStatus = v.union(v.literal("active"), v.literal("inactive"), v.literal("archived"));
 export const assignmentStatus = v.union(v.literal("active"), v.literal("ended"));
 export const scheduleStatus = v.union(v.literal("active"), v.literal("cancelled"));
 
-export const academicSessionDoc = v.object({
-  _id: v.id("academicSessions"), _creationTime: v.number(), nameBn: v.string(), nameEn: v.string(),
-  startDate: v.string(), endDate: v.string(), status: academicStatus, createdAt: v.number(), updatedAt: v.number(),
-});
 export const subjectDoc = v.object({
   _id: v.id("subjects"), _creationTime: v.number(), code: v.string(), nameBn: v.string(), nameEn: v.string(),
   status: v.union(v.literal("active"), v.literal("archived")), createdAt: v.number(), updatedAt: v.number(),
 });
 export const courseDoc = v.object({
-  _id: v.id("courses"), _creationTime: v.number(), academicSessionId: v.id("academicSessions"), code: v.string(), slug: v.string(),
+  _id: v.id("courses"), _creationTime: v.number(), code: v.string(), slug: v.string(),
   nameBn: v.string(), nameEn: v.string(), searchText: v.optional(v.string()), shortDescriptionBn: v.string(), shortDescriptionEn: v.string(),
   descriptionBn: v.string(), descriptionEn: v.string(), status: courseStatus, isPublic: v.boolean(), publicSortOrder: v.number(),
   coverStorageId: v.optional(v.id("_storage")), createdAt: v.number(), updatedAt: v.number(),
@@ -36,9 +32,9 @@ export const teacherDoc = v.object({
   joinedAt: v.optional(v.number()), createdAt: v.number(), updatedAt: v.number(),
 });
 export const batchDoc = v.object({
-  _id: v.id("batches"), _creationTime: v.number(), academicSessionId: v.id("academicSessions"), courseId: v.id("courses"),
+  _id: v.id("batches"), _creationTime: v.number(), courseId: v.id("courses"),
   code: v.string(), slug: v.string(), nameBn: v.string(), nameEn: v.string(), roomBn: v.optional(v.string()), roomEn: v.optional(v.string()),
-  startDate: v.optional(v.string()), endDate: v.optional(v.string()), capacity: v.optional(v.number()), status: academicStatus,
+  startDate: v.string(), status: academicStatus,
   admissionOpen: v.boolean(), isPublic: v.boolean(), publicSortOrder: v.number(), createdAt: v.number(), updatedAt: v.number(),
 });
 export const assignmentDoc = v.object({
@@ -99,6 +95,6 @@ export function assertNonNegativeInteger(value: number, label: string) {
   if (!Number.isSafeInteger(value) || value < 0) throw new Error(`${label} must be a non-negative integer`);
 }
 
-export function isArchived(doc: Doc<"academicSessions"> | Doc<"subjects"> | Doc<"courses"> | Doc<"teachers"> | Doc<"batches">) {
+export function isArchived(doc: Doc<"subjects"> | Doc<"courses"> | Doc<"teachers"> | Doc<"batches">) {
   return doc.status === "archived";
 }

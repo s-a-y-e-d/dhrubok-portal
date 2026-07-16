@@ -43,3 +43,198 @@ https://react.dev/link/hydration-mismatch
  
     at console.overrideMethod [as error] (chrome-extension://fmkadmapgofadopljbjfkapdkoienihi/build/installHook.js:1:174822) (chrome-extension://fmkadmapgofadopljbjfkapdkoienihi/build/installHook.js:1:174822)
 [browser] Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview (chrome-extension://fmkadmapgofadopljbjfkapdkoienihi/build/installHook.js:1:174822)
+[browser] ⨯ unhandledRejection: Error: ClerkJS: Network error at "https://destined-kangaroo-86.clerk.accounts.dev/v1/client/sessions/sess_3GNThlEGoUWt21MP1OyoYH0OTok/touch?__clerk_api_version=2026-05-12&_clerk_js_version=6.25.3&__clerk_db_jwt=dvb_3GK7aJPfM27SB8l6SoGgdjeTYz1" - TypeError: Failed to fetch. Please try again.
+    at Object.o [as request] (https://destined-kangaroo-86.clerk.accounts.dev/npm/@clerk/clerk-js@6/dist/clerk.browser.js:18:179262)
+    at async ia._baseFetch (https://destined-kangaroo-86.clerk.accounts.dev/npm/@clerk/clerk-js@6/dist/clerk.browser.js:17:7975)
+    at async is.execute (https://destined-kangaroo-86.clerk.accounts.dev/npm/@clerk/clerk-js@6/dist/clerk.browser.js:17:6812)
+    at async n_._touchPost (https://destined-kangaroo-86.clerk.accounts.dev/npm/@clerk/clerk-js@6/dist/clerk.browser.js:18:80346)
+    at async n_.touch (https://destined-kangaroo-86.clerk.accounts.dev/npm/@clerk/clerk-js@6/dist/clerk.browser.js:18:80562)
+    at async #eI (https://destined-kangaroo-86.clerk.accounts.dev/npm/@clerk/clerk-js@6/dist/clerk.browser.js:18:226319)
+[browser] Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview (https://destined-kangaroo-86.clerk.accounts.dev/npm/@clerk/clerk-js@6/dist/clerk.browser.js:12:6133)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <RenderFromTemplateContext>
+      <ScrollAndMaybeFocusHandler cacheNode={{rsc:{...}, ...}}>
+        <InnerScrollAndFocusHandlerOld focusAndScrollRef={{scrollRef:null, ...}} cacheNode={{rsc:{...}, ...}}>
+          <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>
+            <LoadingBoundary name="/" loading={null}>
+              <HTTPAccessFallbackBoundary notFound={{...}} forbidden={undefined} unauthorized={undefined}>
+                <HTTPAccessFallbackErrorBoundary pathname="/en/design..." notFound={{...}} forbidden={undefined} ...>
+                  <RedirectBoundary>
+                    <RedirectErrorBoundary router={{...}}>
+                      <InnerLayoutRouter url="/en/design..." tree={[...]} params={{locale:"en"}} ...>
+                        <SegmentViewNode type="layout" pagePath="[locale]/l...">
+                          <SegmentTrieNode>
+                          <link>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <LocaleLayout>
+                            <html lang="en" className="inter_bc22...">
+                              <body
+-                               __processed_5cadd798-b32e-4988-bf81-001f871cf360__="true"
+-                               bis_register="W3sibWFzdGVyIjp0cnVlLCJleHRlbnNpb25JZCI6ImVwcGlvY2VtaG1ubGJoanBsY2drb2Zj..."
+                              >
+                      ...
+          ...
+ 
+[browser] Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview (https://destined-kangaroo-86.clerk.accounts.dev/npm/@clerk/clerk-js@6/dist/clerk.browser.js:12:6133)
+[browser] Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview (https://destined-kangaroo-86.clerk.accounts.dev/npm/@clerk/clerk-js@6/dist/clerk.browser.js:12:6133)
+[browser] Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview (https://destined-kangaroo-86.clerk.accounts.dev/npm/@clerk/clerk-js@6/dist/clerk.browser.js:12:6133)
+[browser] Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview (https://destined-kangaroo-86.clerk.accounts.dev/npm/@clerk/clerk-js@6/dist/clerk.browser.js:12:6133)
+[browser] Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview (https://destined-kangaroo-86.clerk.accounts.dev/npm/@clerk/clerk-js@6/dist/clerk.browser.js:12:6133)
+[browser] Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview (https://destined-kangaroo-86.clerk.accounts.dev/npm/@clerk/clerk-js@6/dist/clerk.browser.js:12:6133)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <RenderFromTemplateContext>
+      <ScrollAndMaybeFocusHandler cacheNode={{rsc:{...}, ...}}>
+        <InnerScrollAndFocusHandlerOld focusAndScrollRef={{scrollRef:null, ...}} cacheNode={{rsc:{...}, ...}}>
+          <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>
+            <LoadingBoundary name="/" loading={null}>
+              <HTTPAccessFallbackBoundary notFound={{...}} forbidden={undefined} unauthorized={undefined}>
+                <HTTPAccessFallbackErrorBoundary pathname="/en" notFound={{...}} forbidden={undefined} ...>
+                  <RedirectBoundary>
+                    <RedirectErrorBoundary router={{...}}>
+                      <InnerLayoutRouter url="/en" tree={[...]} params={{locale:"en"}} cacheNode={{rsc:{...}, ...}} ...>
+                        <SegmentViewNode type="layout" pagePath="[locale]/l...">
+                          <SegmentTrieNode>
+                          <link>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <LocaleLayout>
+                            <html lang="en" className="inter_bc22...">
+                              <body
+-                               __processed_e4c43651-a43e-43c4-af6d-c324badd6792__="true"
+-                               bis_register="W3sibWFzdGVyIjp0cnVlLCJleHRlbnNpb25JZCI6ImVwcGlvY2VtaG1ubGJoanBsY2drb2Zj..."
+                              >
+                      ...
+          ...
+ 
+    at console.overrideMethod [as error] (chrome-extension://fmkadmapgofadopljbjfkapdkoienihi/build/installHook.js:1:174822) (chrome-extension://fmkadmapgofadopljbjfkapdkoienihi/build/installHook.js:1:174822)
+[browser] Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview (chrome-extension://fmkadmapgofadopljbjfkapdkoienihi/build/installHook.js:1:174822)
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <RenderFromTemplateContext>
+      <ScrollAndMaybeFocusHandler cacheNode={{...}}>
+        <InnerScrollAndFocusHandlerOld focusAndScrollRef={{scrollRef:null, ...}} cacheNode={{...}}>
+          <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>
+            <LoadingBoundary name="/" loading={null}>
+              <HTTPAccessFallbackBoundary notFound={<SegmentViewNode>} forbidden={undefined} unauthorized={undefined}>
+                <HTTPAccessFallbackErrorBoundary pathname="/en/owner/..." notFound={<SegmentViewNode>} ...>
+                  <RedirectBoundary>
+                    <RedirectErrorBoundary router={{...}}>
+                      <InnerLayoutRouter url={"/en/owne..."} tree={[...]} params={{locale:"en"}} cacheNode={{...}} ...>
+                        <SegmentViewNode type="layout" pagePath="[locale]/l...">
+                          <SegmentTrieNode>
+                          <link>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <LocaleLayout>
+                            <html lang="en" className="inter_bc22...">
+                              <body
+-                               __processed_347a068c-4bd8-4b97-b69d-953f0f497326__="true"
+-                               bis_register="W3sibWFzdGVyIjp0cnVlLCJleHRlbnNpb25JZCI6ImVwcGlvY2VtaG1ubGJoanBsY2drb2Zj..."
+                              >
+                      ...
+          ...
+ 
+[browser] Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview (https://destined-kangaroo-86.clerk.accounts.dev/npm/@clerk/clerk-js@6/dist/clerk.browser.js:12:6133)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <RenderFromTemplateContext>
+      <ScrollAndMaybeFocusHandler cacheNode={{rsc:{...}, ...}}>
+        <InnerScrollAndFocusHandlerOld focusAndScrollRef={{scrollRef:null, ...}} cacheNode={{rsc:{...}, ...}}>
+          <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>
+            <LoadingBoundary name="/" loading={null}>
+              <HTTPAccessFallbackBoundary notFound={{...}} forbidden={undefined} unauthorized={undefined}>
+                <HTTPAccessFallbackErrorBoundary pathname="/en/owner/..." notFound={{...}} forbidden={undefined} ...>
+                  <RedirectBoundary>
+                    <RedirectErrorBoundary router={{...}}>
+                      <InnerLayoutRouter url="/en/owner/..." tree={[...]} params={{locale:"en"}} ...>
+                        <SegmentViewNode type="layout" pagePath="[locale]/l...">
+                          <SegmentTrieNode>
+                          <link>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <LocaleLayout>
+                            <html lang="en" className="inter_bc22...">
+                              <body
+-                               __processed_ae9e4f4a-4329-4eb9-bf60-72ac3b9d1631__="true"
+-                               bis_register="W3sibWFzdGVyIjp0cnVlLCJleHRlbnNpb25JZCI6ImVwcGlvY2VtaG1ubGJoanBsY2drb2Zj..."
+                              >
+                      ...
+          ...
+ 
+[browser] Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview (https://destined-kangaroo-86.clerk.accounts.dev/npm/@clerk/clerk-js@6/dist/clerk.browser.js:12:6133)
+[browser] Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview (https://destined-kangaroo-86.clerk.accounts.dev/npm/@clerk/clerk-js@6/dist/clerk.browser.js:12:6133)

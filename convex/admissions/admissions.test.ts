@@ -41,7 +41,7 @@ async function seedAdmissions(t: ReturnType<typeof convexTest>) {
       createdAt: now,
       updatedAt: now,
     });
-    const academicSessionId = await ctx.db.insert("academicSessions", {
+    const removedSession = ({
       nameBn: "২০২৬",
       nameEn: "2026",
       startDate: "2026-01-01",
@@ -71,13 +71,11 @@ async function seedAdmissions(t: ReturnType<typeof convexTest>) {
       receiptFooterEn: "Thank you",
       smsEnabled: false,
       publicAdmissionsOpen: true,
-      activeAcademicSessionId: academicSessionId,
       createdAt: now,
       updatedAt: now,
       updatedByAccountId: ownerAccountId,
     });
     const courseId = await ctx.db.insert("courses", {
-      academicSessionId,
       code: "SCI",
       slug: "science",
       nameBn: "বিজ্ঞান",
@@ -95,12 +93,12 @@ async function seedAdmissions(t: ReturnType<typeof convexTest>) {
       updatedByAccountId: ownerAccountId,
     });
     const openBatchId = await ctx.db.insert("batches", {
-      academicSessionId,
       courseId,
       code: "SCI-A",
       slug: "science-a",
       nameBn: "বিজ্ঞান এ",
       nameEn: "Science A",
+      startDate: "2026-01-01",
       status: "active",
       admissionOpen: true,
       isPublic: true,
@@ -109,12 +107,12 @@ async function seedAdmissions(t: ReturnType<typeof convexTest>) {
       updatedAt: now,
     });
     const alternateBatchId = await ctx.db.insert("batches", {
-      academicSessionId,
       courseId,
       code: "SCI-B",
       slug: "science-b",
       nameBn: "বিজ্ঞান বি",
       nameEn: "Science B",
+      startDate: "2026-01-01",
       status: "active",
       admissionOpen: true,
       isPublic: true,
@@ -123,12 +121,12 @@ async function seedAdmissions(t: ReturnType<typeof convexTest>) {
       updatedAt: now,
     });
     const closedBatchId = await ctx.db.insert("batches", {
-      academicSessionId,
       courseId,
       code: "SCI-C",
       slug: "science-c",
       nameBn: "বিজ্ঞান সি",
       nameEn: "Science C",
+      startDate: "2026-01-01",
       status: "active",
       admissionOpen: false,
       isPublic: true,

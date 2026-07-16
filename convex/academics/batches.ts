@@ -3,15 +3,19 @@ import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import { requireOwner } from "../model/auth";
 import { writeAudit } from "../model/audit";
-import { academicStatus, assertDateRange, batchDoc, cleanRequired, mustGet, normalizeCode, normalizeSlug, paginationResult } from "./shared";
+import { academicStatus, assertIsoDate, batchDoc, cleanRequired, mustGet, normalizeCode, normalizeSlug, paginationResult } from "./shared";
 import { scheduleCourseSnapshot } from "./snapshotHooks";
 
-const fields = { academicSessionId: v.id("academicSessions"), courseId: v.id("courses"), code: v.string(), slug: v.string(), nameBn: v.string(), nameEn: v.string(), startDate: v.optional(v.string()), endDate: v.optional(v.string()), capacity: v.optional(v.number()), status: academicStatus, admissionOpen: v.boolean(), isPublic: v.boolean(), publicSortOrder: v.number() };
+const fields = {
+  courseId: v.id("courses"), code: v.string(), slug: v.string(), nameBn: v.string(), nameEn: v.string(),
+  startDate: v.string(), status: academicStatus, admissionOpen: v.boolean(), isPublic: v.boolean(), publicSortOrder: v.number(),
+};
 
-async function validate(ctx: Parameters<typeof mustGet>[0], args: { academicSessionId: never; courseId: never; status: string; startDate?: string; endDate?: string; capacity?: number; admissionOpen: boolean; isPublic: boolean }) {
-  const session = await mustGet(ctx, "academicSessions", args.academicSessionId, "Academic session"); const course = await mustGet(ctx, "courses", args.courseId, "Course");
-  if (course.academicSessionId !== args.academicSessionId) throw new Error("Batch course and academic session do not match"); if (session.status === "archived" || course.status === "archived") throw new Error("Archived academic records cannot receive batches");
-  if (args.startDate) assertDateRange(args.startDate, args.endDate); else if (args.endDate) throw new Error("Start date is required when end date is set"); if (args.capacity !== undefined && (!Number.isSafeInteger(args.capacity) || args.capacity <= 0)) throw new Error("Capacity must be a positive integer"); if ((args.admissionOpen || args.isPublic) && args.status !== "active") throw new Error("Only active batches may be public or open for admission");
+async function validate(ctx: Parameters<typeof mustGet>[0], args: { courseId: never; status: string; startDate: string; admissionOpen: boolean; isPublic: boolean }) {
+  const course = await mustGet(ctx, "courses", args.courseId, "Course");
+  if (course.status === "archived") throw new Error("Archived courses cannot receive batches");
+  assertIsoDate(args.startDate, "Batch start date");
+  if ((args.admissionOpen || args.isPublic) && args.status !== "active") throw new Error("Only active batches may be public or open for admission");
 }
 
 export const list = query({ args: { courseId: v.id("courses"), status: academicStatus, paginationOpts: paginationOptsValidator }, returns: paginationResult(batchDoc), handler: async (ctx, args) => { await requireOwner(ctx); return await ctx.db.query("batches").withIndex("by_courseId_and_status", q => q.eq("courseId", args.courseId).eq("status", args.status)).paginate(args.paginationOpts); } });

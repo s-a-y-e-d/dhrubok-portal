@@ -153,14 +153,13 @@ export const backfillChargeScopes = internalMutation({
     for (const charge of page.page)
       if (
         charge.enrolmentId &&
-        (!charge.courseId || !charge.batchId || !charge.academicSessionId)
+        (!charge.courseId || !charge.batchId)
       ) {
         const enrolment = await ctx.db.get("enrolments", charge.enrolmentId);
         if (enrolment)
           await ctx.db.patch("studentCharges", charge._id, {
             courseId: enrolment.courseId,
             batchId: enrolment.batchId,
-            academicSessionId: enrolment.academicSessionId,
           });
       }
     if (!page.isDone)

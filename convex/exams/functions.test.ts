@@ -49,7 +49,7 @@ async function fixture(t: ReturnType<typeof convexTest>) {
       createdAt: now,
       updatedAt: now,
     });
-    const academicSessionId = await ctx.db.insert("academicSessions", {
+    const removedSession = ({
       nameBn: "2026",
       nameEn: "2026",
       startDate: "2026-01-01",
@@ -59,7 +59,6 @@ async function fixture(t: ReturnType<typeof convexTest>) {
       updatedAt: now,
     });
     const courseId = await ctx.db.insert("courses", {
-      academicSessionId,
       code: "SSC",
       slug: "ssc",
       nameBn: "SSC",
@@ -121,12 +120,12 @@ async function fixture(t: ReturnType<typeof convexTest>) {
     const students = [];
     for (let batchIndex = 0; batchIndex < 2; batchIndex += 1) {
       const batchId = await ctx.db.insert("batches", {
-        academicSessionId,
         courseId,
         code: `B${batchIndex + 1}`,
         slug: `b${batchIndex + 1}`,
         nameBn: `Batch ${batchIndex + 1}`,
         nameEn: `Batch ${batchIndex + 1}`,
+        startDate: "2026-01-01",
         status: "active",
         admissionOpen: true,
         isPublic: true,
@@ -172,7 +171,6 @@ async function fixture(t: ReturnType<typeof convexTest>) {
           studentId,
           courseId,
           batchId,
-          academicSessionId,
           enrolledOn: "2026-01-01",
           status: "active",
           createdAt: now,

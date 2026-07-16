@@ -522,6 +522,21 @@ Display tiers stair-step down on smaller screens:
 
 ## Interaction States
 
+### Dark-mode component previews
+
+- Shared components must be reviewed against both the light operational canvas
+  and the neutral dark canvas before workflow migration.
+- Dark mode remaps neutral surfaces, borders, text, and elevation through design
+  tokens. Brand and semantic meanings do not change between themes.
+- Focused form controls use one emerald border only. Do not add an outer halo,
+  stack outlines, or change control size. Invalid controls keep one danger
+  border while focused rather than combining danger and emerald treatments.
+- Destructive buttons retain white text and use `danger-deep` on hover; dark
+  mode must not weaken their destructive meaning or contrast.
+- The development component showcase is the approval surface for theme parity.
+  A component is not approved when its dark state is only an inverted light
+  screenshot or when Bangla text loses contrast.
+
 Every interactive component must define all applicable states. Do not ship a
 component with only default and hover.
 
@@ -529,7 +544,7 @@ component with only default and hover.
 | -------------------- | ------------------------------------------------------------------------------------------------------------ |
 | **Default**          | Base styling as defined by the component                                                                     |
 | **Hover**            | Subtle background shift or border emphasis. No jarring colour change.                                        |
-| **Focus-visible**    | 2px `{colors.border-focus}` ring with 2px offset. Keyboard users must always see focus.                      |
+| **Focus-visible**    | One `{colors.border-focus}` component border. Do not add a second outer border to form controls.            |
 | **Pressed / Active** | Darker fill or slight scale reduction (scale 0.98).                                                          |
 | **Selected**         | `{colors.brand-muted}` bg, `{colors.brand}` left border or check.                                            |
 | **Disabled**         | `{colors.canvas-subtle}` bg, `{colors.ink-disabled}` text, `cursor: not-allowed`, reduced opacity (0.5–0.6). |
@@ -537,8 +552,10 @@ component with only default and hover.
 | **Error**            | `{colors.border-danger}` border, `{colors.danger}` helper text below.                                        |
 | **Success**          | Brief `{colors.success}` check animation or text, then return to default.                                    |
 
-Focus ring specification: `outline: 2px solid {colors.border-focus}; outline-offset: 2px;`.
-Never remove focus outlines without providing an equivalent visible indicator.
+General controls use `outline: 2px solid {colors.border-focus}; outline-offset: 2px;`.
+Form controls are the exception: their border itself changes to `border-focus`
+so the field retains one border. Never remove focus visibility without an
+equivalent visible indicator.
 
 ---
 
@@ -625,7 +642,7 @@ Never remove focus outlines without providing an equivalent visible indicator.
 - Rounded: `{rounded.xs}` (4px).
 - Padding: 8px 12px.
 - Text: `{typography.body-md}`.
-- Focus: `{colors.border-focus}` border + focus ring.
+- Focus: one `{colors.border-focus}` border, with no outer ring.
 - Error: `{colors.border-danger}` border, `{colors.danger}` helper text below.
 - Disabled: `{colors.canvas-subtle}` bg, `{colors.ink-disabled}` text.
 
@@ -739,6 +756,7 @@ When tables collapse on mobile, each row becomes a card:
 - Inline element, `{rounded.full}`, padding: 2px 10px.
 - Text: `{typography.label-sm}`.
 - Background and text colour determined by semantic state.
+- No border. Status badges are labels, not selectable filter chips.
 
 | State                            | Background      | Text           | CSS Classes |
 | -------------------------------- | --------------- | -------------- | ----------- |

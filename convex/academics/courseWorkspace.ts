@@ -2,47 +2,94 @@ import { paginationOptsValidator, paginationResultValidator } from "convex/serve
 import { v } from "convex/values";
 import { query } from "../_generated/server";
 import { requireOwner } from "../model/auth";
-import { courseReadinessResult, computeCourseReadiness } from "./courseReadiness";
 import { courseStatus } from "./shared";
 
-const snapshot = v.object({
-  qualifyingBatchCount: v.number(), activeBatchCount: v.number(), plannedBatchCount: v.number(), completedBatchCount: v.number(), archivedBatchCount: v.number(),
-  activeEnrolmentCount: v.number(), totalCapacity: v.number(), academicReady: v.boolean(), feeConfigured: v.boolean(), missingTeacherCount: v.number(), missingRoutineCount: v.number(), missingFeeCount: v.number(), websitePublished: v.boolean(), nextRoutineWeekday: v.optional(v.number()), nextRoutineStartMinutes: v.optional(v.number()), updatedAt: v.number(),
+const listItem = v.object({
+  courseId: v.id("courses"),
+  code: v.string(),
+  slug: v.string(),
+  nameBn: v.string(),
+  nameEn: v.string(),
+  status: courseStatus,
+  isPublic: v.boolean(),
+  subjectCount: v.number(),
+  teacherCount: v.number(),
+  activeBatchCount: v.number(),
+  activeEnrolmentCount: v.number(),
 });
-const listItem = v.object({ courseId: v.id("courses"), academicSessionId: v.id("academicSessions"), code: v.string(), slug: v.string(), nameBn: v.string(), nameEn: v.string(), status: courseStatus, snapshot: v.union(snapshot, v.null()) });
 
 export const listCourses = query({
-  args: { academicSessionId: v.id("academicSessions"), status: courseStatus, query: v.string(), paginationOpts: paginationOptsValidator },
+  args: { status: courseStatus, query: v.string(), paginationOpts: paginationOptsValidator },
   returns: paginationResultValidator(listItem),
   handler: async (ctx, args) => {
     await requireOwner(ctx);
-    const search = args.query.trim();
-    const result = search ? await ctx.db.query("courses").withSearchIndex("search_searchText", q => q.search("searchText", search.toLowerCase()).eq("academicSessionId", args.academicSessionId).eq("status", args.status)).paginate(args.paginationOpts) : await ctx.db.query("courses").withIndex("by_academicSessionId_and_status", q => q.eq("academicSessionId", args.academicSessionId).eq("status", args.status)).order("desc").paginate(args.paginationOpts);
-    return { ...result, page: await Promise.all(result.page.map(async course => {
-      const row = await ctx.db.query("courseOperationalSnapshots").withIndex("by_courseId", q => q.eq("courseId", course._id)).unique();
-      return { courseId: course._id, academicSessionId: course.academicSessionId, code: course.code, slug: course.slug, nameBn: course.nameBn, nameEn: course.nameEn, status: course.status, snapshot: row ? { qualifyingBatchCount: row.qualifyingBatchCount, activeBatchCount: row.activeBatchCount, plannedBatchCount: row.plannedBatchCount, completedBatchCount: row.completedBatchCount, archivedBatchCount: row.archivedBatchCount, activeEnrolmentCount: row.activeEnrolmentCount, totalCapacity: row.totalCapacity, academicReady: row.academicReady, feeConfigured: row.feeConfigured, missingTeacherCount: row.missingTeacherCount, missingRoutineCount: row.missingRoutineCount, missingFeeCount: row.missingFeeCount, websitePublished: row.websitePublished, nextRoutineWeekday: row.nextRoutineWeekday, nextRoutineStartMinutes: row.nextRoutineStartMinutes, updatedAt: row.updatedAt } : null };
-    })) };
+    const search = args.query.trim().toLowerCase();
+    const result = search
+      ? await ctx.db.query("courses").withSearchIndex("search_searchText", (q) => q.search("searchText", search).eq("status", args.status)).paginate(args.paginationOpts)
+      : await ctx.db.query("courses").withIndex("by_status", (q) => q.eq("status", args.status)).order("desc").paginate(args.paginationOpts);
+    return {
+      ...result,
+      page: await Promise.all(result.page.map(async (course) => {
+        const [subjects, defaults, batches, enrolments] = await Promise.all([
+          ctx.db.query("courseSubjects").withIndex("by_courseId_and_sortOrder", (q) => q.eq("courseId", course._id)).take(200),
+          ctx.db.query("courseTeacherDefaults").withIndex("by_courseId_and_status", (q) => q.eq("courseId", course._id).eq("status", "active")).take(200),
+          ctx.db.query("batches").withIndex("by_courseId_and_status", (q) => q.eq("courseId", course._id).eq("status", "active")).take(500),
+          ctx.db.query("enrolments").withIndex("by_courseId_and_status", (q) => q.eq("courseId", course._id).eq("status", "active")).take(1000),
+        ]);
+        return {
+          courseId: course._id,
+          code: course.code,
+          slug: course.slug,
+          nameBn: course.nameBn,
+          nameEn: course.nameEn,
+          status: course.status,
+          isPublic: course.isPublic,
+          subjectCount: subjects.length,
+          teacherCount: new Set(defaults.map((row) => row.teacherId)).size,
+          activeBatchCount: batches.length,
+          activeEnrolmentCount: enrolments.length,
+        };
+      })),
+    };
   },
 });
 
-export const getCourseOverview = query({
+export const getCourseDetails = query({
   args: { courseId: v.id("courses") },
-  returns: v.object({ course: v.object({ courseId: v.id("courses"), academicSessionId: v.id("academicSessions"), code: v.string(), slug: v.string(), nameBn: v.string(), nameEn: v.string(), status: courseStatus, isPublic: v.boolean() }), session: v.object({ nameBn: v.string(), nameEn: v.string() }), readiness: courseReadinessResult }),
-  handler: async (ctx, { courseId }) => { await requireOwner(ctx); const course = await ctx.db.get("courses", courseId); if (!course) throw new Error("Course not found"); const session = await ctx.db.get("academicSessions", course.academicSessionId); if (!session) throw new Error("Academic session not found"); return { course: { courseId, academicSessionId: course.academicSessionId, code: course.code, slug: course.slug, nameBn: course.nameBn, nameEn: course.nameEn, status: course.status, isPublic: course.isPublic }, session: { nameBn: session.nameBn, nameEn: session.nameEn }, readiness: await computeCourseReadiness(ctx, courseId) }; },
-});
-
-export const getCoverageMatrix = query({
-  args: { courseId: v.id("courses") },
-  returns: v.object({ subjects: v.array(v.object({ subjectId: v.id("subjects"), nameBn: v.string(), nameEn: v.string(), sortOrder: v.number() })), batches: v.array(v.object({ batchId: v.id("batches"), nameBn: v.string(), nameEn: v.string() })), assignments: v.array(v.object({ assignmentId: v.id("teacherBatchAssignments"), batchId: v.id("batches"), subjectId: v.optional(v.id("subjects")), teacherId: v.id("teachers"), teacherName: v.string() })) }),
-  handler: async (ctx, { courseId }) => { await requireOwner(ctx); const links = await ctx.db.query("courseSubjects").withIndex("by_courseId_and_sortOrder", q => q.eq("courseId", courseId)).take(200); const subjects = (await Promise.all(links.map(async link => ({ link, subject: await ctx.db.get("subjects", link.subjectId) })))).filter(row => row.subject?.status === "active").map(row => ({ subjectId: row.subject!._id, nameBn: row.subject!.nameBn, nameEn: row.subject!.nameEn, sortOrder: row.link.sortOrder })); const batches = [...await ctx.db.query("batches").withIndex("by_courseId_and_status", q => q.eq("courseId", courseId).eq("status", "planned")).take(200), ...await ctx.db.query("batches").withIndex("by_courseId_and_status", q => q.eq("courseId", courseId).eq("status", "active")).take(200)]; const rows = (await Promise.all(batches.map(batch => ctx.db.query("teacherBatchAssignments").withIndex("by_batchId_and_status", q => q.eq("batchId", batch._id).eq("status", "active")).take(200)))).flat(); const assignments = (await Promise.all(rows.map(async row => ({ row, teacher: await ctx.db.get("teachers", row.teacherId) })))).filter(item => item.teacher).map(item => ({ assignmentId: item.row._id, batchId: item.row.batchId, subjectId: item.row.subjectId, teacherId: item.row.teacherId, teacherName: item.teacher!.displayName })); return { subjects, batches: batches.map(batch => ({ batchId: batch._id, nameBn: batch.nameBn, nameEn: batch.nameEn })), assignments }; },
-});
-
-export const getCourseBatches = query({ args: { courseId: v.id("courses") }, returns: v.array(v.object({ batchId: v.id("batches"), code: v.string(), nameBn: v.string(), nameEn: v.string(), status: v.union(v.literal("planned"), v.literal("active"), v.literal("completed"), v.literal("archived")), capacity: v.optional(v.number()), admissionOpen: v.boolean() })), handler: async (ctx, { courseId }) => { await requireOwner(ctx); const statuses = ["planned", "active", "completed", "archived"] as const; const rows = (await Promise.all(statuses.map(status => ctx.db.query("batches").withIndex("by_courseId_and_status", q => q.eq("courseId", courseId).eq("status", status)).take(200)))).flat(); return rows.map(row => ({ batchId: row._id, code: row.code, nameBn: row.nameBn, nameEn: row.nameEn, status: row.status, capacity: row.capacity, admissionOpen: row.admissionOpen })); } });
-
-export const getScheduleAgenda = query({ args: { courseId: v.optional(v.id("courses")), batchId: v.optional(v.id("batches")), teacherId: v.optional(v.id("teachers")) }, returns: v.array(v.object({ scheduleId: v.id("batchSchedules"), courseId: v.id("courses"), batchId: v.id("batches"), batchNameBn: v.string(), batchNameEn: v.string(), teacherId: v.id("teachers"), teacherName: v.string(), subjectId: v.optional(v.id("subjects")), subjectNameBn: v.optional(v.string()), subjectNameEn: v.optional(v.string()), weekday: v.number(), startMinutes: v.number(), endMinutes: v.number(), effectiveFrom: v.string(), effectiveUntil: v.optional(v.string()) })), handler: async (ctx, args) => { await requireOwner(ctx); const rows = args.batchId ? await ctx.db.query("batchSchedules").withIndex("by_batchId_and_status", q => q.eq("batchId", args.batchId!).eq("status", "active")).take(300) : args.teacherId ? await ctx.db.query("batchSchedules").withIndex("by_teacherId_and_status", q => q.eq("teacherId", args.teacherId!).eq("status", "active")).take(300) : await ctx.db.query("batchSchedules").withIndex("by_status", q => q.eq("status", "active")).take(500); const output = []; for (const row of rows) { const batch = await ctx.db.get("batches", row.batchId); if (!batch || (args.courseId && batch.courseId !== args.courseId) || (args.teacherId && row.teacherId !== args.teacherId)) continue; const [teacher, subject] = await Promise.all([ctx.db.get("teachers", row.teacherId), row.subjectId ? ctx.db.get("subjects", row.subjectId) : null]); if (!teacher) continue; output.push({ scheduleId: row._id, courseId: batch.courseId, batchId: batch._id, batchNameBn: batch.nameBn, batchNameEn: batch.nameEn, teacherId: teacher._id, teacherName: teacher.displayName, subjectId: row.subjectId, subjectNameBn: subject?.nameBn, subjectNameEn: subject?.nameEn, weekday: row.weekday, startMinutes: row.startMinutes, endMinutes: row.endMinutes, effectiveFrom: row.effectiveFrom, effectiveUntil: row.effectiveUntil }); } return output.sort((a, b) => a.weekday - b.weekday || a.startMinutes - b.startMinutes); } });
-
-export const getArchiveBlockers = query({
-  args: { courseId: v.id("courses") },
-  returns: v.array(v.object({ batchId: v.id("batches"), nameBn: v.string(), nameEn: v.string(), status: v.union(v.literal("planned"), v.literal("active"), v.literal("completed"), v.literal("archived")), assignmentCount: v.number(), routineCount: v.number(), enrolmentCount: v.number() })),
-  handler: async (ctx, { courseId }) => { await requireOwner(ctx); const statuses = ["planned", "active", "completed"] as const; const batches = (await Promise.all(statuses.map(status => ctx.db.query("batches").withIndex("by_courseId_and_status", q => q.eq("courseId", courseId).eq("status", status)).take(200)))).flat(); return await Promise.all(batches.map(async batch => { const [assignments, routines, enrolments] = await Promise.all([ctx.db.query("teacherBatchAssignments").withIndex("by_batchId_and_status", q => q.eq("batchId", batch._id).eq("status", "active")).take(200), ctx.db.query("batchSchedules").withIndex("by_batchId_and_status", q => q.eq("batchId", batch._id).eq("status", "active")).take(200), ctx.db.query("enrolments").withIndex("by_batchId_and_status", q => q.eq("batchId", batch._id).eq("status", "active")).take(500)]); return { batchId: batch._id, nameBn: batch.nameBn, nameEn: batch.nameEn, status: batch.status, assignmentCount: assignments.length, routineCount: routines.length, enrolmentCount: enrolments.length }; })); },
+  returns: v.union(v.null(), v.object({
+    course: v.object({
+      courseId: v.id("courses"), code: v.string(), slug: v.string(), nameBn: v.string(), nameEn: v.string(),
+      shortDescriptionBn: v.string(), shortDescriptionEn: v.string(), descriptionBn: v.string(), descriptionEn: v.string(),
+      status: courseStatus, isPublic: v.boolean(), coverStorageId: v.optional(v.id("_storage")),
+    }),
+    defaults: v.array(v.object({
+      defaultId: v.id("courseTeacherDefaults"), subjectId: v.id("subjects"), subjectCode: v.string(),
+      subjectNameBn: v.string(), subjectNameEn: v.string(), teacherId: v.id("teachers"), teacherName: v.string(),
+    })),
+    batches: v.array(v.object({ batchId: v.id("batches"), code: v.string(), nameBn: v.string(), nameEn: v.string(), status: v.string(), startDate: v.string() })),
+  })),
+  handler: async (ctx, { courseId }) => {
+    await requireOwner(ctx);
+    const course = await ctx.db.get("courses", courseId);
+    if (!course) return null;
+    const defaults = await ctx.db.query("courseTeacherDefaults").withIndex("by_courseId_and_status", (q) => q.eq("courseId", courseId).eq("status", "active")).take(200);
+    const defaultRows = [];
+    for (const row of defaults) {
+      const [subject, teacher] = await Promise.all([ctx.db.get("subjects", row.subjectId), ctx.db.get("teachers", row.teacherId)]);
+      if (!subject || !teacher) continue;
+      defaultRows.push({ defaultId: row._id, subjectId: subject._id, subjectCode: subject.code, subjectNameBn: subject.nameBn, subjectNameEn: subject.nameEn, teacherId: teacher._id, teacherName: teacher.displayName });
+    }
+    const statuses = ["planned", "active", "completed", "archived"] as const;
+    const batches = (await Promise.all(statuses.map((status) => ctx.db.query("batches").withIndex("by_courseId_and_status", (q) => q.eq("courseId", courseId).eq("status", status)).take(200)))).flat();
+    return {
+      course: {
+        courseId, code: course.code, slug: course.slug, nameBn: course.nameBn, nameEn: course.nameEn,
+        shortDescriptionBn: course.shortDescriptionBn, shortDescriptionEn: course.shortDescriptionEn,
+        descriptionBn: course.descriptionBn, descriptionEn: course.descriptionEn, status: course.status,
+        isPublic: course.isPublic, coverStorageId: course.coverStorageId,
+      },
+      defaults: defaultRows,
+      batches: batches.map((batch) => ({ batchId: batch._id, code: batch.code, nameBn: batch.nameBn, nameEn: batch.nameEn, status: batch.status, startDate: batch.startDate })),
+    };
+  },
 });

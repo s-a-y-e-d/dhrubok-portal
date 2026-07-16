@@ -19,35 +19,23 @@ export function ExamWorkQueue({
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [needsMyAction, setNeedsMyAction] = useState(false);
-  const [sessionId, setSessionId] = useState<Id<"academicSessions"> | "">("");
   const [courseId, setCourseId] = useState<Id<"courses"> | "">("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const sessions = useQuery(api.academics.sessions.list, {
+  const courses = useQuery(api.academics.courses.list, {
     status: "active",
     paginationOpts: { numItems: 100, cursor: null },
   });
-  const courses = useQuery(
-    api.academics.courses.list,
-    sessionId
-      ? {
-          academicSessionId: sessionId,
-          status: "active",
-          paginationOpts: { numItems: 100, cursor: null },
-        }
-      : "skip",
-  );
   const result = useQuery(api.exams.exams.listManaged, {
     paginationOpts: { numItems: 100, cursor: null },
     search: search || undefined,
     status: status || undefined,
     needsMyAction: needsMyAction || undefined,
-    academicSessionId: sessionId || undefined,
     courseId: courseId || undefined,
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
   });
-  if (!result || !sessions)
+  if (!result || !courses)
     return <PortalPageState state="loading" locale={locale} />;
   return (
     <section>
@@ -77,15 +65,16 @@ export function ExamWorkQueue({
           <option value="archived">Archived</option>
         </select>
         <select
-          value={sessionId}
+          value=""
+          hidden
+          disabled
           onChange={(event) => {
-            setSessionId(event.target.value as Id<"academicSessions"> | "");
             setCourseId("");
           }}
           aria-label={bn ? "সেশন" : "Session"}
         >
           <option value="">{bn ? "সব সেশন" : "All sessions"}</option>
-          {sessions.page.map((row) => (
+          {([] as Array<{ _id: string; nameBn: string; nameEn: string }>).map((row) => (
             <option key={row._id} value={row._id}>
               {bn ? row.nameBn : row.nameEn}
             </option>
@@ -96,11 +85,10 @@ export function ExamWorkQueue({
           onChange={(event) =>
             setCourseId(event.target.value as Id<"courses"> | "")
           }
-          disabled={!sessionId}
           aria-label={bn ? "কোর্স" : "Course"}
         >
           <option value="">{bn ? "সব কোর্স" : "All courses"}</option>
-          {courses?.page.map((row) => (
+          {courses.page.map((row) => (
             <option key={row._id} value={row._id}>
               {bn ? row.nameBn : row.nameEn}
             </option>

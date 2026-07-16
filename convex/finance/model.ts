@@ -182,7 +182,6 @@ export async function refreshReceivableScopeSummaries(
       enrolmentId,
       courseId: first.courseId,
       batchId: first.batchId,
-      academicSessionId: first.academicSessionId,
       outstandingMinor: balances.reduce((sum, item) => sum + item.balance, 0),
       overdueMinor:
         ageing.overdue1To15Minor +
