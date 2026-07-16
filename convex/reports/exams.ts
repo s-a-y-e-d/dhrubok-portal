@@ -231,7 +231,6 @@ export const publishedResult = query({
         studentId: v.id("students"),
         studentNumber: v.string(),
         displayName: v.string(),
-        rollNumber: v.union(v.string(), v.null()),
       }),
       result: v.object({
         participation: v.string(),
@@ -300,7 +299,6 @@ export const publishedResult = query({
         studentId: student._id,
         studentNumber: student.studentNumber,
         displayName: student.displayName,
-        rollNumber: student.rollNumber ?? null,
       },
       result: {
         participation: result.publishedParticipation,

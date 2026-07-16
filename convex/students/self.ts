@@ -26,7 +26,7 @@ const ownProfileValidator = v.object({
   alternateGuardianPhone: v.union(v.string(), v.null()),
   preferredSmsLocale: localeValidator,
   admissionDate: v.string(),
-  status: v.union(v.literal("active"), v.literal("paused"), v.literal("completed"), v.literal("left"), v.literal("archived")),
+  status: v.union(v.literal("active"), v.literal("inactive")),
   pendingChanges: v.array(v.object({
     requestId: v.id("studentProfileChangeRequests"),
     fieldKey: sensitiveFieldValidator,
@@ -41,10 +41,15 @@ export const getMyProfile = query({
   returns: ownProfileValidator,
   handler: async (ctx) => {
     const { student } = await requireStudent(ctx);
-    const pendingChanges = await ctx.db.query("studentProfileChangeRequests")
+    const [pendingChanges, activeEnrolment] = await Promise.all([
+      ctx.db.query("studentProfileChangeRequests")
       .withIndex("by_studentId_and_status", (q) => q.eq("studentId", student._id).eq("status", "pending"))
       .order("desc")
-      .take(50);
+      .take(50),
+      ctx.db.query("enrolments")
+        .withIndex("by_studentId_and_status", (q) => q.eq("studentId", student._id).eq("status", "active"))
+        .first(),
+    ]);
     return {
       studentId: student._id,
       studentNumber: student.studentNumber,
@@ -64,7 +69,7 @@ export const getMyProfile = query({
       alternateGuardianPhone: student.alternateGuardianPhone ?? null,
       preferredSmsLocale: student.preferredSmsLocale,
       admissionDate: student.admissionDate,
-      status: student.status,
+      status: activeEnrolment ? "active" as const : "inactive" as const,
       pendingChanges: pendingChanges.map((request) => ({
         requestId: request._id,
         fieldKey: request.fieldKey as "displayName" | "loginEmail" | "guardianName" | "guardianPhone" | "guardianRelationship" | "alternateGuardianPhone",

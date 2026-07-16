@@ -53,6 +53,16 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 
 type Locale = "bn" | "en";
+const teacherStatusLabel = (status: string, bn: boolean) => {
+  const labels: Record<string, [string, string]> = {
+    active: ["সক্রিয়", "Active"],
+    inactive: ["নিষ্ক্রিয়", "Inactive"],
+    archived: ["আর্কাইভ করা", "Archived"],
+    reserved: ["অপেক্ষমাণ", "Reserved"],
+    suspended: ["স্থগিত", "Suspended"],
+  };
+  return labels[status]?.[bn ? 0 : 1] ?? status;
+};
 const initial = {
   employeeCode: "",
   displayName: "",
@@ -369,7 +379,7 @@ export function TeachersWorkspace({ locale }: { locale: Locale }) {
               <SelectGroup>
                 {(["active", "inactive", "archived"] as const).map((item) => (
                   <SelectItem key={item} value={item}>
-                    {item}
+                    {teacherStatusLabel(item, bn)}
                   </SelectItem>
                 ))}
               </SelectGroup>
@@ -422,7 +432,7 @@ export function TeachersWorkspace({ locale }: { locale: Locale }) {
                         teacher.status === "active" ? "success" : "neutral"
                       }
                     >
-                      {teacher.status}
+                      {teacherStatusLabel(teacher.status, bn)}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -435,7 +445,7 @@ export function TeachersWorkspace({ locale }: { locale: Locale }) {
                             : "neutral"
                       }
                     >
-                      {teacher.accountStatus}
+                      {teacherStatusLabel(teacher.accountStatus, bn)}
                     </Badge>
                   </TableCell>
                   <TableCell>{teacher.courseSubjectCount}</TableCell>
@@ -508,7 +518,7 @@ export function TeachersWorkspace({ locale }: { locale: Locale }) {
                     details.teacher.status === "active" ? "success" : "neutral"
                   }
                 >
-                  {details.teacher.status}
+                  {teacherStatusLabel(details.teacher.status, bn)}
                 </Badge>
                 <Badge
                   variant={
@@ -517,7 +527,7 @@ export function TeachersWorkspace({ locale }: { locale: Locale }) {
                       : "info"
                   }
                 >
-                  {details.teacher.accountStatus}
+                  {teacherStatusLabel(details.teacher.accountStatus, bn)}
                 </Badge>
                 <Badge variant={details.teacher.isPublic ? "info" : "neutral"}>
                   {details.teacher.isPublic

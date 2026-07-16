@@ -18,6 +18,7 @@ import { OwnerSettingsEditor } from "./OwnerWorkspaces";
 import { CoursesWorkspace } from "./courses";
 import { BatchesWorkspace } from "./batches";
 import { TeachersWorkspace } from "./teachers";
+import { ScheduleWorkspace } from "./schedule";
 import { FinanceEditor } from "./FinanceWorkspace";
 import { AdmissionsEditor as AdmissionsWorkflow } from "./AdmissionsEditor";
 import { AttendanceEditor as AttendanceWorkflow } from "./AttendanceEditor";
@@ -242,8 +243,8 @@ function OwnerDashboard({ locale }: { locale: "bn" | "en" }) {
             className={styles.studentSearchInput}
             placeholder={
               bn
-                ? "শিক্ষার্থীর নাম, রোল বা আইডি দিয়ে খুঁজুন..."
-                : "Search students by name, roll, or ID..."
+                ? "শিক্ষার্থীর নাম বা আইডি দিয়ে খুঁজুন..."
+                : "Search students by name or ID..."
             }
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
@@ -1695,6 +1696,7 @@ export function RoleSection({
     if (section === "courses") return <CoursesWorkspace locale={locale} />;
     if (section === "batches") return <BatchesWorkspace locale={locale} />;
     if (section === "teachers") return <TeachersWorkspace locale={locale} />;
+    if (section === "schedule") return <ScheduleWorkspace locale={locale} />;
     if (section === "attendance") return <AttendanceWorkflow locale={locale} />;
     if (section === "finance") return <FinanceEditor locale={locale} />;
     if (section === "exams") return <ExamEditor locale={locale} role="owner" />;

@@ -4,8 +4,10 @@ import { mutation, query } from "../_generated/server";
 import { requireOwner } from "../model/auth";
 import { writeAudit } from "../model/audit";
 import { localeValidator, paginationResultFields, studentStatusValidator } from "../model/validators";
-import { assertLocalDate, dhakaDate } from "../model/dates";
+import { assertLocalDate } from "../model/dates";
 import { normalizeBangladeshPhone } from "../model/normalization";
+import { assertMinorUnits } from "../model/money";
+import { scheduleCourseSnapshot } from "../academics/snapshotHooks";
 import { optionalText, requiredText } from "../admissions/model";
 import { applySensitiveField, sensitiveFieldValidator, studentSearchText } from "./model";
 
@@ -17,13 +19,24 @@ const studentListItemValidator = v.object({
   guardianName: v.string(),
   guardianPhone: v.string(),
   admissionDate: v.string(),
-  status: studentStatusValidator,
+  status: v.union(v.literal("active"), v.literal("inactive")),
+  photoUrl: v.union(v.string(), v.null()),
+  currentClass: v.string(),
+  courseId: v.union(v.id("courses"), v.null()),
+  courseNameBn: v.union(v.string(), v.null()),
+  courseNameEn: v.union(v.string(), v.null()),
+  batchId: v.union(v.id("batches"), v.null()),
+  batchNameBn: v.union(v.string(), v.null()),
+  batchNameEn: v.union(v.string(), v.null()),
+  agreedMonthlyAmountMinor: v.union(v.number(), v.null()),
+  outstandingMinor: v.number(),
 });
 
 const profileValidator = v.object({
   studentId: v.id("students"),
   studentNumber: v.string(),
-  rollNumber: v.union(v.string(), v.null()),
+  photoStorageId: v.union(v.id("_storage"), v.null()),
+  photoUrl: v.union(v.string(), v.null()),
   displayName: v.string(),
   nameBn: v.union(v.string(), v.null()),
   nameEn: v.union(v.string(), v.null()),
@@ -43,9 +56,13 @@ const profileValidator = v.object({
   smsRecipient: v.union(v.literal("father"), v.literal("mother"), v.literal("both")),
   preferredSmsLocale: localeValidator,
   admissionDate: v.string(),
-  status: studentStatusValidator,
+  status: v.union(v.literal("active"), v.literal("inactive")),
   internalNote: v.union(v.string(), v.null()),
   portalAccountStatus: v.union(v.literal("reserved"), v.literal("active"), v.literal("suspended"), v.literal("revoked"), v.null()),
+  financialSummary: v.object({
+    totalChargedMinor: v.number(), totalPaidMinor: v.number(), outstandingMinor: v.number(),
+    overdueMinor: v.number(), advanceCreditMinor: v.number(),
+  }),
   enrolments: v.array(v.object({
     enrolmentId: v.id("enrolments"),
     courseId: v.id("courses"),
@@ -53,30 +70,55 @@ const profileValidator = v.object({
     enrolledOn: v.string(),
     endedOn: v.union(v.string(), v.null()),
     status: v.union(v.literal("active"), v.literal("completed"), v.literal("withdrawn"), v.literal("transferred")),
+    agreedMonthlyAmountMinor: v.union(v.number(), v.null()),
+    courseNameBn: v.string(),
+    courseNameEn: v.string(),
+    batchNameBn: v.string(),
+    batchNameEn: v.string(),
   })),
 });
 
+export const generatePhotoUploadUrl = mutation({
+  args: {},
+  returns: v.string(),
+  handler: async (ctx) => {
+    await requireOwner(ctx);
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
 export const listStudents = query({
-  args: { paginationOpts: paginationOptsValidator, status: studentStatusValidator },
+  args: { paginationOpts: paginationOptsValidator, status: v.optional(studentStatusValidator) },
   returns: v.object({ page: v.array(studentListItemValidator), ...paginationResultFields }),
   handler: async (ctx, args) => {
     await requireOwner(ctx);
-    const result = await ctx.db.query("students")
-      .withIndex("by_status_and_admissionDate", (q) => q.eq("status", args.status))
-      .order("desc")
-      .paginate(args.paginationOpts);
+    const result = await ctx.db.query("students").order("desc").paginate(args.paginationOpts);
+    const page = await Promise.all(result.page.map(async (student) => {
+        const activeEnrolment = await ctx.db.query("enrolments")
+          .withIndex("by_studentId_and_status", (q) => q.eq("studentId", student._id).eq("status", "active"))
+          .first();
+        const [course, batch, summary] = await Promise.all([
+          activeEnrolment ? ctx.db.get("courses", activeEnrolment.courseId) : null,
+          activeEnrolment ? ctx.db.get("batches", activeEnrolment.batchId) : null,
+          ctx.db.query("studentFinancialSummaries").withIndex("by_studentId", (q) => q.eq("studentId", student._id)).unique(),
+        ]);
+        return {
+          studentId: student._id, studentNumber: student.studentNumber,
+          displayName: student.displayName, loginEmail: student.loginEmail,
+          guardianName: student.guardianName, guardianPhone: student.guardianPhone,
+          admissionDate: student.admissionDate,
+          status: activeEnrolment ? "active" as const : "inactive" as const,
+          photoUrl: student.photoStorageId ? await ctx.storage.getUrl(student.photoStorageId) : null,
+          currentClass: student.currentClass,
+          courseId: course?._id ?? null, courseNameBn: course?.nameBn ?? null, courseNameEn: course?.nameEn ?? null,
+          batchId: batch?._id ?? null, batchNameBn: batch?.nameBn ?? null, batchNameEn: batch?.nameEn ?? null,
+          agreedMonthlyAmountMinor: activeEnrolment?.agreedMonthlyAmountMinor ?? null,
+          outstandingMinor: summary?.outstandingMinor ?? 0,
+        };
+      }));
     return {
       ...result,
-      page: result.page.map((student) => ({
-        studentId: student._id,
-        studentNumber: student.studentNumber,
-        displayName: student.displayName,
-        loginEmail: student.loginEmail,
-        guardianName: student.guardianName,
-        guardianPhone: student.guardianPhone,
-        admissionDate: student.admissionDate,
-        status: student.status,
-      })),
+      page: args.status ? page.filter((student) => student.status === (args.status === "active" ? "active" : "inactive")) : page,
     };
   },
 });
@@ -88,14 +130,16 @@ export const getStudent = query({
     await requireOwner(ctx);
     const student = await ctx.db.get("students", args.studentId);
     if (!student) return null;
-    const [enrolments, account] = await Promise.all([
+    const [enrolments, account, financialSummary] = await Promise.all([
       ctx.db.query("enrolments").withIndex("by_studentId_and_status", (q) => q.eq("studentId", student._id)).take(100),
       ctx.db.query("portalAccounts").withIndex("by_studentId", (q) => q.eq("studentId", student._id)).unique(),
+      ctx.db.query("studentFinancialSummaries").withIndex("by_studentId", (q) => q.eq("studentId", student._id)).unique(),
     ]);
     return {
       studentId: student._id,
       studentNumber: student.studentNumber,
-      rollNumber: student.rollNumber ?? null,
+      photoStorageId: student.photoStorageId ?? null,
+      photoUrl: student.photoStorageId ? await ctx.storage.getUrl(student.photoStorageId) : null,
       displayName: student.displayName,
       nameBn: student.nameBn ?? null,
       nameEn: student.nameEn ?? null,
@@ -115,17 +159,30 @@ export const getStudent = query({
       smsRecipient: student.smsRecipient ?? "father",
       preferredSmsLocale: student.preferredSmsLocale,
       admissionDate: student.admissionDate,
-      status: student.status,
+      status: enrolments.some((enrolment) => enrolment.status === "active") ? "active" as const : "inactive" as const,
       internalNote: student.internalNote ?? null,
       portalAccountStatus: account?.status ?? null,
-      enrolments: enrolments.map((enrolment) => ({
+      financialSummary: {
+        totalChargedMinor: financialSummary?.totalChargedMinor ?? 0,
+        totalPaidMinor: financialSummary?.totalPaidMinor ?? 0,
+        outstandingMinor: financialSummary?.outstandingMinor ?? 0,
+        overdueMinor: financialSummary?.overdueMinor ?? 0,
+        advanceCreditMinor: financialSummary?.advanceCreditMinor ?? 0,
+      },
+      enrolments: await Promise.all(enrolments.map(async (enrolment) => {
+        const [course, batch] = await Promise.all([ctx.db.get("courses", enrolment.courseId), ctx.db.get("batches", enrolment.batchId)]);
+        if (!course || !batch) throw new Error("Enrolment course or batch not found");
+        return {
         enrolmentId: enrolment._id,
         courseId: enrolment.courseId,
         batchId: enrolment.batchId,
         enrolledOn: enrolment.enrolledOn,
         endedOn: enrolment.endedOn ?? null,
         status: enrolment.status,
-      })),
+        agreedMonthlyAmountMinor: enrolment.agreedMonthlyAmountMinor ?? null,
+        courseNameBn: course.nameBn, courseNameEn: course.nameEn,
+        batchNameBn: batch.nameBn, batchNameEn: batch.nameEn,
+      }; })),
     };
   },
 });
@@ -133,7 +190,7 @@ export const getStudent = query({
 export const updateStudent = mutation({
   args: {
     studentId: v.id("students"),
-    rollNumber: v.optional(v.union(v.string(), v.null())),
+    photoStorageId: v.optional(v.union(v.id("_storage"), v.null())),
     displayName: v.optional(v.string()),
     nameBn: v.optional(v.union(v.string(), v.null())),
     nameEn: v.optional(v.union(v.string(), v.null())),
@@ -153,7 +210,6 @@ export const updateStudent = mutation({
     smsRecipient: v.optional(v.union(v.literal("father"), v.literal("mother"), v.literal("both"))),
     preferredSmsLocale: v.optional(localeValidator),
     admissionDate: v.optional(v.string()),
-    status: v.optional(studentStatusValidator),
     internalNote: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.null(),
@@ -178,7 +234,7 @@ export const updateStudent = mutation({
       }
     }
     const patch: Record<string, unknown> = {};
-    if (args.rollNumber !== undefined) patch.rollNumber = args.rollNumber === null ? undefined : optionalText(args.rollNumber, "Roll number", 40);
+    if (args.photoStorageId !== undefined) patch.photoStorageId = args.photoStorageId ?? undefined;
     if (args.nameBn !== undefined) patch.nameBn = args.nameBn === null ? undefined : optionalText(args.nameBn, "Bangla name", 120);
     if (args.nameEn !== undefined) patch.nameEn = args.nameEn === null ? undefined : optionalText(args.nameEn, "English name", 120);
     if (args.phone !== undefined) patch.phone = args.phone === null ? undefined : normalizeBangladeshPhone(args.phone);
@@ -193,36 +249,6 @@ export const updateStudent = mutation({
     if (args.preferredSmsLocale !== undefined) patch.preferredSmsLocale = args.preferredSmsLocale;
     if (args.admissionDate !== undefined) patch.admissionDate = assertLocalDate(args.admissionDate);
 
-    let statusTransitionPatch = null;
-    if (args.status !== undefined && args.status !== student.status) {
-      patch.status = args.status;
-      const summary = await ctx.db.query("studentFinancialSummaries").withIndex("by_studentId", (q) => q.eq("studentId", student._id)).unique();
-      const outstanding = summary?.outstandingMinor ?? 0;
-      const overdue = summary?.overdueMinor ?? 0;
-      const isOverdue = overdue > 0;
-
-      let diffOutstanding = 0;
-      let diffOverdue = 0;
-      let diffOverdueCount = 0;
-      let diffStudentCount = 0;
-
-      if (student.status === "active" && args.status !== "active") {
-        diffOutstanding = -outstanding;
-        diffOverdue = -overdue;
-        diffOverdueCount = isOverdue ? -1 : 0;
-        diffStudentCount = -1;
-      } else if (student.status !== "active" && args.status === "active") {
-        diffOutstanding = outstanding;
-        diffOverdue = overdue;
-        diffOverdueCount = isOverdue ? 1 : 0;
-        diffStudentCount = 1;
-      }
-
-      if (diffOutstanding !== 0 || diffOverdue !== 0 || diffOverdueCount !== 0 || diffStudentCount !== 0) {
-        statusTransitionPatch = { diffOutstanding, diffOverdue, diffOverdueCount, diffStudentCount };
-      }
-    }
-
     if (args.internalNote !== undefined) patch.internalNote = args.internalNote === null ? undefined : optionalText(args.internalNote, "Internal note", 2000);
     if (Object.keys(patch).length > 0) {
       const merged = { ...current, ...patch };
@@ -232,19 +258,6 @@ export const updateStudent = mutation({
       await ctx.db.patch("students", student._id, patch);
     }
 
-    if (statusTransitionPatch) {
-      const today = dhakaDate();
-      const dailySummary = await ctx.db.query("dailyOperationalSummaries").withIndex("by_date", (q) => q.eq("date", today)).unique();
-      if (dailySummary) {
-        await ctx.db.patch(dailySummary._id, {
-          activeStudentCount: Math.max(0, dailySummary.activeStudentCount + statusTransitionPatch.diffStudentCount),
-          overdueMinor: Math.max(0, dailySummary.overdueMinor + statusTransitionPatch.diffOverdue),
-          overdueStudentsCount: Math.max(0, dailySummary.overdueStudentsCount + statusTransitionPatch.diffOverdueCount),
-          activeOutstandingMinor: Math.max(0, (dailySummary.activeOutstandingMinor ?? 0) + statusTransitionPatch.diffOutstanding),
-          updatedAt: Date.now(),
-        });
-      }
-    }
     await writeAudit(ctx, {
       actorAccountId: account._id,
       actorRole: "owner",
@@ -254,6 +267,46 @@ export const updateStudent = mutation({
       summary: "Student profile updated by owner",
     });
     return null;
+  },
+});
+
+export const transferEnrolment = mutation({
+  args: {
+    studentId: v.id("students"), courseId: v.id("courses"), batchId: v.id("batches"),
+    agreedMonthlyAmountMinor: v.number(), effectiveDate: v.string(),
+  },
+  returns: v.id("enrolments"),
+  handler: async (ctx, args) => {
+    const { account } = await requireOwner(ctx);
+    assertLocalDate(args.effectiveDate);
+    assertMinorUnits(args.agreedMonthlyAmountMinor, "agreedMonthlyAmountMinor");
+    if (args.agreedMonthlyAmountMinor <= 0) throw new Error("Monthly fee must be greater than zero");
+    const [student, course, batch, activeEnrolments] = await Promise.all([
+      ctx.db.get("students", args.studentId), ctx.db.get("courses", args.courseId), ctx.db.get("batches", args.batchId),
+      ctx.db.query("enrolments").withIndex("by_studentId_and_status", (q) => q.eq("studentId", args.studentId).eq("status", "active")).take(2),
+    ]);
+    if (!student) throw new Error("Student not found");
+    if (!course || course.status !== "active") throw new Error("Choose an active course");
+    if (!batch || batch.status !== "active" || batch.courseId !== course._id) throw new Error("Choose an active batch from the selected course");
+    if (activeEnrolments.length > 1) throw new Error("Student has multiple active enrolments; resolve the data before transferring");
+    const current = activeEnrolments[0];
+    if (current && current.courseId === course._id && current.batchId === batch._id) throw new Error("Choose a different course or batch");
+    const now = Date.now();
+    if (current) await ctx.db.patch("enrolments", current._id, { status: "transferred", endedOn: args.effectiveDate, updatedAt: now });
+    const enrolmentId = await ctx.db.insert("enrolments", {
+      studentId: student._id, courseId: course._id, batchId: batch._id, enrolledOn: args.effectiveDate,
+      status: "active", agreedMonthlyAmountMinor: args.agreedMonthlyAmountMinor,
+      createdAt: now, updatedAt: now, createdByAccountId: account._id,
+    });
+    await ctx.db.patch("students", student._id, { status: "active", updatedAt: now, updatedByAccountId: account._id });
+    await writeAudit(ctx, {
+      actorAccountId: account._id, actorRole: "owner", action: "student.enrolment_transferred",
+      entityType: "student", entityId: student._id, summary: "Student course and batch changed",
+      metadata: { previousEnrolmentId: current?._id, enrolmentId, courseId: course._id, batchId: batch._id, effectiveDate: args.effectiveDate, agreedMonthlyAmountMinor: args.agreedMonthlyAmountMinor },
+    });
+    if (current) await scheduleCourseSnapshot(ctx, current.courseId);
+    await scheduleCourseSnapshot(ctx, course._id);
+    return enrolmentId;
   },
 });
 
@@ -343,7 +396,7 @@ export const searchStudentsForOwner = query({
       studentId: v.id("students"),
       studentNumber: v.string(),
       displayName: v.string(),
-      status: studentStatusValidator,
+      status: v.union(v.literal("active"), v.literal("inactive")),
       phone: v.union(v.string(), v.null()),
       guardianPhone: v.string(),
       coursesAndBatches: v.array(v.object({ courseName: v.string(), batchName: v.string() })),
@@ -357,7 +410,7 @@ export const searchStudentsForOwner = query({
     const text = args.queryText.trim().toLowerCase();
     if (text.length < 2) return [];
 
-    const statuses = ["active", "paused", "completed", "left", "archived"] as const;
+    const statuses = ["active", "inactive", "paused", "completed", "left", "archived"] as const;
     const searchPromises = statuses.map((status) =>
       ctx.db
         .query("students")
@@ -369,7 +422,7 @@ export const searchStudentsForOwner = query({
     const searchResults = await Promise.all(searchPromises);
     const matchedStudents = searchResults.flat();
 
-    const statusOrder: Record<string, number> = { active: 0, paused: 1, completed: 2, left: 3, archived: 4 };
+    const statusOrder: Record<string, number> = { active: 0, inactive: 1, paused: 1, completed: 1, left: 1, archived: 1 };
     matchedStudents.sort((a, b) => {
       const orderA = statusOrder[a.status] ?? 99;
       const orderB = statusOrder[b.status] ?? 99;
@@ -416,7 +469,7 @@ export const searchStudentsForOwner = query({
         studentId: student._id,
         studentNumber: student.studentNumber,
         displayName: student.displayName,
-        status: student.status,
+        status: enrolments.length > 0 ? "active" as const : "inactive" as const,
         phone: student.phone ?? null,
         guardianPhone: student.guardianPhone,
         coursesAndBatches,

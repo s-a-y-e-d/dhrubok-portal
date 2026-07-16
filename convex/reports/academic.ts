@@ -27,13 +27,13 @@ export const batchHeader = query({
 
 export const batchRoster = query({
   args: { batchId: v.id("batches"), status: v.union(v.literal("active"), v.literal("completed"), v.literal("withdrawn"), v.literal("transferred")), paginationOpts: paginationOptsValidator },
-  returns: v.object({ page: v.array(v.object({ enrolmentId: v.id("enrolments"), studentId: v.id("students"), studentNumber: v.string(), rollNumber: v.union(v.string(), v.null()), displayName: v.string(), enrolledOn: v.string(), status: v.string() })), ...pageFields }),
+  returns: v.object({ page: v.array(v.object({ enrolmentId: v.id("enrolments"), studentId: v.id("students"), studentNumber: v.string(), displayName: v.string(), enrolledOn: v.string(), status: v.string() })), ...pageFields }),
   handler: async (ctx, args) => {
     await requireOwnerOrAssignedTeacherForBatch(ctx, args.batchId);
     const page = await ctx.db.query("enrolments").withIndex("by_batchId_and_status", (q) => q.eq("batchId", args.batchId).eq("status", args.status)).paginate(args.paginationOpts);
     return { ...page, page: await Promise.all(page.page.map(async (enrolment) => {
       const student = await ctx.db.get("students", enrolment.studentId);
-      return { enrolmentId: enrolment._id, studentId: enrolment.studentId, studentNumber: student?.studentNumber ?? "", rollNumber: student?.rollNumber ?? null, displayName: student?.displayName ?? "", enrolledOn: enrolment.enrolledOn, status: enrolment.status };
+      return { enrolmentId: enrolment._id, studentId: enrolment.studentId, studentNumber: student?.studentNumber ?? "", displayName: student?.displayName ?? "", enrolledOn: enrolment.enrolledOn, status: enrolment.status };
     })) };
   },
 });

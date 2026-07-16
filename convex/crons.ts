@@ -14,6 +14,12 @@ crons.interval(
   internal.finance.actions.dailyBilling,
   {},
 );
+crons.interval(
+  "extend class occurrence window",
+  { hours: 24 },
+  internal.academics.classOccurrenceMaterializer.materializeActiveSchedules,
+  {},
+);
 crons.cron(
   "refresh operational summary",
   "30 18 * * *",

@@ -52,6 +52,12 @@ function slugFromCode(code: string) {
   );
 }
 
+function previousDate(date: string) {
+  return new Date(Date.parse(`${date}T00:00:00Z`) - 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+}
+
 function validateRoutine(
   rows: Array<{
     weekday: number;
@@ -430,5 +436,171 @@ export const createWithRoutine = mutation({
       { scheduleIds },
     );
     return batchId;
+  },
+});
+
+export const updateWithRoutine = mutation({
+  args: {
+    batchId: v.id("batches"),
+    code: v.string(),
+    nameBn: v.string(),
+    nameEn: v.string(),
+    startDate: v.string(),
+    admissionOpen: v.boolean(),
+    isPublic: v.boolean(),
+    effectiveFrom: v.string(),
+    routine: v.array(routineRow),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { account } = await requireOwner(ctx);
+    const batch = await ctx.db.get("batches", args.batchId);
+    if (!batch) throw new Error("Batch not found");
+    if (batch.status === "archived")
+      throw new Error("Archived batches cannot be edited");
+    assertIsoDate(args.startDate, "Batch start date");
+    assertIsoDate(args.effectiveFrom, "Routine effective date");
+    validateRoutine(args.routine);
+    await validateExistingConflicts(
+      ctx,
+      args.routine,
+      args.effectiveFrom,
+      args.batchId,
+    );
+
+    const assignments = await ctx.db
+      .query("teacherBatchAssignments")
+      .withIndex("by_batchId_and_status", (q) =>
+        q.eq("batchId", args.batchId).eq("status", "active"),
+      )
+      .take(200);
+    const assignmentKeys = new Set(
+      assignments.map(
+        (row) => `${String(row.teacherId)}:${String(row.subjectId ?? "")}`,
+      ),
+    );
+    for (const row of args.routine) {
+      const exact = `${String(row.teacherId)}:${String(row.subjectId ?? "")}`;
+      const teacherOnly = `${String(row.teacherId)}:`;
+      if (!assignmentKeys.has(exact) && !assignmentKeys.has(teacherOnly))
+        throw new Error(
+          "Routine teacher and subject must match an active batch assignment",
+        );
+    }
+
+    if (args.startDate !== batch.startDate) {
+      const enrolments = await ctx.db
+        .query("enrolments")
+        .withIndex("by_batchId_and_status", (q) =>
+          q.eq("batchId", args.batchId).eq("status", "active"),
+        )
+        .take(1000);
+      if (enrolments.some((row) => row.enrolledOn < args.startDate))
+        throw new Error(
+          "Start date cannot move after an active enrolment began",
+        );
+      const sessions = await ctx.db
+        .query("classSessions")
+        .withIndex("by_batchId_and_sessionDate", (q) =>
+          q.eq("batchId", args.batchId),
+        )
+        .take(1000);
+      if (sessions.some((row) => row.status === "submitted"))
+        throw new Error(
+          "Start date cannot change after attendance is submitted",
+        );
+    }
+
+    const code = normalizeCode(args.code);
+    const slug = slugFromCode(code);
+    const [sameCode, sameSlug] = await Promise.all([
+      ctx.db
+        .query("batches")
+        .withIndex("by_code", (q) => q.eq("code", code))
+        .unique(),
+      ctx.db
+        .query("batches")
+        .withIndex("by_slug", (q) => q.eq("slug", slug))
+        .unique(),
+    ]);
+    if (sameCode && sameCode._id !== args.batchId)
+      throw new Error("Batch code already exists");
+    if (sameSlug && sameSlug._id !== args.batchId)
+      throw new Error("Batch slug already exists");
+    if (batch.status !== "active" && (args.admissionOpen || args.isPublic))
+      throw new Error(
+        "Only active batches can be public or open for admission",
+      );
+
+    const oldSchedules = await ctx.db
+      .query("batchSchedules")
+      .withIndex("by_batchId_and_status", (q) =>
+        q.eq("batchId", args.batchId).eq("status", "active"),
+      )
+      .take(200);
+    const now = Date.now();
+    for (const schedule of oldSchedules)
+      await ctx.db.patch("batchSchedules", schedule._id, {
+        status: "cancelled",
+        effectiveUntil: previousDate(args.effectiveFrom),
+        updatedAt: now,
+      });
+
+    for (const schedule of oldSchedules) {
+      const sessions = await ctx.db
+        .query("classSessions")
+        .withIndex("by_scheduleId_and_sessionDate", (q) =>
+          q
+            .eq("scheduleId", schedule._id)
+            .gte("sessionDate", args.effectiveFrom),
+        )
+        .take(200);
+      for (const session of sessions)
+        if (session.status === "scheduled" && !session.isOneOffOverride)
+          await ctx.db.patch("classSessions", session._id, {
+            status: "cancelled",
+            cancellationType: "routine",
+            cancelledAt: now,
+            updatedAt: now,
+          });
+    }
+
+    const scheduleIds = [];
+    for (const row of args.routine)
+      scheduleIds.push(
+        await ctx.db.insert("batchSchedules", {
+          batchId: args.batchId,
+          ...row,
+          effectiveFrom: args.effectiveFrom,
+          status: "active",
+          createdAt: now,
+          updatedAt: now,
+        }),
+      );
+    await ctx.db.patch("batches", args.batchId, {
+      code,
+      slug,
+      nameBn: cleanRequired(args.nameBn, "Bangla name"),
+      nameEn: cleanRequired(args.nameEn, "English name"),
+      startDate: args.startDate,
+      admissionOpen: args.admissionOpen,
+      isPublic: args.isPublic,
+      updatedAt: now,
+    });
+    await writeAudit(ctx, {
+      actorAccountId: account._id,
+      actorRole: "owner",
+      action: "batch.updated_with_routine",
+      entityType: "batch",
+      entityId: args.batchId,
+      summary: "Batch details and future weekly routine updated",
+    });
+    await scheduleCourseSnapshot(ctx, batch.courseId);
+    await ctx.scheduler.runAfter(
+      0,
+      internal.academics.classOccurrenceMaterializer.materializeSchedules,
+      { scheduleIds },
+    );
+    return null;
   },
 });

@@ -80,7 +80,6 @@ export const detailMine = query({
       student: {
         studentNumber: student.studentNumber,
         displayName: student.displayName,
-        rollNumber: student.rollNumber,
       },
     };
   },

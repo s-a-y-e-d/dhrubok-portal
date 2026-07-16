@@ -11,6 +11,7 @@ import {
   Users,
   BookOpen,
   CalendarCheck,
+  CalendarRange,
   DollarSign,
   FileSpreadsheet,
   FileText,
@@ -81,6 +82,12 @@ const ownerNavGroups: NavGroupDef[] = [
         labelBn: "ব্যাচ",
         path: "/batches",
         icon: GraduationCap,
+      },
+      {
+        labelEn: "Schedule",
+        labelBn: "সময়সূচি",
+        path: "/schedule",
+        icon: CalendarRange,
       },
       {
         labelEn: "Teachers",
@@ -271,7 +278,7 @@ const ownerQuickActions = [
   {
     labelEn: "Add student",
     labelBn: "শিক্ষার্থী যোগ করুন",
-    path: "/students?add=true",
+    path: "/admissions?add=true",
     icon: UserPlus,
   },
   {
@@ -340,6 +347,13 @@ const navMetadata: Record<
     titleBn: "শিক্ষক",
     descEn: "Manage teacher profiles, access, and current workload.",
     descBn: "শিক্ষক প্রোফাইল, অ্যাক্সেস এবং বর্তমান কাজ পরিচালনা করুন।",
+  },
+  "/schedule": {
+    titleEn: "Schedule",
+    titleBn: "সময়সূচি",
+    descEn: "Manage generated classes, one-off changes, and extra classes.",
+    descBn:
+      "নির্ধারিত ক্লাস, এককালীন পরিবর্তন এবং অতিরিক্ত ক্লাস পরিচালনা করুন।",
   },
   "/attendance": {
     titleEn: "Attendance",

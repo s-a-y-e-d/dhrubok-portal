@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ResponsiveDetailDrawer } from "@/components/portal/ResponsiveDetailDrawer";
 import {
   Select,
   SelectContent,
@@ -45,13 +46,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import {
   Table,
   TableBody,
@@ -61,9 +55,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/portal/DatePicker";
 import { cn } from "@/lib/utils";
 
 type Locale = "bn" | "en";
+const academicStatusLabel = (status: string, bn: boolean) => {
+  const labels: Record<string, [string, string]> = {
+    active: ["সক্রিয়", "Active"],
+    planned: ["পরিকল্পিত", "Planned"],
+    completed: ["সম্পন্ন", "Completed"],
+    archived: ["আর্কাইভ করা", "Archived"],
+  };
+  return labels[status]?.[bn ? 0 : 1] ?? status;
+};
 type TeacherSelection = { teacherId: string; subjectIds: string[] };
 type RoutineRow = {
   id: string;
@@ -628,14 +632,29 @@ function CourseCreateDialog({
                                     ? "শুরুর তারিখ"
                                     : "Start date"}
                           </Label>
-                          <Input
-                            type={key === "startDate" ? "date" : "text"}
-                            value={batch[key]}
-                            onChange={(e) =>
-                              setBatch({ ...batch, [key]: e.target.value })
-                            }
-                            required
-                          />
+                          {key === "startDate" ? (
+                            <DatePicker
+                              value={batch.startDate}
+                              onChange={(value) =>
+                                setBatch({ ...batch, startDate: value })
+                              }
+                              locale={locale}
+                              ariaLabel={
+                                bn
+                                  ? "শুরুর তারিখ নির্বাচন"
+                                  : "Choose start date"
+                              }
+                              required
+                            />
+                          ) : (
+                            <Input
+                              value={batch[key]}
+                              onChange={(e) =>
+                                setBatch({ ...batch, [key]: e.target.value })
+                              }
+                              required
+                            />
+                          )}
                         </div>
                       ),
                     )}
@@ -1053,117 +1072,114 @@ export function CoursesWorkspace({ locale }: { locale: Locale }) {
           );
         }}
       />
-      <Sheet
+      <ResponsiveDetailDrawer
         open={Boolean(selectedId)}
         onOpenChange={(value) => {
           if (!value) setSelectedId(null);
         }}
+        closeLabel={bn ? "বন্ধ করুন" : "Close"}
+        title={
+          details
+            ? bn
+              ? details.course.nameBn
+              : details.course.nameEn
+            : bn
+              ? "কোর্স"
+              : "Course"
+        }
+        description={details?.course.code}
       >
-        <SheetContent className="w-[min(560px,calc(100%-24px))]">
-          <SheetHeader>
-            <SheetTitle>
-              {details
-                ? bn
-                  ? details.course.nameBn
-                  : details.course.nameEn
-                : bn
-                  ? "কোর্স"
-                  : "Course"}
-            </SheetTitle>
-            <SheetDescription>{details?.course.code}</SheetDescription>
-          </SheetHeader>
-          {details && (
-            <div className="grid gap-5">
-              <div className="flex gap-2">
-                <Badge
-                  variant={
-                    details.course.status === "active" ? "success" : "neutral"
-                  }
-                >
-                  {details.course.status}
-                </Badge>
-                <Badge variant={details.course.isPublic ? "info" : "neutral"}>
-                  {details.course.isPublic
-                    ? bn
-                      ? "ওয়েবসাইটে প্রকাশিত"
-                      : "Published"
-                    : bn
-                      ? "প্রাইভেট"
-                      : "Private"}
-                </Badge>
-              </div>
-              <section>
-                <h3 className="mb-2 font-semibold">
-                  {bn
-                    ? "বিষয় ও ডিফল্ট শিক্ষক"
-                    : "Subjects and default teachers"}
-                </h3>
-                <div className="grid gap-2">
-                  {details.defaults.map((row) => (
-                    <div
-                      key={row.defaultId}
-                      className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[var(--border)] p-3"
-                    >
-                      <span>
-                        {bn ? row.subjectNameBn : row.subjectNameEn}{" "}
-                        <small className="text-[var(--ink-mute)]">
-                          {row.subjectCode}
-                        </small>
-                      </span>
-                      <span className="text-sm text-[var(--ink-secondary)]">
-                        <Users className="me-1 inline size-4" />
-                        {row.teacherName}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </section>
-              <section>
-                <h3 className="mb-2 font-semibold">
-                  {bn ? "ব্যাচ" : "Batches"}
-                </h3>
-                {details.batches.map((batch) => (
+        {details && (
+          <div className="grid gap-5">
+            <div className="flex gap-2">
+              <Badge
+                variant={
+                  details.course.status === "active" ? "success" : "neutral"
+                }
+              >
+                {academicStatusLabel(details.course.status, bn)}
+              </Badge>
+              <Badge variant={details.course.isPublic ? "info" : "neutral"}>
+                {details.course.isPublic
+                  ? bn
+                    ? "ওয়েবসাইটে প্রকাশিত"
+                    : "Published"
+                  : bn
+                    ? "প্রাইভেট"
+                    : "Private"}
+              </Badge>
+            </div>
+            <section>
+              <h3 className="mb-2 font-semibold">
+                {bn ? "বিষয় ও ডিফল্ট শিক্ষক" : "Subjects and default teachers"}
+              </h3>
+              <div className="grid gap-2">
+                {details.defaults.map((row) => (
                   <div
-                    key={batch.batchId}
-                    className="flex justify-between border-b border-[var(--border)] py-2"
+                    key={row.defaultId}
+                    className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[var(--border)] p-3"
                   >
-                    <span>{bn ? batch.nameBn : batch.nameEn}</span>
-                    <Badge>{batch.status}</Badge>
+                    <span>
+                      {bn ? row.subjectNameBn : row.subjectNameEn}{" "}
+                      <small className="text-[var(--ink-mute)]">
+                        {row.subjectCode}
+                      </small>
+                    </span>
+                    <span className="text-sm text-[var(--ink-secondary)]">
+                      <Users className="me-1 inline size-4" />
+                      {row.teacherName}
+                    </span>
                   </div>
                 ))}
-              </section>
-              <Button variant="secondary" asChild>
-                <a href={`/${locale}/owner/website`}>
-                  <Globe2 />
-                  {bn ? "ওয়েবসাইট CMS" : "Website CMS"}
-                </a>
-              </Button>
-              {details.course.status === "active" && (
-                <Button
-                  variant="danger"
-                  onClick={async () => {
-                    try {
-                      await archive({ courseId: details.course.courseId });
-                      setSelectedId(null);
-                      setStatus("archived");
-                      setFeedback(
-                        bn ? "কোর্স আর্কাইভ হয়েছে।" : "Course archived.",
-                      );
-                    } catch (error) {
-                      setFeedback(
-                        error instanceof Error ? error.message : String(error),
-                      );
-                    }
-                  }}
+              </div>
+            </section>
+            <section>
+              <h3 className="mb-2 font-semibold">{bn ? "ব্যাচ" : "Batches"}</h3>
+              {details.batches.map((batch) => (
+                <div
+                  key={batch.batchId}
+                  className="flex justify-between border-b border-[var(--border)] py-2"
                 >
-                  <Archive />
-                  {bn ? "কোর্স আর্কাইভ" : "Archive course"}
-                </Button>
-              )}
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
+                  <span>{bn ? batch.nameBn : batch.nameEn}</span>
+                  <Badge
+                    variant={batch.status === "active" ? "success" : "neutral"}
+                  >
+                    {academicStatusLabel(batch.status, bn)}
+                  </Badge>
+                </div>
+              ))}
+            </section>
+            <Button variant="secondary" asChild>
+              <a href={`/${locale}/owner/website`}>
+                <Globe2 />
+                {bn ? "ওয়েবসাইট CMS" : "Website CMS"}
+              </a>
+            </Button>
+            {details.course.status === "active" && (
+              <Button
+                variant="danger"
+                onClick={async () => {
+                  try {
+                    await archive({ courseId: details.course.courseId });
+                    setSelectedId(null);
+                    setStatus("archived");
+                    setFeedback(
+                      bn ? "কোর্স আর্কাইভ হয়েছে।" : "Course archived.",
+                    );
+                  } catch (error) {
+                    setFeedback(
+                      error instanceof Error ? error.message : String(error),
+                    );
+                  }
+                }}
+              >
+                <Archive />
+                {bn ? "কোর্স আর্কাইভ" : "Archive course"}
+              </Button>
+            )}
+          </div>
+        )}
+      </ResponsiveDetailDrawer>
     </div>
   );
 }

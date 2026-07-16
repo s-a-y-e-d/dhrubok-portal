@@ -323,7 +323,7 @@ export const withdrawApplication = mutation({
 
 export const acceptApplication = mutation({
   args: {
-    applicationId: v.id("admissionApplications"), conversionKey: v.string(), studentNumber: v.string(), rollNumber: v.optional(v.string()),
+    applicationId: v.id("admissionApplications"), conversionKey: v.string(), studentNumber: v.string(),
     admissionDate: v.string(), confirmedCourseId: v.id("courses"), confirmedBatchId: v.id("batches"), feePlanId: v.optional(v.id("feePlans")),
     agreedMonthlyAmountMinor: v.optional(v.number()), agreedCourseAmountMinor: v.optional(v.number()), internalNote: v.optional(v.string()),
     discounts: v.array(v.object({ feePlanItemId: v.optional(v.id("feePlanItems")), kind: v.union(v.literal("fixed"), v.literal("percentage")), valueMinor: v.optional(v.number()), percentageBasisPoints: v.optional(v.number()), reason: v.string(), startsOn: v.string(), endsOn: v.optional(v.string()) })),
@@ -360,7 +360,7 @@ export const acceptApplication = mutation({
     if (args.discounts.length > 20 || args.initialCharges.length > 20) throw new Error("Too many admission financial items");
     const now = Date.now();
     const studentId = await ctx.db.insert("students", {
-      studentNumber, rollNumber: optionalText(args.rollNumber, "Roll number", 40), displayName: application.studentDisplayName,
+      studentNumber, displayName: application.studentDisplayName,
       nameBn: application.studentNameBn, nameEn: application.studentNameEn, loginEmail: application.studentEmail,
       normalizedLoginEmail: application.normalizedStudentEmail, phone: application.studentPhone, dateOfBirth: application.dateOfBirth,
       gender: application.gender, schoolCollege: application.schoolCollege, currentClass: application.currentClass, address: application.address,
@@ -426,7 +426,7 @@ export const acceptApplication = mutation({
 
 export const createDirectAdmission = mutation({
   args: {
-    studentNumber: v.string(), rollNumber: v.optional(v.string()), admissionDate: v.string(),
+    studentNumber: v.string(), admissionDate: v.string(),
     studentDisplayName: v.string(), studentNameBn: v.optional(v.string()), studentNameEn: v.optional(v.string()),
     studentEmail: v.string(), studentPhone: v.optional(v.string()), dateOfBirth: v.optional(v.string()), gender: v.optional(v.string()),
     schoolCollege: v.string(), currentClass: v.string(), address: v.optional(v.string()),
@@ -458,7 +458,7 @@ export const createDirectAdmission = mutation({
     }
     const now = Date.now();
     const studentId = await ctx.db.insert("students", {
-      studentNumber, rollNumber: optionalText(args.rollNumber, "Roll number", 40), displayName: profile.studentDisplayName,
+      studentNumber, displayName: profile.studentDisplayName,
       nameBn: profile.studentNameBn, nameEn: profile.studentNameEn, loginEmail: profile.studentEmail,
       normalizedLoginEmail: profile.normalizedStudentEmail, phone: profile.studentPhone, dateOfBirth: profile.dateOfBirth,
       gender: profile.gender, schoolCollege: profile.schoolCollege, currentClass: profile.currentClass, address: profile.address,

@@ -157,8 +157,7 @@ export default defineSchema({
     nextRoutineWeekday: v.optional(v.number()),
     nextRoutineStartMinutes: v.optional(v.number()),
     updatedAt: v.number(),
-  })
-    .index("by_courseId", ["courseId"]),
+  }).index("by_courseId", ["courseId"]),
 
   courses: defineTable({
     code: v.string(),
@@ -290,6 +289,7 @@ export default defineSchema({
     createdAt: v.number(),
     createdByAccountId: v.id("portalAccounts"),
   })
+    .index("by_status", ["status"])
     .index("by_teacherId_and_status", ["teacherId", "status"])
     .index("by_batchId_and_status", ["batchId", "status"])
     .index("by_teacherId_and_batchId", ["teacherId", "batchId"])
@@ -380,6 +380,7 @@ export default defineSchema({
 
   students: defineTable({
     studentNumber: v.string(),
+    // Deprecated during the roll-number removal migration. New writes omit it.
     rollNumber: v.optional(v.string()),
     displayName: v.string(),
     nameBn: v.optional(v.string()),
@@ -405,7 +406,11 @@ export default defineSchema({
     ),
     preferredSmsLocale: localeValidator,
     admissionDate: v.string(),
-    status: studentStatusValidator,
+    // Legacy states remain accepted until the enrolment-derived migration runs.
+    status: v.union(
+      v.literal("active"), v.literal("inactive"), v.literal("paused"),
+      v.literal("completed"), v.literal("left"), v.literal("archived"),
+    ),
     sourceApplicationId: v.optional(v.id("admissionApplications")),
     internalNote: v.optional(v.string()),
     searchText: v.string(),
@@ -497,8 +502,22 @@ export default defineSchema({
     absentCount: v.optional(v.number()),
     // Set by the Schedule page when one generated occurrence is moved independently.
     isOneOffOverride: v.optional(v.boolean()),
+    occurrenceType: v.optional(
+      v.union(v.literal("generated"), v.literal("extra")),
+    ),
+    originalSessionDate: v.optional(v.string()),
+    originalStartsAt: v.optional(v.number()),
+    originalEndsAt: v.optional(v.number()),
+    changeReason: v.optional(v.string()),
+    cancelledAt: v.optional(v.number()),
+    cancelledByAccountId: v.optional(v.id("portalAccounts")),
+    cancellationType: v.optional(
+      v.union(v.literal("manual"), v.literal("routine")),
+    ),
+    updatedAt: v.optional(v.number()),
     createdAt: v.number(),
   })
+    .index("by_sessionDate", ["sessionDate"])
     .index("by_batchId_and_sessionDate", ["batchId", "sessionDate"])
     .index("by_teacherId_and_sessionDate", ["teacherId", "sessionDate"])
     .index("by_status_and_sessionDate", ["status", "sessionDate"])

@@ -778,6 +778,21 @@
   text-transform: uppercase;
 }
 
+.studentListAvatar img,
+.studentProfileImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+.studentProfileImage {
+  width: 96px;
+  height: 96px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
 .studentListItemActive .studentListAvatar {
   background-color: var(--brand);
   color: var(--canvas);

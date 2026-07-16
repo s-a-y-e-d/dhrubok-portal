@@ -20,6 +20,7 @@ import type * as academics_courses from "../academics/courses.js";
 import type * as academics_options from "../academics/options.js";
 import type * as academics_public from "../academics/public.js";
 import type * as academics_readModels from "../academics/readModels.js";
+import type * as academics_scheduleWorkspace from "../academics/scheduleWorkspace.js";
 import type * as academics_schedules from "../academics/schedules.js";
 import type * as academics_shared from "../academics/shared.js";
 import type * as academics_snapshotHooks from "../academics/snapshotHooks.js";
@@ -111,6 +112,7 @@ declare const fullApi: ApiFromModules<{
   "academics/options": typeof academics_options;
   "academics/public": typeof academics_public;
   "academics/readModels": typeof academics_readModels;
+  "academics/scheduleWorkspace": typeof academics_scheduleWorkspace;
   "academics/schedules": typeof academics_schedules;
   "academics/shared": typeof academics_shared;
   "academics/snapshotHooks": typeof academics_snapshotHooks;

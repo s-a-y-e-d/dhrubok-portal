@@ -31,6 +31,32 @@ async function fixture(t: ReturnType<typeof convexTest>) {
 }
 
 describe("immutable attendance submission", () => {
+  it("lists scheduled and submitted classes for owners and excludes cancelled classes", async () => {
+    const t = convexTest(schema, modules);
+    const data = await fixture(t);
+    await t.run(async (ctx) => {
+      const base = (await ctx.db.get("classSessions", data.sessionId))!;
+      const { _id: _baseId, _creationTime: _baseCreationTime, ...baseFields } = base;
+      for (const [suffix, status] of [["scheduled", "scheduled"], ["submitted", "submitted"], ["cancelled", "cancelled"]] as const) {
+        await ctx.db.insert("classSessions", { ...baseFields, sessionKey: `test-${suffix}`, status });
+      }
+    });
+    const owner = t.withIdentity({ tokenIdentifier: "clerk|owner", emailVerified: true });
+    const sessions = await owner.query(api.attendance.functions.listMySessions, { sessionDate: "2026-07-11" });
+    expect(sessions.map((session) => session.status).sort()).toEqual(["open", "scheduled", "submitted"]);
+  });
+
+  it("lets an owner open today's scheduled class and snapshots its roster count", async () => {
+    const t = convexTest(schema, modules);
+    const data = await fixture(t);
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+    await t.run((ctx) => ctx.db.patch("classSessions", data.sessionId, { sessionDate: today, status: "scheduled", rosterCount: 0 }));
+    const owner = t.withIdentity({ tokenIdentifier: "clerk|owner", emailVerified: true });
+    await expect(owner.mutation(api.attendance.functions.openSession, { sessionId: data.sessionId })).resolves.toBeNull();
+    const session = await t.run((ctx) => ctx.db.get("classSessions", data.sessionId));
+    expect(session).toMatchObject({ status: "open", rosterCount: 2 });
+  });
+
   it("requires every eligible student exactly once and queues only absent/late SMS", async () => {
     const t = convexTest(schema, modules);
     const data = await fixture(t);

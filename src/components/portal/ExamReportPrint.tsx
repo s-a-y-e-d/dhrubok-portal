@@ -365,10 +365,6 @@ export function PublishedResultPrint({
           <dd>{student.studentNumber}</dd>
         </div>
         <div>
-          <dt>{bn ? "রোল" : "Roll"}</dt>
-          <dd>{student.rollNumber ?? "—"}</dd>
-        </div>
-        <div>
           <dt>{bn ? "প্রকাশনা" : "Publication"}</dt>
           <dd>v{marks.publicationVersion}</dd>
         </div>

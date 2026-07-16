@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState, type FormEvent } from "react";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import {
   BookOpen,
   CalendarDays,
+  Pencil,
   Plus,
   Search,
   Trash2,
@@ -14,6 +17,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +28,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ResponsiveDetailDrawer } from "@/components/portal/ResponsiveDetailDrawer";
 import {
   Select,
   SelectContent,
@@ -33,13 +38,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
   Table,
   TableBody,
   TableCell,
@@ -47,6 +45,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DatePicker } from "@/components/portal/DatePicker";
 
 type Locale = "bn" | "en";
 type Routine = {
@@ -75,6 +74,15 @@ const weekdaysBn = [
   "শুক্রবার",
   "শনিবার",
 ];
+const batchStatusLabel = (status: string, bn: boolean) => {
+  const labels: Record<string, [string, string]> = {
+    active: ["সক্রিয়", "Active"],
+    planned: ["পরিকল্পিত", "Planned"],
+    completed: ["সম্পন্ন", "Completed"],
+    archived: ["আর্কাইভ করা", "Archived"],
+  };
+  return labels[status]?.[bn ? 0 : 1] ?? status;
+};
 const emptyRoutine = (): Routine => ({
   id: crypto.randomUUID(),
   weekday: "0",
@@ -225,17 +233,30 @@ function CreateBatchDialog({
                           ? "শুরুর তারিখ"
                           : "Start date"}
                 </Label>
-                <Input
-                  type={key === "startDate" ? "date" : "text"}
-                  value={values[key]}
-                  onChange={(event) =>
-                    setValues((current) => ({
-                      ...current,
-                      [key]: event.target.value,
-                    }))
-                  }
-                  required
-                />
+                {key === "startDate" ? (
+                  <DatePicker
+                    value={values.startDate}
+                    onChange={(value) =>
+                      setValues((current) => ({ ...current, startDate: value }))
+                    }
+                    locale={locale}
+                    ariaLabel={
+                      bn ? "শুরুর তারিখ নির্বাচন" : "Choose start date"
+                    }
+                    required
+                  />
+                ) : (
+                  <Input
+                    value={values[key]}
+                    onChange={(event) =>
+                      setValues((current) => ({
+                        ...current,
+                        [key]: event.target.value,
+                      }))
+                    }
+                    required
+                  />
+                )}
               </label>
             ))}
           </div>
@@ -437,15 +458,373 @@ function CreateBatchDialog({
   );
 }
 
+function EditBatchDialog({
+  batchId,
+  open,
+  onOpenChange,
+  locale,
+}: {
+  batchId: Id<"batches"> | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  locale: Locale;
+}) {
+  const bn = locale === "bn";
+  const details = useQuery(
+    api.academics.batchWorkspace.getBatchDetails,
+    batchId && open ? { batchId } : "skip",
+  );
+  const update = useMutation(api.academics.batchWorkspace.updateWithRoutine);
+  const [nameBn, setNameBn] = useState("");
+  const [nameEn, setNameEn] = useState("");
+  const [code, setCode] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [effectiveFrom, setEffectiveFrom] = useState("");
+  const [admissionOpen, setAdmissionOpen] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
+  const [routine, setRoutine] = useState<Routine[]>([]);
+  const [loadedId, setLoadedId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    if (!details || loadedId === String(details.batch.batchId)) return;
+    // Populate the draft once per opened batch; subsequent live query updates must not overwrite owner edits.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoadedId(String(details.batch.batchId));
+    setNameBn(details.batch.nameBn);
+    setNameEn(details.batch.nameEn);
+    setCode(details.batch.code);
+    setStartDate(details.batch.startDate);
+    setEffectiveFrom(
+      new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Dhaka",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date()),
+    );
+    setAdmissionOpen(details.batch.admissionOpen);
+    setIsPublic(details.batch.isPublic);
+    setRoutine(
+      details.routine.map((row) => ({
+        id: String(row.scheduleId),
+        weekday: String(row.weekday),
+        start: formatMinutes(row.startMinutes),
+        end: formatMinutes(row.endMinutes),
+        teacherId: String(row.teacherId),
+        subjectId: row.subjectId ? String(row.subjectId) : "",
+      })),
+    );
+  }, [details, loadedId]);
+  const changeRow = (id: string, patch: Partial<Routine>) =>
+    setRoutine((rows) =>
+      rows.map((row) => (row.id === id ? { ...row, ...patch } : row)),
+    );
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!batchId) return;
+    setError("");
+    setBusy(true);
+    try {
+      await update({
+        batchId,
+        nameBn,
+        nameEn,
+        code,
+        startDate,
+        effectiveFrom,
+        admissionOpen,
+        isPublic,
+        routine: routine.map((row) => ({
+          weekday: Number(row.weekday),
+          startMinutes: toMinutes(row.start),
+          endMinutes: toMinutes(row.end),
+          teacherId: row.teacherId as Id<"teachers">,
+          subjectId: row.subjectId
+            ? (row.subjectId as Id<"subjects">)
+            : undefined,
+        })),
+      });
+      onOpenChange(false);
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "Unable to update batch",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  const teachers = details
+    ? Array.from(
+        new Map(
+          details.assignments.map((row) => [
+            String(row.teacherId),
+            row.teacherName,
+          ]),
+        ).entries(),
+      )
+    : [];
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) setLoadedId(null);
+        onOpenChange(next);
+      }}
+    >
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
+        <DialogHeader>
+          <DialogTitle>{bn ? "ব্যাচ সম্পাদনা" : "Edit batch"}</DialogTitle>
+          <DialogDescription>
+            {bn
+              ? "ব্যাচের তথ্য ও ভবিষ্যৎ সাপ্তাহিক রুটিন পরিবর্তন করুন।"
+              : "Update batch details and the future weekly routine together."}
+          </DialogDescription>
+        </DialogHeader>
+        {details && (
+          <form className="grid gap-5" onSubmit={submit}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Label>
+                {bn ? "বাংলা নাম" : "Bangla name"}
+                <Input
+                  value={nameBn}
+                  onChange={(event) => setNameBn(event.target.value)}
+                  required
+                />
+              </Label>
+              <Label>
+                {bn ? "ইংরেজি নাম" : "English name"}
+                <Input
+                  value={nameEn}
+                  onChange={(event) => setNameEn(event.target.value)}
+                  required
+                />
+              </Label>
+              <Label>
+                {bn ? "ব্যাচ কোড" : "Batch code"}
+                <Input
+                  value={code}
+                  onChange={(event) => setCode(event.target.value)}
+                  required
+                />
+              </Label>
+              <Label>
+                {bn ? "শুরুর তারিখ" : "Start date"}
+                <DatePicker
+                  value={startDate}
+                  onChange={setStartDate}
+                  locale={locale}
+                  ariaLabel={bn ? "শুরুর তারিখ নির্বাচন" : "Choose start date"}
+                  required
+                />
+              </Label>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Label className="flex min-h-11 items-center justify-between rounded-[var(--radius-md)] border border-[var(--border)] px-3">
+                {bn ? "ভর্তি চালু" : "Admission open"}
+                <Checkbox
+                  checked={admissionOpen}
+                  onCheckedChange={(checked) =>
+                    setAdmissionOpen(checked === true)
+                  }
+                />
+              </Label>
+              <Label className="flex min-h-11 items-center justify-between rounded-[var(--radius-md)] border border-[var(--border)] px-3">
+                {bn ? "ওয়েবসাইটে প্রকাশিত" : "Published on website"}
+                <Checkbox
+                  checked={isPublic}
+                  onCheckedChange={(checked) => setIsPublic(checked === true)}
+                />
+              </Label>
+            </div>
+            <section className="grid gap-3">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold">
+                    {bn ? "সাপ্তাহিক রুটিন" : "Weekly routine"}
+                  </h3>
+                  <Label>
+                    {bn ? "কার্যকর তারিখ" : "Effective from"}
+                    <DatePicker
+                      value={effectiveFrom}
+                      onChange={setEffectiveFrom}
+                      locale={locale}
+                      ariaLabel={
+                        bn ? "কার্যকর তারিখ নির্বাচন" : "Choose effective date"
+                      }
+                      required
+                    />
+                  </Label>
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() =>
+                    setRoutine((rows) => [...rows, emptyRoutine()])
+                  }
+                >
+                  <Plus data-icon="inline-start" />
+                  {bn ? "ক্লাস" : "Class"}
+                </Button>
+              </div>
+              {routine.map((row) => {
+                const subjects = details.assignments.filter(
+                  (item) =>
+                    String(item.teacherId) === row.teacherId && item.subjectId,
+                );
+                return (
+                  <div
+                    key={row.id}
+                    className="grid gap-2 rounded-[var(--radius-md)] border border-[var(--border)] p-3 md:grid-cols-[1fr_1fr_1fr_1.3fr_1.3fr_auto]"
+                  >
+                    <Select
+                      value={row.weekday}
+                      onValueChange={(weekday) =>
+                        changeRow(row.id, { weekday })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {(bn ? weekdaysBn : weekdaysEn).map((day, index) => (
+                            <SelectItem key={day} value={String(index)}>
+                              {day}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      aria-label={bn ? "শুরুর সময়" : "Start time"}
+                      type="time"
+                      value={row.start}
+                      onChange={(event) =>
+                        changeRow(row.id, { start: event.target.value })
+                      }
+                      required
+                    />
+                    <Input
+                      aria-label={bn ? "শেষ সময়" : "End time"}
+                      type="time"
+                      value={row.end}
+                      onChange={(event) =>
+                        changeRow(row.id, { end: event.target.value })
+                      }
+                      required
+                    />
+                    <Select
+                      value={row.teacherId}
+                      onValueChange={(teacherId) =>
+                        changeRow(row.id, { teacherId, subjectId: "" })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={bn ? "শিক্ষক" : "Teacher"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {teachers.map(([id, name]) => (
+                            <SelectItem key={id} value={id}>
+                              {name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={row.subjectId || "none"}
+                      onValueChange={(subjectId) =>
+                        changeRow(row.id, {
+                          subjectId: subjectId === "none" ? "" : subjectId,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={bn ? "বিষয়" : "Subject"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem value="none">
+                            {bn ? "বিষয় ছাড়া" : "No subject"}
+                          </SelectItem>
+                          {subjects.map((item) => (
+                            <SelectItem
+                              key={item.assignmentId}
+                              value={String(item.subjectId)}
+                            >
+                              {bn ? item.subjectNameBn : item.subjectNameEn}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      disabled={routine.length === 1}
+                      aria-label={bn ? "সারি সরান" : "Remove row"}
+                      onClick={() =>
+                        setRoutine((rows) =>
+                          rows.filter((item) => item.id !== row.id),
+                        )
+                      }
+                    >
+                      <Trash2 />
+                    </Button>
+                  </div>
+                );
+              })}
+            </section>
+            {error && (
+              <p role="alert" className="text-sm text-[var(--danger)]">
+                {error}
+              </p>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => onOpenChange(false)}
+              >
+                {bn ? "বাতিল" : "Cancel"}
+              </Button>
+              <Button type="submit" disabled={busy || !routine.length}>
+                {busy
+                  ? bn
+                    ? "সংরক্ষণ হচ্ছে…"
+                    : "Saving…"
+                  : bn
+                    ? "পরিবর্তন সংরক্ষণ"
+                    : "Save changes"}
+              </Button>
+            </div>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function BatchesWorkspace({ locale }: { locale: Locale }) {
   const bn = locale === "bn";
+  const searchParams = useSearchParams();
   const [status, setStatus] = useState<
     "active" | "planned" | "completed" | "archived"
   >("active");
   const [courseId, setCourseId] = useState("");
   const [query, setQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<Id<"batches"> | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const linkedBatchId = searchParams?.get("batchId") as Id<"batches"> | null;
+  const [selectedIdOverride, setSelectedId] = useState<
+    Id<"batches"> | null | undefined
+  >(undefined);
+  const selectedId =
+    selectedIdOverride === undefined ? linkedBatchId : selectedIdOverride;
   const options = useQuery(api.academics.options.ownerWorkspace, {});
   const batches = usePaginatedQuery(
     api.academics.batchWorkspace.listBatches,
@@ -525,7 +904,7 @@ export function BatchesWorkspace({ locale }: { locale: Locale }) {
                 {(["active", "planned", "completed", "archived"] as const).map(
                   (item) => (
                     <SelectItem key={item} value={item}>
-                      {item}
+                      {batchStatusLabel(item, bn)}
                     </SelectItem>
                   ),
                 )}
@@ -577,7 +956,7 @@ export function BatchesWorkspace({ locale }: { locale: Locale }) {
                         batch.status === "active" ? "success" : "neutral"
                       }
                     >
-                      {batch.status}
+                      {batchStatusLabel(batch.status, bn)}
                     </Badge>
                   </TableCell>
                   <TableCell>{batch.routineCount}</TableCell>
@@ -625,104 +1004,131 @@ export function BatchesWorkspace({ locale }: { locale: Locale }) {
         locale={locale}
         onCreated={setSelectedId}
       />
-      <Sheet
+      <ResponsiveDetailDrawer
         open={Boolean(selectedId)}
         onOpenChange={(open) => {
           if (!open) setSelectedId(null);
         }}
+        closeLabel={bn ? "বন্ধ করুন" : "Close"}
+        title={
+          details
+            ? bn
+              ? details.batch.nameBn
+              : details.batch.nameEn
+            : bn
+              ? "ব্যাচ"
+              : "Batch"
+        }
+        description={
+          details
+            ? `${details.batch.code} · ${bn ? details.batch.courseNameBn : details.batch.courseNameEn}`
+            : undefined
+        }
       >
-        <SheetContent className="w-[min(560px,calc(100%-24px))]">
-          <SheetHeader>
-            <SheetTitle>
-              {details
-                ? bn
-                  ? details.batch.nameBn
-                  : details.batch.nameEn
-                : bn
-                  ? "ব্যাচ"
-                  : "Batch"}
-            </SheetTitle>
-            <SheetDescription>
-              {details
-                ? `${details.batch.code} · ${bn ? details.batch.courseNameBn : details.batch.courseNameEn}`
-                : ""}
-            </SheetDescription>
-          </SheetHeader>
-          {details && (
-            <div className="grid gap-5">
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="success">{details.batch.status}</Badge>
-                <Badge
-                  variant={details.batch.admissionOpen ? "info" : "neutral"}
-                >
-                  {details.batch.admissionOpen
-                    ? bn
-                      ? "ভর্তি চালু"
-                      : "Admission open"
-                    : bn
-                      ? "ভর্তি বন্ধ"
-                      : "Admission closed"}
-                </Badge>
-                <Badge variant={details.batch.isPublic ? "info" : "neutral"}>
-                  {details.batch.isPublic
-                    ? bn
-                      ? "পাবলিক"
-                      : "Public"
-                    : bn
-                      ? "প্রাইভেট"
-                      : "Private"}
-                </Badge>
-              </div>
-              <p>
-                <CalendarDays className="me-2 inline size-4" />
-                {details.batch.startDate}
-              </p>
-              <section>
-                <h3 className="mb-2 font-semibold">
-                  <Users className="me-2 inline size-4" />
-                  {bn ? "শিক্ষক ও বিষয়" : "Teachers and subjects"}
-                </h3>
-                {details.assignments.map((row) => (
-                  <div
-                    key={row.assignmentId}
-                    className="flex justify-between border-b border-[var(--border)] py-2"
-                  >
-                    <span>{row.teacherName}</span>
-                    <span>
-                      {row.subjectId
-                        ? bn
-                          ? row.subjectNameBn
-                          : row.subjectNameEn
-                        : "—"}
-                    </span>
-                  </div>
-                ))}
-              </section>
-              <section>
-                <h3 className="mb-2 font-semibold">
-                  <BookOpen className="me-2 inline size-4" />
-                  {bn ? "সাপ্তাহিক রুটিন" : "Weekly routine"}
-                </h3>
-                {details.routine.map((row) => (
-                  <div
-                    key={row.scheduleId}
-                    className="grid grid-cols-[1fr_auto] gap-2 border-b border-[var(--border)] py-2"
-                  >
-                    <span>
-                      {(bn ? weekdaysBn : weekdaysEn)[row.weekday]} ·{" "}
-                      {row.teacherName}
-                    </span>
-                    <span>
-                      {formatMinutes(row.startMinutes)}–
-                      {formatMinutes(row.endMinutes)}
-                    </span>
-                  </div>
-                ))}
-              </section>
+        {details && (
+          <div className="grid gap-5">
+            <div className="flex flex-wrap gap-2">
+              <Badge
+                variant={
+                  details.batch.status === "active"
+                    ? "success"
+                    : details.batch.status === "completed"
+                      ? "info"
+                      : "neutral"
+                }
+              >
+                {batchStatusLabel(details.batch.status, bn)}
+              </Badge>
+              <Badge variant={details.batch.admissionOpen ? "info" : "neutral"}>
+                {details.batch.admissionOpen
+                  ? bn
+                    ? "ভর্তি চালু"
+                    : "Admission open"
+                  : bn
+                    ? "ভর্তি বন্ধ"
+                    : "Admission closed"}
+              </Badge>
+              <Badge variant={details.batch.isPublic ? "info" : "neutral"}>
+                {details.batch.isPublic
+                  ? bn
+                    ? "পাবলিক"
+                    : "Public"
+                  : bn
+                    ? "প্রাইভেট"
+                    : "Private"}
+              </Badge>
             </div>
-          )}
-        </SheetContent>
-      </Sheet>
+            <p>
+              <CalendarDays className="me-2 inline size-4" />
+              {details.batch.startDate}
+            </p>
+            {details.batch.status !== "archived" && (
+              <div className="flex flex-wrap gap-2">
+                <Button variant="secondary" onClick={() => setEditOpen(true)}>
+                  <Pencil data-icon="inline-start" />
+                  {bn ? "ব্যাচ সম্পাদনা" : "Edit batch"}
+                </Button>
+                <Button asChild variant="secondary">
+                  <Link
+                    href={`/${locale}/owner/schedule?batchId=${details.batch.batchId}`}
+                  >
+                    <CalendarDays data-icon="inline-start" />
+                    {bn ? "সময়সূচি খুলুন" : "Open schedule"}
+                  </Link>
+                </Button>
+              </div>
+            )}
+            <section>
+              <h3 className="mb-2 font-semibold">
+                <Users className="me-2 inline size-4" />
+                {bn ? "শিক্ষক ও বিষয়" : "Teachers and subjects"}
+              </h3>
+              {details.assignments.map((row) => (
+                <div
+                  key={row.assignmentId}
+                  className="flex justify-between border-b border-[var(--border)] py-2"
+                >
+                  <span>{row.teacherName}</span>
+                  <span>
+                    {row.subjectId
+                      ? bn
+                        ? row.subjectNameBn
+                        : row.subjectNameEn
+                      : "—"}
+                  </span>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3 className="mb-2 font-semibold">
+                <BookOpen className="me-2 inline size-4" />
+                {bn ? "সাপ্তাহিক রুটিন" : "Weekly routine"}
+              </h3>
+              {details.routine.map((row) => (
+                <div
+                  key={row.scheduleId}
+                  className="grid grid-cols-[1fr_auto] gap-2 border-b border-[var(--border)] py-2"
+                >
+                  <span>
+                    {(bn ? weekdaysBn : weekdaysEn)[row.weekday]} ·{" "}
+                    {row.teacherName}
+                  </span>
+                  <span>
+                    {formatMinutes(row.startMinutes)}–
+                    {formatMinutes(row.endMinutes)}
+                  </span>
+                </div>
+              ))}
+            </section>
+          </div>
+        )}
+      </ResponsiveDetailDrawer>
+      <EditBatchDialog
+        batchId={selectedId}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        locale={locale}
+      />
     </div>
   );
 }
