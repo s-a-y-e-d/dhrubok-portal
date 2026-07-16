@@ -9,6 +9,7 @@
  */
 
 import type * as academics_assignments from "../academics/assignments.js";
+import type * as academics_batchWorkspace from "../academics/batchWorkspace.js";
 import type * as academics_batches from "../academics/batches.js";
 import type * as academics_classOccurrenceMaterializer from "../academics/classOccurrenceMaterializer.js";
 import type * as academics_courseReadiness from "../academics/courseReadiness.js";
@@ -23,6 +24,7 @@ import type * as academics_schedules from "../academics/schedules.js";
 import type * as academics_shared from "../academics/shared.js";
 import type * as academics_snapshotHooks from "../academics/snapshotHooks.js";
 import type * as academics_subjects from "../academics/subjects.js";
+import type * as academics_teacherWorkspace from "../academics/teacherWorkspace.js";
 import type * as academics_teachers from "../academics/teachers.js";
 import type * as accounts from "../accounts.js";
 import type * as admissions_actions from "../admissions/actions.js";
@@ -98,6 +100,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   "academics/assignments": typeof academics_assignments;
+  "academics/batchWorkspace": typeof academics_batchWorkspace;
   "academics/batches": typeof academics_batches;
   "academics/classOccurrenceMaterializer": typeof academics_classOccurrenceMaterializer;
   "academics/courseReadiness": typeof academics_courseReadiness;
@@ -112,6 +115,7 @@ declare const fullApi: ApiFromModules<{
   "academics/shared": typeof academics_shared;
   "academics/snapshotHooks": typeof academics_snapshotHooks;
   "academics/subjects": typeof academics_subjects;
+  "academics/teacherWorkspace": typeof academics_teacherWorkspace;
   "academics/teachers": typeof academics_teachers;
   accounts: typeof accounts;
   "admissions/actions": typeof admissions_actions;

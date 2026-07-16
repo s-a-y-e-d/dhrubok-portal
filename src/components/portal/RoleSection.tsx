@@ -16,6 +16,8 @@ import { PortalPageState } from "./PortalPageState";
 import { OwnerWebsiteEditor } from "./OwnerEditors";
 import { OwnerSettingsEditor } from "./OwnerWorkspaces";
 import { CoursesWorkspace } from "./courses";
+import { BatchesWorkspace } from "./batches";
+import { TeachersWorkspace } from "./teachers";
 import { FinanceEditor } from "./FinanceWorkspace";
 import { AdmissionsEditor as AdmissionsWorkflow } from "./AdmissionsEditor";
 import { AttendanceEditor as AttendanceWorkflow } from "./AttendanceEditor";
@@ -1691,6 +1693,8 @@ export function RoleSection({
     if (section === "materials")
       return <ContentEditor locale={locale} role="owner" />;
     if (section === "courses") return <CoursesWorkspace locale={locale} />;
+    if (section === "batches") return <BatchesWorkspace locale={locale} />;
+    if (section === "teachers") return <TeachersWorkspace locale={locale} />;
     if (section === "attendance") return <AttendanceWorkflow locale={locale} />;
     if (section === "finance") return <FinanceEditor locale={locale} />;
     if (section === "exams") return <ExamEditor locale={locale} role="owner" />;

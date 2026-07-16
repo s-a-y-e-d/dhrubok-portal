@@ -495,6 +495,8 @@ export default defineSchema({
     presentCount: v.optional(v.number()),
     lateCount: v.optional(v.number()),
     absentCount: v.optional(v.number()),
+    // Set by the Schedule page when one generated occurrence is moved independently.
+    isOneOffOverride: v.optional(v.boolean()),
     createdAt: v.number(),
   })
     .index("by_batchId_and_sessionDate", ["batchId", "sessionDate"])

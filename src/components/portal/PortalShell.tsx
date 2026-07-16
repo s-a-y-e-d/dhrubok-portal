@@ -77,6 +77,18 @@ const ownerNavGroups: NavGroupDef[] = [
         icon: BookOpen,
       },
       {
+        labelEn: "Batches",
+        labelBn: "ব্যাচ",
+        path: "/batches",
+        icon: GraduationCap,
+      },
+      {
+        labelEn: "Teachers",
+        labelBn: "শিক্ষক",
+        path: "/teachers",
+        icon: User,
+      },
+      {
         labelEn: "Attendance",
         labelBn: "উপস্থিতি",
         path: "/attendance",
@@ -317,6 +329,18 @@ const navMetadata: Record<
     descEn: "Manage courses, subjects, batches, and class routines.",
     descBn: "কোর্স, বিষয়, ব্যাচ এবং ক্লাস রুটিন পরিচালনা করুন।",
   },
+  "/batches": {
+    titleEn: "Batches",
+    titleBn: "ব্যাচ",
+    descEn: "Manage course intakes, assignments, and weekly routines.",
+    descBn: "কোর্সের ব্যাচ, শিক্ষক এবং সাপ্তাহিক রুটিন পরিচালনা করুন।",
+  },
+  "/teachers": {
+    titleEn: "Teachers",
+    titleBn: "শিক্ষক",
+    descEn: "Manage teacher profiles, access, and current workload.",
+    descBn: "শিক্ষক প্রোফাইল, অ্যাক্সেস এবং বর্তমান কাজ পরিচালনা করুন।",
+  },
   "/attendance": {
     titleEn: "Attendance",
     titleBn: "উপস্থিতি",
@@ -372,7 +396,7 @@ const navMetadata: Record<
     descEn: "Configure coaching parameters, fees, and SMS templates.",
     descBn: "কোচিংয়ের সাধারণ সেটিংস, ফি এবং SMS টেমপ্লেট কনফিগার করুন।",
   },
-  "/batches": {
+  "/teacher-batches": {
     titleEn: "My Batches",
     titleBn: "আমার ব্যাচ",
     descEn: "View assigned student batches and schedules.",
