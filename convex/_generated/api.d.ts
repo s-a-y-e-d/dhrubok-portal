@@ -46,6 +46,7 @@ import type * as exams_functions from "../exams/functions.js";
 import type * as exams_marks from "../exams/marks.js";
 import type * as exams_migrations from "../exams/migrations.js";
 import type * as exams_model from "../exams/model.js";
+import type * as exams_ownerWorkflow from "../exams/ownerWorkflow.js";
 import type * as exams_publication from "../exams/publication.js";
 import type * as exams_review from "../exams/review.js";
 import type * as exams_studentResults from "../exams/studentResults.js";
@@ -138,6 +139,7 @@ declare const fullApi: ApiFromModules<{
   "exams/marks": typeof exams_marks;
   "exams/migrations": typeof exams_migrations;
   "exams/model": typeof exams_model;
+  "exams/ownerWorkflow": typeof exams_ownerWorkflow;
   "exams/publication": typeof exams_publication;
   "exams/review": typeof exams_review;
   "exams/studentResults": typeof exams_studentResults;

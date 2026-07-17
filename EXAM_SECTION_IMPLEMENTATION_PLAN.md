@@ -1,1070 +1,855 @@
-# Dhrubok Portal — Exam Section Implementation Plan
+# Dhrubok Portal — Owner Exam Rebuild Plan
 
-**Status:** Implementation-ready plan
-
-**Prepared:** 12 July 2026
-**Scope:** Offline exam creation, candidate targeting, subject-level CQ/MCQ marks, teacher entry, owner review, audience-scoped merit, publication, guardian SMS, student results, reports, corrections, and migration of the current combined-result model.
+**Status:** Implementation-ready
+**Prepared:** 17 July 2026
+**Confidence:** 97%
+**Primary scope:** Owner exam list, complete exam creation, single-exam workspace, marks entry, review, publication, results, and owner Schedule integration.
 
 ## 1. Outcome
 
-Build a fast, trustworthy exam workflow in which:
+Rebuild Exams around one simple invariant:
 
-- an owner creates an offline exam for one batch, selected batches, or every active batch in a course;
-- each subject independently supports CQ/written, MCQ, or both;
-- the candidate roster is previewed and frozen before marks entry;
-- teachers enter only the subject and batch marks assigned to them;
-- teachers can save drafts without prematurely submitting work;
-- the owner reviews one complete validation workspace before publication;
-- merit is calculated within the frozen exam audience, not automatically across the entire course;
-- an optional secondary batch position can be calculated for multi-batch exams;
-- publication creates an immutable, versioned result snapshot and queues Mother/Father SMS messages;
-- students see only published results and can print bilingual result cards;
-- reopening and republishing preserves a permanent correction history.
+> One exam belongs to exactly one batch.
 
-The finished experience must remain phone-friendly, Bangla-first, keyboard-efficient on desktop, and safe around irreversible publication.
+An owner creates the entire exam in one atomic submission, including its schedule, selected course subjects, subject-specific marking rules, responsible teachers, and frozen student roster. The exam immediately appears as `scheduled`. There is no exam draft and no manual “Open marks entry” transition.
+
+The owner can then open the exam, enter marks one subject at a time, review every exception, publish batch-scoped results, and correct a published result through the existing versioned reopen/republish workflow.
 
 ## 2. Locked product decisions
 
-### 2.1 Exam boundary
+### 2.1 Scope and authority
 
-- Exams remain offline. Dhrubok does not conduct online tests or grade answers.
-- Every exam belongs to exactly one course and one academic session through that course.
-- An exam contains one or more subjects from that course.
-- Exam question-paper authoring, question banks, AI question generation, and answer-script storage are outside this scope.
+- This delivery is owner-first. Teacher portal redesign is deferred.
+- Teacher selection and `examTeacherAssignments` remain so every exam subject snapshots its responsible teacher for future teacher workflows.
+- An owner has universal exam authority and is not restricted by teacher assignments.
+- Owners can create, edit, enter or correct marks for every subject, review, publish, reopen, republish, and view all reports.
+- Existing student result, guardian SMS, reporting, merit, and correction-history capabilities remain.
 
-### 2.2 Audience modes
+### 2.2 Academic boundary
 
-Every exam has exactly one audience mode:
+- Academic sessions have already been removed from the live code and schema. Do not add session fields, filters, selectors, or migration work back into Exams.
+- Every exam has one required `batchId`.
+- The course is derived from the selected batch. Store `courseId` as a snapshot/query aid, but never let the client choose a mismatched course.
+- Multi-batch audience modes are removed.
+- Official merit is always batch merit over the exam’s frozen included candidates.
 
-1. `single_batch`: one selected active batch in the course.
-2. `selected_batches`: two or more selected active batches in the course.
-3. `all_course_batches`: all eligible active enrolments in all active course batches when the roster is frozen.
+### 2.3 Required schedule
 
-The owner sees a candidate preview before confirmation. After confirmation, the candidate roster is frozen. Later admissions, transfers, completions, withdrawals, or batch changes do not alter that exam.
+Every exam requires:
 
-The same student cannot appear twice in one exam. If overlapping enrolments would create a duplicate, roster confirmation is blocked and the conflicting records are shown to the owner.
+- exam date;
+- start time;
+- duration in minutes.
 
-### 2.3 Subject and component rules
+The backend derives the end time. Creation and schedule edits block overlap with another class or exam for the same batch. Teacher conflicts are outside this owner-first scope.
 
-Each exam subject independently defines:
+The exam appears on the owner Schedule immediately after creation. The Schedule item links to the exam workspace; schedule edits remain owned by the exam workspace so there is one authoritative edit path.
 
-- mode: `mcq`, `written`, or `both`;
-- MCQ full marks when applicable;
-- CQ/written full marks when applicable;
-- total full marks, calculated by the backend;
-- overall subject pass marks;
-- optional MCQ component pass marks;
-- optional CQ/written component pass marks;
-- sort order.
+### 2.4 Creation and drafts
 
-The backend is authoritative for totals and pass/fail. Client-calculated values are previews only.
+- `/owner/exams` has a prominent **Create exam** header button.
+- The empty state includes the same action.
+- The owner dashboard quick action links directly to `/owner/exams/create`.
+- Creation uses a multi-step client-local form, but no server exam exists until final submission.
+- Refreshing or abandoning the creation page discards the unsaved form.
+- Final creation is atomic: validation failure creates nothing.
+- Exam-creation drafts, `setupDraftJson`, draft restoration, and draft archive actions are removed.
+- Marks drafts remain. Partial marks and autosave are required for large rosters.
 
-Default pass policy:
+### 2.5 Subjects and marking rules
 
-- a present student passes a subject when the total reaches the subject pass mark and every configured component pass requirement is met;
-- an absent subject result fails that subject;
-- the overall exam result is pass only when every required subject is passed;
-- absent students never receive component marks.
+- Available subjects come only from the selected batch’s course.
+- The owner selects one or more subjects.
+- Each selected subject independently supports:
+  - `mcq`;
+  - `written`/CQ;
+  - `both`.
+- Each subject stores applicable component full marks, total full marks, overall pass marks, and optional component pass marks.
+- The backend is authoritative for totals and pass/fail.
+- Selected subject order becomes marks navigation and printed report order.
 
-### 2.4 Merit rules
+### 2.6 Teachers
 
-The official merit population is the exam's frozen candidate cohort.
+- Each exam subject has exactly one selected responsible teacher.
+- Eligible teachers come from the course/batch academic structure for that subject.
+- One teacher may own multiple subjects.
+- The resolved teacher is snapshotted in `examTeacherAssignments` at creation.
+- Missing teacher coverage blocks creation.
+- Changing a teacher later does not delete marks.
+- Assignment status fields remain for the future teacher workflow, but owner review and publication do not depend on teacher submission.
 
-| Audience mode      | Official merit label | Official population                                  |
-| ------------------ | -------------------- | ---------------------------------------------------- |
-| Single batch       | Batch merit          | Frozen candidates in that batch                      |
-| Selected batches   | Overall exam merit   | Frozen candidates across the selected batches        |
-| All course batches | Course merit         | Frozen candidates across all included course batches |
+### 2.7 Candidates
 
-For selected-batch and all-course-batch exams, the owner may enable a secondary position within each student's own frozen batch cohort.
+- Creation starts with every active enrolment in the selected batch included.
+- The owner may exclude individual students without giving a reason.
+- The complete included/excluded roster is frozen as exam-owned data at creation.
+- Later enrolments, withdrawals, transfers, or batch changes never alter the exam automatically.
+- Before publication, the owner may explicitly include a newly eligible student, re-include an excluded student, or exclude an included student.
+- The batch itself is immutable after creation.
 
-Merit configuration:
+### 2.8 Lifecycle
 
-- `official_only`: calculate only the official exam-cohort position;
-- `official_and_batch`: calculate official position plus secondary batch position;
-- `none`: publish results without a merit list.
-
-Recommended defaults:
-
-- single batch: `official_only`;
-- selected batches: `official_and_batch`;
-- all course batches: `official_and_batch`.
-
-Competition ranking is used: `1, 2, 2, 4`.
-
-Tie ordering:
-
-1. higher grand total;
-2. higher combined CQ/written total;
-3. higher combined MCQ total;
-4. same position when still tied.
-
-Failed or absent students do not receive an official merit position by default. This policy is stored with the exam publication so historical results remain explainable.
-
-### 2.5 Roles and authority
-
-- Owners create, edit, confirm rosters, assign teachers, review, publish, reopen, republish, archive, and view all exam data.
-- Teachers see only assigned exams and may enter marks only for their assigned subject/batch scopes.
-- Teachers save drafts and explicitly submit an assignment for owner review.
-- Teachers cannot publish, reopen, change the exam audience, or change marking rules.
-- Students see only their own published result snapshots.
-- Guardians have no accounts.
-
-### 2.6 Publication and corrections
-
-- Publication is owner-only and requires a complete, valid roster.
-- Publication freezes all student-visible subject results, totals, pass/fail states, merit positions, comments, population counts, and policy metadata.
-- Each publication increments `publicationVersion`.
-- Reopening requires a reason and writes an audit record.
-- Republishing creates a new immutable version and sends a correction message, not a duplicate original result message.
-- Failed messaging never changes or rolls back the exam publication.
-
-### 2.7 Guardian messaging
-
-- Result messages may target Mother, Father, or both according to coaching settings.
-- Identical Mother/Father phone numbers are de-duplicated.
-- Delivery is tracked separately for every unique recipient.
-- Messages use the student's preferred SMS language.
-- The preview shows exact Bangla and English text, unique recipient count, estimated segments, and missing/invalid guardian phones.
-- The official merit scope must be named in the message; a bare “5th” is not sufficient.
-
-Example for selected batches:
-
-> মাসিক পরীক্ষায় অনিক হাসানের প্রাপ্ত নম্বর ৪৫০/৫০০, ফলাফল: উত্তীর্ণ, সামগ্রিক মেধাস্থান: ৫ম/৭১, ব্যাচ মেধাস্থান: ২য়/৩৪।
-
-## 3. Target information architecture
-
-Keep the existing `/[locale]/owner/exams`, `/[locale]/teacher/exams`, and `/[locale]/student/results` routes. Improve the internal page structure without creating unnecessary top-level navigation.
-
-### 3.1 Owner exams
+Use this owner-visible lifecycle:
 
 ```text
-Exams
-├── Work queue
-│   ├── Draft
-│   ├── Marks in progress
-│   ├── Needs teacher submission
-│   ├── Ready for owner review
-│   ├── Published
-│   ├── Reopened
-│   └── Archived
-├── Create exam wizard
-├── Exam workspace
-│   ├── Overview
-│   ├── Candidates
-│   ├── Subjects & marking rules
-│   ├── Teacher assignments
-│   ├── Entry progress
-│   ├── Review & publication
-│   └── History
-└── Reports
-    ├── Result sheet
-    ├── Tabulation sheet
-    ├── Merit list
-    ├── Subject analysis
-    └── Individual result
+scheduled
+  -> marks_entry        (first successful mark save)
+  -> ready_for_review   (owner validation succeeds)
+  -> published
+  -> reopened           (owner supplies correction reason)
+  -> published          (new immutable publication version)
 ```
 
-### 3.2 Teacher exams
+Internal `publication_processing` may remain for bounded publication jobs. There is no `draft` or owner-triggered `open marks entry` state.
+
+The Marks tab is available while `scheduled`. Before the scheduled end time it shows a clear warning, but the owner may still enter marks. The first successful save changes `scheduled` to `marks_entry` transactionally.
+
+### 2.9 Editing and destructive effects
+
+- Before marks exist, the owner may edit schedule, subjects, rules, teachers, and candidates.
+- After marks exist:
+  - name, type, date, start time, duration, and teacher changes are safe edits;
+  - adding a subject or candidate creates a new empty scope;
+  - removing a subject/candidate or changing a marking rule requires an impact preview and explicit destructive confirmation;
+  - only affected editable marks are deleted/reset.
+- After publication:
+  - schedule/name metadata may be corrected with audit history;
+  - result-affecting changes require reopening;
+  - republishing creates a new immutable version and correction SMS messages.
+
+## 3. Information architecture and routing
+
+The current owner optional catch-all route passes only `section?.[0]`, so deeper exam URLs are not currently distinguishable. Update the route dispatcher to preserve and validate the full segment array.
 
 ```text
-My exam work
-├── Needs entry
-├── Draft saved
-├── Returned for correction
-├── Submitted
-└── Published
+/[locale]/owner/exams
+  Exam list
 
-Assignment workspace
-├── Exam and marking-rule summary
-├── Batch/subject selector when multiple assignments exist
-├── Marks grid
-├── Incomplete and invalid filters
-└── Save draft / Submit for review
+/[locale]/owner/exams/create
+  Complete exam creation
+
+/[locale]/owner/exams/[examId]
+  One exam workspace
 ```
 
-### 3.3 Student results
+Use query state only for workspace tabs and the active subject:
 
 ```text
-Results
-├── Latest published result spotlight
-├── Published result history
-├── Individual result detail
-└── Print result
+/owner/exams/[examId]?tab=overview
+/owner/exams/[examId]?tab=marks&subject=[examSubjectId]
+/owner/exams/[examId]?tab=review
+/owner/exams/[examId]?tab=results
 ```
 
-## 4. Frictionless UX specification
+Required route work:
 
-### 4.1 Shared exam list
+- change `src/app/[locale]/owner/[[...section]]/page.tsx` to pass the entire segment array;
+- update `src/components/portal/RoleSection.tsx` to dispatch list, create, and detail exam views;
+- validate unknown/malformed exam paths and render `notFound()` or a stable not-found state;
+- update owner navigation and quick-action active-state handling for nested exam URLs;
+- follow the installed Next.js 16 dynamic/catch-all route contract from `node_modules/next/dist/docs/`.
 
-Replace the undifferentiated selection list with a searchable work queue.
+Teacher exam routes and teacher workspace redesign are explicitly deferred.
 
-Each exam row shows:
+## 4. Owner UX specification
 
-- Bangla/English name according to locale;
-- exam number and date;
-- course and audience label;
-- subject count and candidate count;
-- completion percentage;
-- state badge;
-- the next required action.
+### 4.1 Exam list — `/owner/exams`
+
+Page header:
+
+- title and concise operational description;
+- one dominant **Create exam** button using shadcn `Button`;
+- button links to `/owner/exams/create`.
 
 Filters:
 
-- search by exam name or number;
-- academic session;
+- search by exam name or exam number;
 - course;
+- batch;
 - status;
 - date range;
-- “Needs my action.”
+- clear filters.
 
-Default ordering is action urgency followed by exam date, not simple creation order.
+There is no academic-session filter. Filters remain URL-addressable so reload/back/forward preserve the list state.
 
-### 4.2 Create exam wizard
+Desktop uses shadcn `Table`; mobile uses operational `Card` records. Each record shows:
 
-Use a five-step wizard with a persistent summary rail on desktop and a compact summary disclosure on mobile.
+- exam name and number;
+- course and batch;
+- date, start time, duration, and derived end time;
+- subject count and included candidate count;
+- completion count/percentage;
+- semantic `Badge` status;
+- next action.
 
-#### Step 1 — Basic information
+Default ordering prioritizes actionable exams, then the nearest relevant date. Published exams remain in the same list and are reachable through filters.
 
-- academic session;
-- course;
-- Bangla name;
-- English name;
-- exam type: weekly, monthly, model test, term, final, other;
-- date;
-- optional start/end time;
-- optional venue.
+States:
 
-Primary action: **Continue to audience**.
+- `Skeleton` rows while loading;
+- shadcn-style empty state with **Create exam**;
+- recoverable error state;
+- pagination rather than client-side truncation.
 
-#### Step 2 — Audience
+### 4.2 Create exam — `/owner/exams/create`
 
-- segmented choice: One batch / Selected batches / All course batches;
-- batch controls appropriate to the selected mode;
-- live candidate count;
-- duplicate/conflict warnings;
-- searchable candidate preview;
-- optional individual exclusions with required reason.
+Use a four-step wizard with client-local state. Desktop shows a compact progress rail/summary; mobile shows a shadcn `Progress` bar and current-step label. The stepper is a project-specific composition, not decorative navigation.
 
-Do not freeze the roster yet. Primary action: **Continue with N candidates**.
+#### Step 1 — Batch and schedule
 
-#### Step 3 — Subjects and marks
+- searchable batch `Combobox`;
+- derived read-only course identity;
+- Bangla and English exam names;
+- exam type;
+- required date;
+- required start time;
+- required duration, with useful presets plus a custom value;
+- derived end time;
+- inline schedule conflict result.
 
-Use an editable table rather than a long checkbox form.
+Primary action: **Continue to subjects**.
 
-| Subject | Mode | CQ full | MCQ full | Total | Pass | Component pass |
-| ------- | ---- | ------: | -------: | ----: | ---: | -------------- |
+#### Step 2 — Subjects, rules, and teachers
 
-Behavior:
+- show only subjects linked to the selected batch’s course;
+- multi-select with native/shadcn `Checkbox` controls;
+- each selected subject expands into its marking-rule editor;
+- use `ToggleGroup` for MCQ/Written/Both;
+- use shadcn `FieldGroup`, `Field`, `Input`, and validation attributes;
+- show calculated total read-only;
+- show the eligible/resolved teacher and allow a valid teacher choice where more than one is exposed by the academic read model;
+- block progress when a selected subject has no valid teacher;
+- support accessible subject ordering without drag-only interaction.
 
-- selecting a mode shows only relevant inputs;
-- totals update immediately but remain server-validated;
-- invalid distributions are explained next to the row;
-- “Apply this rule to selected subjects” supports repetitive setup;
-- drag or arrow controls set report order accessibly.
+Primary action: **Continue to students**.
 
-Primary action: **Continue to assignments**.
+#### Step 3 — Students
 
-#### Step 4 — Teacher assignments and merit
-
-- assign a teacher to each subject and optionally each batch;
-- offer “Assign one teacher to all selected batches” where valid;
-- block overlapping assignments for the same subject/batch scope;
-- choose merit mode with a plain-language preview of who will be ranked;
-- show the official label that will appear in reports and SMS.
+- include all active enrolments by default;
+- searchable, compact student table/card list;
+- checkbox selection with selected/excluded totals always visible;
+- no exclusion-reason field;
+- “Select all eligible” and “Clear exclusions” actions;
+- require at least one included candidate.
 
 Primary action: **Review exam**.
 
-#### Step 5 — Review and confirm
+#### Step 4 — Review and create
 
-Show one concise read-only summary:
+Read-only summary:
 
-- exam identity and schedule;
-- audience mode and candidate count;
-- included batches and exclusions;
-- subject mark distributions and pass policies;
-- teacher coverage;
-- merit scope and population;
-- warnings requiring resolution.
+- batch and course;
+- exam identity;
+- date, start, duration, and end;
+- schedule-conflict result;
+- subjects, formats, marks, pass rules, and teachers;
+- included and excluded student counts;
+- batch-merit scope;
+- guardian publication/SMS effects.
 
-Confirmation text must state that the candidate roster and marking rules become locked when marks entry opens.
+Primary action: **Create exam**.
 
-Primary action: **Create exam and open marks entry**.
+Final submission calls one `createComplete` mutation. Show `Spinner` inside the disabled button while pending, preserve local values on error, and use `sonner` only after an authoritative mutation result. On success, navigate to `/owner/exams/[examId]?tab=overview`.
 
-Allow saving a draft from every step. Drafts do not freeze the roster.
+### 4.3 Exam workspace — `/owner/exams/[examId]`
 
-### 4.3 Marks entry workspace
+Use shadcn `Tabs` with URL synchronization:
 
-Desktop uses a spreadsheet-style grid. Mobile uses one student card at a time with previous/next navigation and a persistent progress summary.
+1. **Overview**
+2. **Marks**
+3. **Review & publish**
+4. **Results & history**
 
-Desktop grid requirements:
+The header remains visible across tabs and contains:
 
-- sticky student identifier column;
-- compact rows using DESIGN.md table spacing;
-- participation selector: present or absent;
-- only applicable CQ/MCQ fields;
-- server-calculated total and result preview;
-- Tab, Shift+Tab, Enter, and arrow-key navigation;
-- current cell focus is always visible;
-- autosave indicator plus explicit **Save draft** fallback;
-- unsaved-change protection;
-- search by student name or number;
+- exam identity;
+- batch/course;
+- schedule;
+- status badge;
+- compact progress;
+- Edit action.
+
+Tabs are sections within one exam, not separate setup gates. Browser back/forward and direct links must work.
+
+#### Overview
+
+- schedule card;
+- included/excluded roster summary;
+- subject/rule/teacher summary;
+- marks completion by subject;
+- audit highlights;
+- edit action opening a shadcn `Sheet` on desktop and full-width mobile.
+
+Edits first call `previewEditImpact`. Safe edits save directly. Destructive edits use `AlertDialog` with exact affected subject/student/result counts.
+
+#### Marks
+
+Selecting the exam is sufficient to enter the workspace. There is no batch selector and no required subject-selection landing screen.
+
+- automatically open the first incomplete selected subject;
+- provide visible subject navigation within the workspace;
+- owner may switch subjects at any time;
+- show per-subject completed/remaining counts;
+- show a pre-end-time `Alert`, without blocking entry;
+- no spreadsheet paste or CSV import.
+
+Desktop marks grid:
+
+- sticky student identity column;
+- participation: present/absent;
+- only applicable MCQ/written inputs;
+- backend-calculated total and pass/fail preview;
+- visible keyboard focus;
+- Tab/Shift+Tab/Enter navigation;
+- search by student name/number;
 - filters: all, incomplete, invalid, absent, complete;
-- batch selector when the assignment spans batches;
-- “Paste from spreadsheet” action with preview;
-- CSV import with row-by-row validation, never silent partial import.
+- autosave indicator and explicit **Save marks** fallback;
+- unsaved-change protection;
+- shadcn `Table`, `Input`, `Badge`, `Alert`, `Skeleton`, and `Spinner` composition.
+
+Mobile marks entry:
+
+- one student card at a time;
+- previous/next controls;
+- persistent subject and progress context;
+- 44px minimum controls;
+- never compress Bangla names or marks inputs below a usable width.
 
 Absent behavior:
 
-- choosing absent clears and disables component mark fields after confirmation if values existed;
-- absent is treated as a completed entry, not a missing one.
+- absent is a complete entry;
+- component fields are cleared and disabled;
+- if marks already exist, changing to absent requires confirmation.
 
-Draft and submit are separate:
+#### Review & publish
 
-- **Save draft** persists current values;
-- **Submit assignment for review** validates the entire assigned subject/batch scope;
-- submission confirmation shows complete, absent, and invalid counts;
-- after submission, the teacher sees read-only values unless the owner returns the assignment or reopens the exam.
+Lead with blockers and exceptions, not a giant result table:
 
-### 4.4 Progress and ownership
-
-Owner progress view groups work by subject and batch:
-
-| Subject | Batch | Teacher | Complete | Missing | Invalid | State |
-| ------- | ----- | ------- | -------: | ------: | ------: | ----- |
-
-Every incomplete count opens the filtered records causing it.
-
-Owner actions:
-
-- remind teacher outside the system or later through a notice workflow;
-- return an assignment with a required reason;
-- open read-only marks;
-- enter/correct marks directly while the exam is open;
-- move to owner review only when every assignment is submitted and valid.
-
-### 4.5 Owner review
-
-The review page leads with exceptions, not a giant result table.
-
-Summary cards:
-
-- frozen candidates;
-- complete students;
+- included candidates;
+- complete/incomplete candidates;
 - absent subject entries;
-- passed and failed students;
-- missing values;
-- invalid values;
-- guardian recipients;
-- missing/invalid guardian phones.
+- invalid marks;
+- pass/fail preview;
+- tied merit positions;
+- guardian phone problems;
+- changed/reset marks audit indicators.
 
-Review filters:
+**Ready for review** validates actual candidate/subject completeness. Teacher assignment submission state does not block an owner.
 
-- failures;
-- absences;
-- tied positions;
-- unusually high/low marks;
-- changed after teacher submission;
-- missing comments when a comment policy is enabled;
-- guardian contact problems.
+Publication retains:
 
-The owner can open an individual result drawer showing subject breakdown, computed summary, audit metadata, and the exact eventual student view.
+- immutable versioned snapshots;
+- batch merit with competition ranking;
+- exact Bangla/English guardian SMS preview;
+- de-duplicated Mother/Father recipients;
+- recipient and skipped-contact counts;
+- explicit acknowledgement;
+- publication-processing reconciliation where required.
 
-### 4.6 Publication confirmation
+Use `AlertDialog`/dedicated confirmation composition, never `window.confirm`.
 
-Publication uses a dedicated confirmation panel, not a generic browser dialog.
+#### Results & history
 
-It shows:
+- current published version summary;
+- result sheet;
+- merit list;
+- subject analysis;
+- individual result links;
+- publication/reopen/republish timeline;
+- reopen action requiring a reason;
+- correction metadata and SMS state.
 
-- publication version;
-- candidate, pass, fail, and absent counts;
-- official merit scope and population;
-- batch-merit setting;
-- unique Mother/Father recipient count;
-- skipped contacts and why;
-- exact Bangla and English SMS previews;
-- estimated SMS segments;
-- reports that become visible.
+Published status uses the project’s `info` semantic treatment.
 
-Required acknowledgement:
+## 5. shadcn and design-system implementation
 
-> আমি বুঝেছি যে প্রকাশের পর শিক্ষার্থীরা এই ফলাফল দেখতে পাবে এবং অভিভাবক SMS কিউ হবে। সংশোধনের জন্য কারণসহ পরীক্ষা পুনরায় খুলতে হবে।
+### 5.1 Existing components to reuse
 
-Primary action includes the effect: **Publish 184 results and queue 315 SMS**.
+Reuse the installed project components under `src/components/ui/`:
 
-### 4.7 Student result experience
+- `Button`, `Card`, `Table`, `Badge`;
+- `Field`, `Input`, `Select`, `Checkbox`, `ToggleGroup`;
+- `Alert`, `AlertDialog`, `Dialog`, `Sheet`;
+- `Popover`, `ScrollArea`, `Separator`;
+- `Skeleton`, `Spinner`, `Tooltip`.
 
-Result detail order:
+### 5.2 Official components to add
 
-1. exam name, date, course, and publication version;
-2. pass/fail state and grand total;
-3. official merit label, position, and population when enabled;
-4. secondary batch position when enabled;
-5. subject-by-subject CQ/MCQ breakdown;
-6. teacher comments;
-7. print result action.
+Preview with `npx shadcn@latest add --dry-run` and inspect diffs before adding:
 
-Do not use celebratory animation or decorative ranking podiums. Merit is academic information, not gamification.
+```powershell
+npx shadcn@latest add tabs combobox progress sonner --dry-run
+```
 
-### 4.8 Empty, loading, error, and success states
+Then add the approved official components without overwriting local customizations. Use the project’s Radix base, New York style, Lucide icons, Tailwind v4 semantic tokens, and `@/components/ui` alias.
 
-Every exam surface must define:
+### 5.3 New project-specific compositions
 
-- initial loading skeleton with stable dimensions;
-- no exams yet, with owner creation CTA or teacher explanation;
-- no result published for students;
-- query error with safe retry;
-- mutation error preserving entered values;
-- offline/network interruption warning;
-- draft saved timestamp;
-- assignment submitted confirmation;
-- publication success with links to result sheet, merit list, and SMS log.
+Create only workflow compositions that shadcn does not provide:
 
-## 5. Target Convex data model
+- `ExamStatusBadge`;
+- `ExamCreationStepper`;
+- `ExamScheduleSummary`;
+- `ExamSubjectRuleEditor`;
+- `ExamCandidateSelector`;
+- `ExamWorkspaceTabs`;
+- `ExamSubjectNavigator`;
+- `OwnerMarksGrid`;
+- `MobileMarksCard`;
+- `ExamEditImpactDialog`;
+- `PublishResultsDialog`.
 
-Use scaled integer marks with the existing `SCORE_SCALE = 100`.
+These compose shadcn primitives; they do not replace them with raw styled controls.
 
-### 5.1 `exams` additions
+### 5.4 DESIGN.md alignment
 
-Add initially optional fields for the migration window:
+Update `DESIGN.md` before UI implementation because its current exam guidance still assumes five creation steps, draft/freeze transitions, and older marks semantics.
 
-- `examType`: weekly, monthly, model_test, term, final, other;
-- `startsAtMinutes` optional;
-- `endsAtMinutes` optional;
-- `venue` optional;
-- `audienceMode`: single_batch, selected_batches, all_course_batches;
-- `rosterStatus`: preview, frozen;
-- `rosterFrozenAt` optional;
-- `candidateCount`;
-- `meritMode`: official_only, official_and_batch, none;
-- `officialMeritScope`: batch, selected_batches, course, none;
-- `rankFailedStudents`: boolean, default false;
-- `markingRulesVersion`: number;
+Document:
 
-Keep `courseId`, names, date, lifecycle status, publication metadata, and audit metadata.
+- four-step atomic exam creation;
+- `scheduled` exam semantics;
+- single-batch exam invariant;
+- owner exam workspace tabs;
+- subject-at-a-time marks navigation;
+- sparse marks and autosave states;
+- schedule conflict messaging;
+- destructive edit-impact confirmation.
 
-The current exam-level mode and full-mark fields become deprecated compatibility fields after migration. Do not delete them in the first rollout.
+Keep Bangla-first typography, semantic colors, one dominant primary action per region, compact owner density, 44px mobile targets, and restrained operational visuals.
 
-### 5.2 `examSubjects` becomes marking configuration
+## 6. Target Convex model
 
-Extend each row with:
+The implementation preflight found existing records in the exam-related tables.
+Therefore the rollout uses widen-and-coexist semantics: legacy rows and fields
+remain readable, while newly created owner exams use `modelVersion: 3` and the
+single-batch contract. Destructive table removal and schema narrowing are
+deferred until a later audited migration proves that legacy records have been
+converted or intentionally retired.
 
-- `mode`;
-- `mcqFullMarksScaled` optional;
-- `writtenFullMarksScaled` optional;
-- `totalFullMarksScaled`;
-- `passMarksScaled`;
-- `mcqPassMarksScaled` optional;
-- `writtenPassMarksScaled` optional;
-- `isRequired` boolean;
-- existing `sortOrder`.
+### 6.1 `exams`
 
-Indexes:
+Reshape new exams around required fields:
 
-- `by_examId_and_sortOrder`;
-- `by_examId_and_subjectId`.
-
-The `(examId, subjectId)` pair remains unique by mutation enforcement.
-
-### 5.3 `examCandidates` — new frozen roster
-
-Fields:
-
-- `examId`;
-- `studentId`;
-- `enrolmentId`;
+- `examNumber`;
 - `batchId`;
-- `courseId`;
-- `includedAt`;
-- `source`: single_batch, selected_batches, all_course_batches;
-- `excludedAt` optional;
-- `exclusionReason` optional;
-- `status`: included, excluded.
+- `courseId` snapshot;
+- `nameBn`, `nameEn`;
+- `examType`;
+- `examDate`;
+- `startMinutes`;
+- `durationMinutes`;
+- `endMinutes` derived and stored by the backend for reliable reads/conflict checks;
+- `status`: `scheduled | marks_entry | ready_for_review | publication_processing | published | reopened | archived`;
+- `candidateCount`, `subjectCount`;
+- sparse marks progress counters;
+- publication version/audit fields.
 
-Indexes:
+Remove/deprecate from the new contract:
 
-- `by_examId_and_studentId`;
-- `by_examId_and_batchId`;
-- `by_studentId_and_examId`;
-- `by_examId_and_status`.
+- exam-level combined mark fields;
+- `draft` and `marks_initializing` as owner-visible states;
+- `setupDraftJson`;
+- `audienceMode`;
+- `rosterStatus`/manual roster-freeze fields;
+- multi-scope merit settings;
+- legacy compatibility fields after the empty-table preflight.
 
-Do not use a candidates array inside the exam document.
+Indexes should support:
 
-### 5.4 `examTeacherAssignments` becomes subject-aware
+- batch + date;
+- status + date;
+- course + date;
+- exam number.
 
-Add:
+### 6.2 Deprecate `examBatches`
 
-- `examSubjectId`;
-- retain optional `batchId` where no batch means all frozen exam batches;
-- `status`: pending, in_progress, submitted, returned;
-- `submittedAt` optional;
-- `returnedAt` optional;
-- `returnReason` optional;
-- `updatedAt`.
+One required `exams.batchId` is authoritative for model-version-3 exams. A
+compatibility `examBatches` row is retained during the coexistence window so
+existing reports and older functions remain safe; remove it only after the
+explicit legacy migration.
 
-Indexes:
+### 6.3 `examSubjects`
 
-- `by_examId`;
-- `by_teacherId_and_status`;
-- `by_examId_and_examSubjectId`;
-- `by_examId_and_examSubjectId_and_batchId`;
-- `by_teacherId_and_examId`.
+Keep one row per selected subject with required:
 
-Mutation enforcement prevents overlapping teacher scopes.
+- exam and subject IDs;
+- sort order;
+- mode;
+- component/total/pass marks;
+- component pass marks when configured;
+- required flag if still needed by result policy.
 
-### 5.5 `examSubjectResults` — new editable subject marks
+Enforce unique `(examId, subjectId)` in mutations.
 
-Fields:
+### 6.4 `examTeacherAssignments`
+
+Keep one assignment per exam subject:
 
 - `examId`;
 - `examSubjectId`;
-- `studentId`;
-- `examCandidateId`;
-- `batchId`;
-- `participation`: present, absent;
-- `mcqScoreScaled` optional;
-- `writtenScoreScaled` optional;
-- `totalScoreScaled` optional;
-- `passed` optional;
-- `entryStatus`: missing, draft, ready, published;
-- `teacherCommentBn` optional;
-- `teacherCommentEn` optional;
-- `enteredByAccountId` optional;
-- `enteredAt` optional;
-- `updatedAt`;
-- `publishedMcqScoreScaled` optional;
-- `publishedWrittenScoreScaled` optional;
-- `publishedTotalScoreScaled` optional;
-- `publishedPassed` optional;
-- `publishedParticipation` optional;
-- `publishedTeacherCommentBn` optional;
-- `publishedTeacherCommentEn` optional;
-- `publicationVersion` optional;
-- `publishedAt` optional.
+- `teacherId`;
+- future-facing assignment state/audit timestamps.
 
-Indexes:
+Remove assignment `batchId`; the exam already owns one batch. Add/use a unique exam-subject index. Owner authorization never depends on the assignment teacher.
 
-- `by_examId_and_studentId`;
-- `by_examSubjectId_and_studentId`;
-- `by_examId_and_entryStatus`;
-- `by_examId_and_batchId_and_entryStatus`;
-- `by_examSubjectId_and_entryStatus`.
+### 6.5 `examCandidates`
 
-### 5.6 `examResults` becomes the student-level aggregate
-
-Retain the table but evolve it into the computed student summary:
-
-- existing exam/course/student/enrolment identifiers;
-- add `examCandidateId` and `batchId`;
-- `grandTotalScaled`;
-- `grandFullMarksScaled`;
-- `percentageBasisPoints`;
-- `passed`;
-- `failedSubjectCount`;
-- `absentSubjectCount`;
-- `officialMeritPosition` optional;
-- `officialMeritPopulation` optional;
-- `officialMeritScope`: batch, selected_batches, course, none;
-- `batchMeritPosition` optional;
-- `batchMeritPopulation` optional;
-- `entryStatus`;
-- publication snapshot fields for every displayed aggregate;
-- existing publication version and timestamps.
-
-The current combined MCQ/written fields remain optional and deprecated during compatibility. New UI must read the new subject rows and aggregate fields when available.
-
-### 5.7 `examPublicationEvents` — recommended version history
-
-Fields:
+Store the frozen roster explicitly:
 
 - `examId`;
-- `publicationVersion`;
-- `kind`: initial, correction;
-- `publishedAt`;
-- `publishedByAccountId`;
-- `candidateCount`;
-- `passCount`;
-- `failCount`;
-- `recipientCount`;
-- `officialMeritScope`;
-- `meritMode`;
-- `reopenReason` optional;
-- `supersedesVersion` optional.
+- student and enrolment IDs;
+- batch snapshot;
+- `included | excluded`;
+- inclusion/exclusion timestamps as useful audit metadata.
 
-Indexes:
+Remove audience source modes and required exclusion reasons.
 
-- `by_examId_and_publicationVersion`;
-- `by_publishedAt`.
+### 6.6 Sparse `examSubjectResults`
 
-This complements audit logs with a report-friendly publication timeline.
+Do not pre-create one empty result document for every candidate × subject during exam creation.
 
-## 6. Backend modules and API plan
+- Missing row means no marks entered yet.
+- First save inserts the row.
+- Later saves patch it.
+- Entry rows keep participation, applicable component scores, derived total/pass state, entry status, actor, and timestamps.
+- Review queries left-join frozen candidates/subjects with existing rows to identify missing work.
 
-Refactor the current `convex/exams/functions.ts` into focused modules while keeping existing public references temporarily available as compatibility wrappers.
+This keeps complete exam creation atomic and removes the current `marks_initializing` fan-out workflow.
 
-```text
-convex/exams/
-├── model.ts                 # scaled marks, pass policy, ranking helpers
-├── exams.ts                 # create/edit/lifecycle/list/detail
-├── audience.ts              # preview, validate, freeze candidates
-├── subjects.ts              # subject marking configurations
-├── assignments.ts           # teacher scopes and submission states
-├── marks.ts                 # draft entry, bulk save, validation
-├── review.ts                # completion and exception summaries
-├── publication.ts           # snapshots, merit, SMS, correction versions
-├── studentResults.ts        # published student queries
-├── migrations.ts            # staged data backfills
-└── *.test.ts
-```
+### 6.7 Existing publication tables
 
-### 6.1 Required queries
+Preserve and adapt immutable publication snapshots, aggregate results, audit events, SMS idempotency, and report queries to the one-batch invariant.
 
-- `exams.listManaged` — paginated and filterable work queue;
-- `exams.detail` — exam identity, state, counts, and rules;
-- `audience.preview` — bounded candidate preview and conflict summary;
-- `audience.listCandidates` — paginated frozen roster;
-- `assignments.myWork` — teacher assignments requiring action;
-- `marks.entryGrid` — paginated/filtered rows for one assignment;
-- `review.progress` — subject/batch completion matrix;
-- `review.summary` — publication validation counts;
-- `review.individualPreview` — exact future student result;
-- `publication.preview` — merit and SMS recipient/message preview;
-- `studentResults.listMine` and `studentResults.detailMine`;
-- report queries for tabulation, merit, subject analysis, and version history.
+## 7. Backend API plan
 
-### 6.2 Required mutations
+### 7.1 Owner creation and editing
 
-- `exams.createDraft`;
-- `exams.updateDraft`;
-- `exams.archiveDraft`;
-- `audience.freezeRoster`;
-- `assignments.configure`;
-- `marks.saveDraft` for a bounded batch of rows;
-- `marks.submitAssignment`;
-- `marks.returnAssignment` with reason;
-- `review.markReadyForPublication` or derive readiness transactionally;
-- `publication.publish`;
-- `publication.reopen` with reason;
-- `publication.republish` through the same validated publish mutation.
+Replace draft orchestration with:
 
-Every function has argument and return validators. Authorization derives identity server-side and never accepts a user ID for permission decisions.
+- `exams.creationOptions` — batches plus course subjects, effective teachers, and active enrolments;
+- `exams.previewConflict` — same-batch class/exam overlap;
+- `exams.createComplete` — one validated atomic creation mutation;
+- `exams.previewEditImpact` — counts rows that an edit would reset;
+- `exams.update` — safe or explicitly acknowledged destructive edit;
+- `exams.detail` — complete owner workspace projection;
+- `exams.listManaged` — paginated server-filtered owner list.
 
-### 6.3 Transaction and scale boundaries
+`createComplete` must revalidate every relationship server-side:
 
-- Candidate preview is read-only and paginated.
-- Roster freezing and subject-result initialization must respect Convex mutation limits. If the cohort can exceed a safe transaction size, create the exam in a `roster_freezing` state and schedule bounded internal batches, then atomically mark it frozen when counts reconcile.
-- Bulk marks save accepts a bounded number of rows, such as 50, and returns per-row errors without writing invalid rows.
-- Publication must not exceed mutation limits. For the current centre size, verify the actual maximum candidate count. If publication plus subject snapshots and SMS creation can exceed a single transaction, use a publication job with a locked version, bounded internal batches, reconciliation, and a final visibility flip. Students must never see a partially published version.
-- Never calculate counts using unbounded `.collect().length`; use bounded reads and maintained counters where scale requires them.
+- owner identity;
+- active/non-archived batch and derived course;
+- every selected subject belongs to the course;
+- every selected teacher is eligible for that subject/course/batch read model;
+- valid date/start/duration/end;
+- no same-batch overlap;
+- included candidates are valid batch enrolments;
+- at least one subject and candidate;
+- valid subject mark distributions;
+- unique subject/teacher/candidate inputs.
 
-## 7. Merit calculation specification
+Never trust client totals, `courseId`, teacher eligibility, candidate membership, or conflict results.
 
-Merit is calculated only from the frozen candidate cohort and the frozen reviewed values.
+### 7.2 Marks
 
-Algorithm:
+Refactor owner marks APIs around exam + subject rather than teacher assignment:
 
-1. Exclude unresolved candidates; publication is blocked if any exist.
-2. Exclude failed/absent students from ranking unless the stored policy explicitly includes them.
-3. Sort by grand total descending.
-4. Tie-break by total CQ/written descending.
-5. Tie-break by total MCQ descending.
-6. Assign competition rank based on the complete comparison tuple.
-7. Store the official population count used for the published position.
-8. If enabled, repeat within each frozen batch cohort and store batch position/population.
+- `marks.ownerSubjectGrid` — paginated/filterable candidates plus sparse results;
+- `marks.saveOwnerRows` — bounded upsert, per-row validation, first-save lifecycle transition;
+- `marks.subjectProgress`;
+- retain assignment-scoped APIs only where needed to keep future teacher work structurally possible.
 
-Important: the position and population are published data, not values recomputed live after publication.
+The owner endpoint derives owner identity server-side and may write every selected exam subject.
 
-## 8. SMS and guardian integration
+### 7.3 Review and publication
 
-Update result template variables:
+Update:
 
-- `studentName`;
-- `examName`;
-- `obtainedMarks`;
-- `fullMarks`;
-- `resultLabel`;
-- `officialMeritLabel`;
-- `officialMeritPosition`;
-- `officialMeritPopulation`;
-- `batchMeritPosition` optional;
-- `batchMeritPopulation` optional;
-- `publicationVersion` for correction templates where useful.
+- `review.progress` and `review.summary` for sparse rows;
+- `review.markReadyForPublication` to validate completeness directly, not teacher submission;
+- `review.exceptions` and individual previews;
+- `publication.preview`, `publish`, `reopen`, and history;
+- batch-only merit labels/populations;
+- report and student-result queries.
 
-Recipient resolution must use the new Mother/Father fields rather than a legacy single guardian field.
+### 7.4 Schedule
 
-Idempotency key includes exam, version, student, and recipient identity or normalized phone:
+Extend `convex/academics/scheduleWorkspace.ts` with a discriminated owner schedule item:
 
 ```text
-exam:{examId}:v{version}:{studentId}:{normalizedPhone}
+kind: class | exam
 ```
 
-Templates:
+The weekly query returns bounded class sessions and exams in one chronological projection. Exam items contain exam ID, batch/course, date/time/duration, status, and a workspace URL. Existing class reschedule/cancel/attendance actions remain class-only.
 
-- result published — Bangla and English;
-- result corrected — Bangla and English.
+## 8. Component and file plan
 
-The publication preview and actual enqueue operation must share the same recipient-resolution and template-rendering helpers to prevent preview/send drift.
+### Routes and dispatch
 
-## 9. Reporting plan
+- `src/app/[locale]/owner/[[...section]]/page.tsx`
+- `src/components/portal/RoleSection.tsx`
+- `src/components/portal/PortalShell.tsx`
 
-### 9.1 Individual result
+### Owner exams
 
-- bilingual coaching and exam identity;
-- subject rows with CQ, MCQ, total, full marks, and pass state;
-- grand total and percentage;
-- official merit label, position, and population;
-- optional batch merit;
-- comments;
-- publication version and timestamp;
-- correction notice when version is greater than one;
-- deterministic A4 print.
-
-### 9.2 Tabulation sheet
-
-- A4 landscape;
-- frozen candidate ordering with student numbers;
-- one column group per subject;
-- grand total, result, official merit, and batch merit;
-- repeated table header on printed pages;
-- version and publication timestamp.
-
-### 9.3 Merit list
-
-- official scope stated prominently;
-- position, student, batch, obtained/full marks, percentage, and result;
-- optional internal batch filter that never changes the official stored position;
-- ties displayed correctly.
-
-### 9.4 Subject analysis
-
-- highest, lowest, average, and pass rate;
-- absence count;
-- score bands;
-- selected-batch comparison;
-- internal owner/teacher report only.
-
-### 9.5 Correction history
-
-- version timeline;
-- reopen reason;
-- changed values when practical;
-- actors and timestamps;
-- correction-SMS delivery status.
-
-## 10. Component plan
-
-Split the current monolithic `src/components/portal/ExamEditor.tsx`.
+Replace the current monolithic `src/components/portal/ExamEditor.tsx` with:
 
 ```text
 src/components/portal/exams/
-├── ExamWorkQueue.tsx
-├── ExamFilters.tsx
-├── ExamStatusBadge.tsx
+├── owner/
+│   ├── OwnerExamListPage.tsx
+│   ├── OwnerExamCreatePage.tsx
+│   ├── OwnerExamWorkspace.tsx
+│   ├── ExamListFilters.tsx
+│   ├── ExamStatusBadge.tsx
+│   └── ExamWorkspaceTabs.tsx
 ├── create/
-│   ├── ExamCreateWizard.tsx
-│   ├── BasicInfoStep.tsx
-│   ├── AudienceStep.tsx
+│   ├── ExamCreationStepper.tsx
+│   ├── BatchScheduleStep.tsx
 │   ├── SubjectRulesStep.tsx
-│   ├── AssignmentAndMeritStep.tsx
-│   └── ReviewStep.tsx
+│   ├── CandidateSelectionStep.tsx
+│   └── ReviewCreateStep.tsx
 ├── marks/
-│   ├── MarksWorkspace.tsx
-│   ├── MarksGrid.tsx
+│   ├── OwnerMarksWorkspace.tsx
+│   ├── ExamSubjectNavigator.tsx
+│   ├── OwnerMarksGrid.tsx
 │   ├── MobileMarksCard.tsx
-│   ├── MarksToolbar.tsx
-│   ├── ImportMarksDialog.tsx
-│   └── SubmitAssignmentDialog.tsx
+│   └── MarksToolbar.tsx
 ├── review/
-│   ├── ExamProgressMatrix.tsx
 │   ├── OwnerReviewWorkspace.tsx
 │   ├── ReviewExceptions.tsx
-│   ├── StudentResultPreview.tsx
 │   └── PublishResultsDialog.tsx
-└── history/
-    └── ExamPublicationTimeline.tsx
+└── edit/
+    ├── EditExamSheet.tsx
+    └── ExamEditImpactDialog.tsx
 ```
 
-Reuse existing shared buttons, tables, status badges, confirmation patterns, page states, and print frames. Add new reusable patterns to `DESIGN.md` only when no current pattern applies, particularly:
+Reuse/refactor existing `ExamWorkQueue`, `MarksWorkspace`, `OwnerReviewWorkspace`, student results, and print/report components where behavior still matches. Do not duplicate valid result/publication logic.
 
-- dense editable marks grid;
-- multi-step operational wizard;
-- progress matrix;
-- irreversible publication summary.
+### Convex
 
-## 11. Migration strategy
+- `convex/schema.ts`
+- `convex/exams/validators.ts`
+- `convex/exams/model.ts`
+- `convex/exams/exams.ts`
+- `convex/exams/subjects.ts`
+- `convex/exams/audience.ts`
+- `convex/exams/assignments.ts`
+- `convex/exams/marks.ts`
+- `convex/exams/review.ts`
+- `convex/exams/publication.ts`
+- `convex/exams/studentResults.ts`
+- `convex/exams/diagnostics.ts`
+- `convex/academics/scheduleWorkspace.ts`
+- `convex/reports/exams.ts` and affected report/dashboard projections.
 
-Use widen–migrate–narrow. Existing published results must stay readable throughout.
+Remove obsolete draft/audience/migration code only after repository-wide reference checks pass.
 
-### Deploy A — Widen and dual-read
+## 9. Delivery sequence
 
-1. Add the new tables and indexes.
-2. Add new exam and subject fields as optional.
-3. Keep current combined result fields.
-4. Update reads to support:
-   - new subject-level results when present;
-   - legacy combined results otherwise.
-5. Update newly created exams to use the new model behind a controlled feature flag or owner-only rollout.
-6. Preserve current result pages and reports for legacy exams.
+### Phase 0 — Contract and zero-data preflight
 
-### Migration A — Backfill exam configuration
+- Verify exam-related tables contain zero documents in the target deployment.
+- Update `DESIGN.md` and this plan’s status references.
+- Freeze the single-batch, no-draft, owner-universal contracts in tests.
 
-For every legacy exam:
+Exit: no hidden data/migration blocker and design contract matches the rebuild.
 
-- infer audience mode:
-  - one exam batch → `single_batch`;
-  - more than one exam batch → `selected_batches`;
-- do not infer `all_course_batches`, because historical intent cannot be proven;
-- set official merit scope from the inferred frozen selected audience;
-- set `meritMode = official_only` to preserve current behavior as closely as possible;
-- copy exam-level mode/full/pass rules onto every legacy `examSubject` only if that interpretation is academically acceptable;
-- otherwise mark the exam as `legacy_combined` and retain legacy display without fabricating subject marks.
+### Phase 1 — Schema and pure domain model
 
-Preferred safety rule: never invent a subject-level score distribution from one combined score.
+- Reshape exam schema and indexes.
+- Remove `examBatches` and draft/audience-only fields after preflight.
+- Implement schedule overlap, subject rule validation, totals, pass/fail, and batch merit helpers.
+- Update generated API/types.
 
-### Migration B — Backfill frozen candidates
+Exit: schema deploys over the verified empty exam tables and domain tests pass.
 
-Create `examCandidates` from legacy `examResults`, using the stored enrolment to resolve the historical batch. The legacy result roster is the historical source of truth, not current active enrolments.
+### Phase 2 — Atomic creation backend
 
-Verify:
+- Add options/conflict/create APIs.
+- Snapshot subjects, teachers, and included/excluded candidates atomically.
+- Add audit events and counters.
+- Update dev seed for scheduled one-batch exams.
 
-- candidate count equals legacy result count;
-- no duplicate `(examId, studentId)`;
-- every candidate belongs to the exam course;
-- every candidate has a resolvable batch/enrolment or is explicitly reported for manual repair.
+Exit: any invalid input rolls back the entire creation; valid creation produces no empty mark rows.
 
-### Migration C — Preserve legacy result presentation
+### Phase 3 — Owner exam list and creation UI
 
-Do not split legacy combined scores among subjects. Mark legacy exams with a compatibility mode and continue showing their combined MCQ/written result exactly as published.
+- Add nested route dispatch.
+- Install approved missing shadcn primitives.
+- Build list, filters, empty/loading/error states, and Create button.
+- Build four-step local wizard and final review.
+- Verify Bangla and English responsive layouts.
 
-New exams use subject-level result records exclusively.
+Exit: owner can create a complete exam and land on its workspace.
 
-### Deploy B — New UI and dual operation
+### Phase 4 — Owner workspace and editing
 
-1. Enable the new creation wizard.
-2. Route new-model exams to the new marks/review UI.
-3. Route legacy exams to read-only or compatible correction UI.
-4. Enable new reports and SMS templates for new-model exams.
-5. Monitor errors, counts, publication duration, and SMS recipient differences.
+- Build shared header and URL-synced tabs.
+- Build Overview and edit Sheet.
+- Add impact preview and destructive confirmation.
+- Preserve batch immutability and audit changes.
 
-### Deploy C — Narrow
+Exit: safe edits preserve marks; destructive edits reset exactly the previewed scope.
 
-After all writable exams use the new model and migration verification passes:
+### Phase 5 — Sparse owner marks entry
 
-1. require the new fields for new-model exams through a discriminated schema shape or explicit model version;
-2. remove dual-write paths;
-3. retain dual-read for immutable legacy publications as long as those records exist;
-4. deprecate, but do not immediately delete, legacy combined fields;
-5. remove migration code only after production reconciliation and backup confirmation.
+- Build owner subject grid query/upsert mutations.
+- Build desktop grid and mobile card flow.
+- Add partial save/autosave, filters, keyboard navigation, and pre-end warning.
+- Transition `scheduled` to `marks_entry` on first save.
 
-Use `@convex-dev/migrations` for batched, resumable backfills. Run dry runs first and record migrated, skipped, and failed counts.
+Exit: owner can complete every subject without an assignment restriction or import feature.
 
-## 12. Test plan
+### Phase 6 — Review, publication, and reports
 
-### 12.1 Domain unit tests
+- Adapt completeness/exception queries to sparse marks.
+- Remove teacher-submission dependency from owner readiness.
+- Preserve batch merit, immutable versions, SMS preview/enqueue, reopen, correction history, student results, and print reports.
 
-- MCQ-only, CQ-only, and combined subject configuration validation;
-- component full marks sum to subject total;
+Exit: published student/report/SMS values all come from the same immutable version.
+
+### Phase 7 — Owner Schedule integration
+
+- Add exam items to owner weekly schedule.
+- Block same-batch class/exam and exam/exam overlap during create/edit.
+- Link schedule exam items to the exam workspace.
+- Keep class-only actions unavailable on exam rows.
+
+Exit: created/edited exams appear at the correct date/time and cannot overlap the same batch.
+
+### Phase 8 — Cleanup and hardening
+
+- Remove obsolete draft wizard, manual open-entry flow, multi-batch UI, and unused compatibility paths.
+- Keep teacher assignment data/API seams, but defer teacher UI redesign.
+- Update implementation status and operational documentation.
+- Run the complete verification gate.
+
+Exit: no stale draft/audience/session wording or unreachable code remains.
+
+## 10. Test plan
+
+### Domain and schema
+
+- one exam requires one valid batch;
+- course always derives from batch;
+- required date/start/duration and derived end validation;
+- cross-midnight/invalid duration policy is rejected consistently;
+- MCQ, written, and both configurations;
 - component and overall pass boundaries;
-- absent subjects reject marks;
-- subject and exam aggregate totals;
-- overall fail when a required subject fails;
-- duplicate student roster detection;
-- competition ties `1, 2, 2, 4`;
-- tie-break ordering;
-- official merit populations for all three audience modes;
-- optional batch merit populations;
-- failed students excluded by default;
-- Bengali ordinal/message formatting where applicable.
+- batch-only competition ranking `1, 2, 2, 4`;
+- no academic-session fields or filters.
 
-### 12.2 Authorization tests
+### Creation
 
-- teacher sees only assigned exams;
-- teacher can edit only assigned subject/batch rows;
-- teacher cannot modify audience or marking rules;
-- teacher cannot publish or reopen;
-- owner can review and publish all exams;
-- student can read only own published snapshot;
-- draft, partial, and reopened unpublished changes remain hidden;
-- account identity is derived server-side.
+- only course subjects are selectable;
+- missing/invalid teacher blocks creation;
+- duplicate subjects/candidates are rejected;
+- active batch enrolments are included by default;
+- exclusions require no reason;
+- same-batch class/exam and exam/exam overlap is blocked;
+- another batch at the same time is allowed;
+- failed creation leaves every exam table unchanged;
+- successful creation has `scheduled` status and zero result rows.
 
-### 12.3 Workflow integration tests
+### Authorization
 
-- create single-batch exam and freeze correct roster;
-- create selected-batch exam and calculate overall plus batch merit;
-- create all-batches exam and freeze every eligible active enrolment;
-- later enrolment changes do not alter frozen roster;
-- teacher saves partial draft, reloads, and continues;
-- incomplete assignment cannot be submitted;
-- owner cannot publish unresolved results;
-- owner preview counts equal publication counts;
-- publication freezes subject and aggregate snapshots;
-- Mother/Father duplicate phones generate one message;
-- distinct Mother/Father phones generate two messages;
-- failed SMS does not roll back publication;
+- owner can read/write every exam subject regardless of assigned teacher;
+- owner can review/publish without teacher submission;
+- non-owner/non-assigned access remains denied by server authorization;
+- student sees only own published immutable result;
+- future teacher assignment rows do not grant broader course/batch access.
+
+### Marks and editing
+
+- first save inserts sparse rows and changes status to `marks_entry`;
+- partial saves survive reload;
+- invalid rows do not silently partially overwrite valid values unless the API explicitly returns per-row outcomes;
+- absent clears/disables component scores;
+- subject-at-a-time grid reports accurate progress;
+- adding a candidate/subject produces empty scope;
+- destructive preview count equals deleted/reset count;
+- teacher and schedule edits preserve marks;
+- batch cannot change.
+
+### Review/publication
+
+- sparse missing rows block readiness;
+- owner readiness ignores teacher assignment submission state;
+- publication counts match frozen included candidates;
+- excluded candidates never receive results/SMS;
+- duplicate guardian phones enqueue once;
+- failed SMS never rolls back publication;
 - reopen requires a reason;
-- republish increments version and sends correction messages exactly once.
+- republish increments version and sends correction messages once;
+- student, print, report, and SMS values match the same version.
 
-### 12.4 Migration tests
+### Components/accessibility
 
-- backfill is idempotent;
-- dry run makes no writes;
-- legacy candidate counts reconcile;
-- legacy combined marks are never fabricated into subject marks;
-- migrated legacy results remain visually and numerically identical;
-- mixed legacy/new reads work during the migration window.
-
-### 12.5 Component and accessibility tests
-
-- wizard preserves values across steps;
-- audience mode changes require confirmation when selections would be lost;
-- keyboard traversal follows visual marks-grid order;
-- focus remains visible;
-- errors are associated with the correct cells and summarized;
+- wizard values persist across steps but not refresh;
+- back/forward preserves list filters and workspace tabs;
 - Bangla labels do not clip;
-- all mobile controls meet 44px target size;
-- confirmation acknowledgement gates publication;
-- screen reader names include student, component, and full marks.
+- marks keyboard order matches visual order;
+- sticky identity remains usable during horizontal scroll;
+- mobile controls meet 44px targets;
+- dialogs/sheets have titles, focus trapping, focus restoration, and escape behavior;
+- destructive edits require explicit acknowledgement;
+- loading dimensions remain stable.
 
-### 12.6 End-to-end tests
+### End-to-end
 
-1. Owner creates and configures a selected-batch hybrid exam.
-2. Teacher enters marks on desktop, saves, reloads, completes, and submits.
-3. Owner reviews exceptions and publishes.
-4. Student sees the exact published result and prints it.
-5. SMS outbox contains correct unique guardian recipients and merit scope.
-6. Owner reopens with reason, corrects one result, and republishes version two.
-7. Student and report surfaces display version two while history preserves version one.
+1. Owner opens `/owner/exams` and uses **Create exam**.
+2. Owner selects a batch, schedule, subjects/rules/teachers, excludes students, reviews, and creates.
+3. Exam appears in the owner Schedule.
+4. Owner enters partial marks before the scheduled end and sees the warning.
+5. First save changes status to marks entry; reload preserves marks.
+6. Owner completes every subject, reviews exceptions, and publishes.
+7. Student sees the exact published result; print/report routes match it.
+8. Guardian SMS outbox has correct unique recipients and batch merit wording.
+9. Owner reopens, corrects one mark, and republishes version two.
 
-Run E2E coverage in English and at least one critical flow in Bangla.
+Run the critical owner journey in Bangla and English.
 
-## 13. Observability and reconciliation
+## 11. Verification gate
 
-Add owner-only diagnostics for:
+Focused checks during each phase, followed by:
 
-- exams stuck in roster freezing or publication processing;
-- candidate count versus aggregate result count;
-- subject-result expected versus actual count;
-- assignments submitted versus expected;
-- published aggregate count versus candidate count;
-- SMS preview recipients versus queued recipients;
-- publication version mismatches;
-- orphaned candidates, subject results, or assignments.
+```powershell
+npm run convex:codegen
+npm run typecheck
+npm test
+npm run lint
+npm run build
+npm run test:e2e
+git diff --check
+```
 
-Audit actions:
+Use the repository’s normal `npm test` command. Treat Windows file locks separately from source failures.
 
-- exam draft created/updated;
-- roster frozen;
-- teacher assignment configured/submitted/returned;
-- marks changed after teacher submission;
-- exam marked ready;
-- results published;
-- exam reopened;
-- corrected results republished;
-- exam archived.
+## 12. Explicit non-goals
 
-## 14. Delivery phases
+- Teacher portal exam/marks UX redesign in this delivery.
+- Multi-batch or course-wide exams.
+- Academic sessions.
+- Exam creation drafts.
+- Manual “Open marks entry” action.
+- Bulk spreadsheet paste or CSV import.
+- Online exams, question banks, AI question generation, grading, or answer-script upload.
+- Teacher/invigilator schedule-conflict modeling.
 
-### Phase 0 — Contract alignment
+## 13. Definition of done
 
-- Update `IMPLEMENTATION_PLAN.md` exam rules so they no longer claim one combined result or unconditional course merit.
-- Document Mother/Father result-recipient behavior.
-- Add new reusable UX patterns to `DESIGN.md` only where necessary.
-- Define legacy compatibility policy.
-
-Exit criteria: product, data, merit, and migration decisions have no contradictions.
-
-### Phase 1 — Domain model and widened schema
-
-- Add model version, optional configuration fields, new tables, and indexes.
-- Implement pure subject validation, aggregate, and ranking helpers with tests.
-- Add dual-read types.
-
-Exit criteria: schema deploys over current data; domain tests pass.
-
-### Phase 2 — Audience and creation wizard
-
-- Build draft creation, audience preview, duplicate checks, subject rules, teacher assignments, merit configuration, review, and roster freezing.
-- Implement responsive wizard UI.
-
-Exit criteria: owners can create all three audience modes and frozen counts reconcile.
-
-### Phase 3 — Marks entry and teacher workflow
-
-- Create subject/batch assignments and subject-result rows.
-- Build desktop grid, mobile cards, draft saves, filters, validation, bulk paste/import preview, and submission.
-
-Exit criteria: assigned teachers can complete large rosters without accessing another scope.
-
-### Phase 4 — Owner progress and review
-
-- Build progress matrix, return flow, exception filters, individual preview, and readiness validation.
-
-Exit criteria: every publication blocker is visible and directly actionable.
-
-### Phase 5 — Merit, publication, and SMS
-
-- Implement official and batch merit calculation.
-- Build immutable subject/aggregate snapshots.
-- Add Mother/Father recipient resolution, template preview, idempotent enqueue, and correction messaging.
-- Build publication confirmation.
-
-Exit criteria: preview counts equal committed counts and publication remains atomic from the student's perspective.
-
-### Phase 6 — Student results and reports
-
-- Build subject-wise student result.
-- Update print result, result sheet, tabulation, merit, analysis, and history reports.
-- Verify Bangla print font and A4 layouts.
-
-Exit criteria: screen and print values match the published snapshot exactly.
-
-### Phase 7 — Migration and compatibility
-
-- Deploy widened dual-read code.
-- Run dry-run migrations.
-- Backfill configuration and candidates.
-- Verify legacy results.
-- Enable new creation path.
-- Narrow new-model requirements after reconciliation.
-
-Exit criteria: no historical result changes and all new exams use the new model.
-
-### Phase 8 — Hardening and rollout
-
-- Complete unit, authorization, component, E2E, accessibility, performance, and print tests.
-- Seed realistic large-batch fixtures.
-- Test Bengali-first mobile entry.
-- Add diagnostics and runbooks.
-- Roll out to owners first, then teachers, then expose published student views.
-
-Exit criteria: all acceptance criteria pass in a production-like environment.
-
-## 15. Definition of done
-
-- All three audience modes create the correct frozen cohort.
-- Multi-subject exams store real subject-level marks.
-- Every subject supports CQ, MCQ, or both with validated distributions.
-- Teachers can save drafts and submit only their assigned work.
-- Owner review exposes every missing, invalid, absent, failed, and contact exception.
-- Official merit uses the frozen exam audience and states its scope and population.
-- Optional batch merit is correct for selected/all-batch exams.
-- Published results are immutable snapshots with visible versions.
-- Mother/Father SMS messages include unambiguous merit scope and are de-duplicated by phone.
-- Student and printed results show identical published data.
-- Legacy results remain unchanged and readable.
-- Bangla and English UI, SMS, and print layouts are verified.
-- Desktop marks entry is keyboard-efficient and mobile marks entry is touch-friendly.
-- Type checking, linting, focused Convex tests, component tests, E2E tests, and print QA pass.
-
-## 16. Explicit non-goals
-
-- Online examination delivery.
-- Question bank or paper generation.
-- AI-generated questions or grading.
-- Answer-script upload and evaluation.
-- Public unauthenticated result search.
-- Guardian accounts.
-- GPA/transcript replacement for formal schools.
-- Predictive ranking or gamified leaderboards.
-
-These may be reconsidered only through a separate product decision and architecture review.
+- `/owner/exams` is a fast, filterable list with a prominent Create action.
+- Creation is four-step, local-only until one atomic mutation, and produces a complete scheduled exam.
+- Every exam belongs to one immutable batch and appears on the owner Schedule.
+- Date, start time, and duration are required; same-batch overlaps are blocked.
+- Subjects come only from the batch course and retain independent MCQ/written rules.
+- One responsible teacher is snapshotted per subject while owners retain universal authority.
+- The complete roster is frozen with reasonless individual exclusions.
+- There is no exam draft or manual marks-opening workflow.
+- The merged exam workspace provides Overview, Marks, Review, and Results tabs.
+- Marks entry automatically opens the first incomplete subject and persists partial work.
+- Sparse marks keep creation atomic and progress/review accurate.
+- Safe edits preserve marks; destructive edits preview and reset only affected rows.
+- Batch merit, publication, SMS, student results, reports, and correction history remain correct and versioned.
+- Bangla/English desktop and mobile owner flows pass accessibility and end-to-end verification.

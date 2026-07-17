@@ -13,7 +13,9 @@ one coaching centre.
   and teachers have their own Clerk-authenticated portals using Google as the
   normal sign-in method. A verified Google identity receives no portal access
   until its approved email is linked to a Dhrubok owner, teacher, or student
-  record. Guardians do not have accounts; every student profile stores two
+  record. Owners are also teachers, with the owner acting as the coaching
+  centre's primary and most important teacher. Guardians do not have accounts;
+  every student profile stores two
   guardians, Mother and Father, with a separate name and phone number for each.
 - The public website presents owner-managed coaching content and includes a
   public admission application. Applicants choose a preferred course and batch.

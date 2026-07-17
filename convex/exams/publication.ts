@@ -63,7 +63,7 @@ async function build(
   examId: Id<"exams">,
 ) {
   const exam = await ctx.db.get("exams", examId);
-  if (!exam || exam.modelVersion !== 2)
+  if (!exam || (exam.modelVersion !== 2 && exam.modelVersion !== 3))
     throw new Error("New-model exam not found");
   const settings = (await ctx.db.query("coachingSettings").take(1))[0];
   const candidates = await ctx.db
@@ -607,7 +607,11 @@ export const reopen = mutation({
     const { account } = await requireOwner(ctx);
     if (!args.reason.trim()) throw new Error("A reopen reason is required");
     const exam = await ctx.db.get("exams", args.examId);
-    if (!exam || exam.modelVersion !== 2 || exam.status !== "published")
+    if (
+      !exam ||
+      (exam.modelVersion !== 2 && exam.modelVersion !== 3) ||
+      exam.status !== "published"
+    )
       throw new Error("Only a published new-model exam can be reopened");
     const now = Date.now();
     const currentPublication = await ctx.db

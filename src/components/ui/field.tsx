@@ -62,7 +62,7 @@ function FieldDescription({ className, ...props }: React.ComponentProps<"p">) {
   return (
     <p
       data-slot="field-description"
-      className={cn("text-sm text-muted-foreground", className)}
+      className={cn("text-sm text-[var(--ink-mute)]", className)}
       {...props}
     />
   );
@@ -73,7 +73,7 @@ function FieldError({ className, ...props }: React.ComponentProps<"p">) {
     <p
       role="alert"
       data-slot="field-error"
-      className={cn("text-sm text-destructive", className)}
+      className={cn("text-sm text-[var(--danger)]", className)}
       {...props}
     />
   );

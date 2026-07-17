@@ -296,7 +296,7 @@ const ownerQuickActions = [
   {
     labelEn: "Create exam",
     labelBn: "পরীক্ষা তৈরি করুন",
-    path: "/exams",
+    path: "/exams/create",
     icon: FileSpreadsheet,
   },
   {

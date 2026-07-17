@@ -10,7 +10,7 @@ async function loadExamRows(
   examId: Id<"exams">,
 ) {
   const exam = await ctx.db.get("exams", examId);
-  if (!exam || exam.modelVersion !== 2)
+  if (!exam || (exam.modelVersion !== 2 && exam.modelVersion !== 3))
     throw new Error("New-model exam not found");
   const candidates = await ctx.db
     .query("examCandidates")
@@ -34,7 +34,7 @@ export const progress = query({
   returns: v.any(),
   handler: async (ctx, args) => {
     await requireOwner(ctx);
-    const { subjects, results } = await loadExamRows(ctx, args.examId);
+    const { exam, candidates, subjects, results } = await loadExamRows(ctx, args.examId);
     const assignments = await ctx.db
       .query("examTeacherAssignments")
       .withIndex("by_examId", (q) => q.eq("examId", args.examId))
@@ -61,7 +61,10 @@ export const progress = query({
             ? await ctx.db.get("batches", assignment.batchId)
             : null,
           complete: rows.filter((row) => row.entryStatus !== "missing").length,
-          missing: rows.filter((row) => row.entryStatus === "missing").length,
+          missing:
+            exam.modelVersion === 3
+              ? candidates.length - rows.length
+              : rows.filter((row) => row.entryStatus === "missing").length,
           invalid: rows.filter(
             (row) =>
               row.entryStatus !== "missing" &&
@@ -83,9 +86,10 @@ export const summary = query({
       args.examId,
     );
     const expected = candidates.length * subjects.length;
-    const missing = results.filter(
-      (row) => row.entryStatus === "missing",
-    ).length;
+    const missing =
+      exam.modelVersion === 3
+        ? expected - results.filter((row) => row.entryStatus !== "missing").length
+        : results.filter((row) => row.entryStatus === "missing").length;
     const invalid = results.filter(
       (row) =>
         row.entryStatus !== "missing" &&
@@ -175,7 +179,8 @@ export const summary = query({
         missing === 0 &&
         invalid === 0 &&
         assignments.length > 0 &&
-        assignments.every((row) => row.status === "submitted"),
+        (exam.modelVersion === 3 ||
+          assignments.every((row) => row.status === "submitted")),
     };
   },
 });
@@ -326,19 +331,27 @@ export const markReadyForPublication = mutation({
     if (
       !candidates.length ||
       results.length !== candidates.length * subjects.length ||
-      results.some(
-        (row) =>
-          row.entryStatus !== "submitted" ||
-          row.totalScoreScaled === undefined ||
-          row.passed === undefined,
+      results.some((row) =>
+        (exam.modelVersion !== 3 && row.entryStatus !== "submitted") ||
+        row.totalScoreScaled === undefined ||
+        row.passed === undefined,
       ) ||
       !assignments.length ||
-      assignments.some((row) => row.status !== "submitted")
+      (exam.modelVersion !== 3 &&
+        assignments.some((row) => row.status !== "submitted"))
     )
       throw new Error(
         "Every assignment and result row must be submitted and valid",
       );
     const now = Date.now();
+    if (exam.modelVersion === 3)
+      for (const row of results)
+        if (row.entryStatus !== "submitted")
+          await ctx.db.patch("examSubjectResults", row._id, {
+            entryStatus: "submitted",
+            submittedAt: now,
+            updatedAt: now,
+          });
     await ctx.db.patch("exams", exam._id, {
       status: "ready_for_review",
       updatedAt: now,

@@ -20,7 +20,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { useMutation, useQuery } from "convex/react";
 import { CheckCircle2, CircleAlert } from "lucide-react";
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { DatePicker } from "./DatePicker";
 import { PortalPageState } from "./PortalPageState";
+
+function dhakaToday() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Dhaka",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
 
 function FormSection({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return (
@@ -47,15 +57,16 @@ function TextField({ label, name, required = false, type = "text", description }
 export function DirectAdmissionForm({ locale, onCancel }: { locale: "bn" | "en"; onCancel: () => void }) {
   const bn = locale === "bn";
   const scopes = useQuery(api.academics.options.contentScopes, {});
-  const plans = useQuery(api.finance.functions.listFeePlans, {});
   const create = useMutation(api.admissions.owner.createDirectAdmission);
   const [courseId, setCourseId] = useState<Id<"courses"> | "">("");
   const [batchId, setBatchId] = useState<Id<"batches"> | "">("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [admissionDate, setAdmissionDate] = useState(dhakaToday);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const batches = useMemo(() => scopes?.batches.filter((row) => row.courseId === courseId) ?? [], [scopes, courseId]);
 
-  if (!scopes || !plans) return <PortalPageState state="loading" locale={locale} />;
+  if (!scopes) return <PortalPageState state="loading" locale={locale} />;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -73,15 +84,17 @@ export function DirectAdmissionForm({ locale, onCancel }: { locale: "bn" | "en";
       await create({
         studentNumber: String(data.get("studentNumber")), admissionDate: String(data.get("admissionDate")),
         studentDisplayName: String(data.get("studentDisplayName")), studentNameBn: opt("studentNameBn"), studentNameEn: opt("studentNameEn"), studentEmail: String(data.get("studentEmail")),
-        studentPhone: opt("studentPhone"), dateOfBirth: opt("dateOfBirth"), gender: opt("gender"), schoolCollege: String(data.get("schoolCollege")), currentClass: String(data.get("currentClass")), address: opt("address"),
+        studentPhone: opt("studentPhone"), dateOfBirth: dateOfBirth || undefined, gender: opt("gender"), schoolCollege: String(data.get("schoolCollege")), currentClass: String(data.get("currentClass")), address: opt("address"),
         guardianName: String(data.get("guardianName")), guardianPhone: String(data.get("guardianPhone")), guardianRelationship: "father", alternateGuardianPhone: opt("alternateGuardianPhone"),
         motherName: String(data.get("motherName")), motherPhone: String(data.get("motherPhone")),
-        preferredSmsLocale: data.get("preferredSmsLocale") === "en" ? "en" : "bn", courseId, batchId, feePlanId: opt("feePlanId") as Id<"feePlans"> | undefined,
+        preferredSmsLocale: data.get("preferredSmsLocale") === "en" ? "en" : "bn", courseId, batchId,
         agreedMonthlyAmountMinor: minor("agreedMonthly"), initialAdmissionFeeMinor: minor("initialAdmissionFee"), internalNote: opt("internalNote"),
       });
       form.reset();
       setCourseId("");
       setBatchId("");
+      setDateOfBirth("");
+      setAdmissionDate(dhakaToday());
       setMessage({ ok: true, text: bn ? "শিক্ষার্থী সফলভাবে ভর্তি হয়েছে।" : "Student admitted successfully." });
     } catch (cause) {
       setMessage({ ok: false, text: cause instanceof Error ? cause.message : "Could not admit student" });
@@ -89,8 +102,6 @@ export function DirectAdmissionForm({ locale, onCancel }: { locale: "bn" | "en";
       setBusy(false);
     }
   }
-
-  const filteredPlans = plans.filter((row) => (!row.courseId || row.courseId === courseId) && (!row.batchId || row.batchId === batchId));
 
   return (
     <form className="flex flex-col gap-6" onSubmit={(event) => void submit(event)}>
@@ -110,7 +121,10 @@ export function DirectAdmissionForm({ locale, onCancel }: { locale: "bn" | "en";
           <TextField label={bn ? "ইংরেজি নাম" : "Name in English"} name="studentNameEn" />
           <TextField label={bn ? "Google ইমেইল" : "Google email"} name="studentEmail" required type="email" />
           <TextField label={bn ? "শিক্ষার্থীর ফোন" : "Student phone"} name="studentPhone" type="tel" />
-          <TextField label={bn ? "জন্মতারিখ" : "Date of birth"} name="dateOfBirth" type="date" />
+          <Field>
+            <FieldLabel htmlFor="direct-date-of-birth">{bn ? "জন্মতারিখ" : "Date of birth"}</FieldLabel>
+            <DatePicker id="direct-date-of-birth" value={dateOfBirth} onChange={setDateOfBirth} locale={locale} ariaLabel={bn ? "জন্মতারিখ বেছে নিন" : "Choose date of birth"} />
+          </Field>
           <Field>
             <FieldLabel htmlFor="direct-gender">{bn ? "লিঙ্গ" : "Gender"}</FieldLabel>
             <Select name="gender">
@@ -120,7 +134,11 @@ export function DirectAdmissionForm({ locale, onCancel }: { locale: "bn" | "en";
           </Field>
           <TextField label={bn ? "স্কুল বা কলেজ" : "School or college"} name="schoolCollege" required />
           <TextField label={bn ? "বর্তমান শ্রেণি" : "Current class"} name="currentClass" required />
-          <TextField label={bn ? "ভর্তির তারিখ" : "Admission date"} name="admissionDate" required type="date" />
+          <Field>
+            <FieldLabel htmlFor="direct-admission-date">{bn ? "ভর্তির তারিখ" : "Admission date"}</FieldLabel>
+            <DatePicker id="direct-admission-date" value={admissionDate} onChange={setAdmissionDate} locale={locale} ariaLabel={bn ? "ভর্তির তারিখ বেছে নিন" : "Choose admission date"} required />
+            <input type="hidden" name="admissionDate" value={admissionDate} />
+          </Field>
           <Field className="md:col-span-2"><FieldLabel htmlFor="direct-address">{bn ? "ঠিকানা" : "Address"}</FieldLabel><Textarea id="direct-address" name="address" rows={2} /></Field>
         </FieldGroup>
       </FormSection>
@@ -145,7 +163,7 @@ export function DirectAdmissionForm({ locale, onCancel }: { locale: "bn" | "en";
 
       <Separator />
 
-      <FormSection title={bn ? "কোর্স ও ফি" : "Course and fees"} description={bn ? "এনরোলমেন্ট, ফি পরিকল্পনা এবং প্রাথমিক চার্জ নির্ধারণ করুন।" : "Set the enrolment, fee plan, and initial charges."}>
+      <FormSection title={bn ? "কোর্স ও ফি" : "Course and fees"} description={bn ? "এনরোলমেন্ট এবং প্রাথমিক চার্জ নির্ধারণ করুন।" : "Set the enrolment and initial charges."}>
         <FieldGroup className="grid gap-5 md:grid-cols-2">
           <Field>
             <FieldLabel htmlFor="direct-course">{bn ? "কোর্স" : "Course"}</FieldLabel>
@@ -161,20 +179,13 @@ export function DirectAdmissionForm({ locale, onCancel }: { locale: "bn" | "en";
               <SelectContent><SelectGroup>{batches.map((row) => <SelectItem key={row.batchId} value={row.batchId}>{bn ? row.nameBn : row.nameEn}</SelectItem>)}</SelectGroup></SelectContent>
             </Select>
           </Field>
-          <Field>
-            <FieldLabel htmlFor="direct-fee-plan">{bn ? "ফি পরিকল্পনা" : "Fee plan"}</FieldLabel>
-            <Select name="feePlanId" disabled={!courseId || !batchId}>
-              <SelectTrigger id="direct-fee-plan"><SelectValue placeholder={bn ? "ঐচ্ছিক" : "Optional"} /></SelectTrigger>
-              <SelectContent><SelectGroup>{filteredPlans.map((row) => <SelectItem key={row.feePlanId} value={row.feePlanId}>{bn ? row.nameBn : row.nameEn}</SelectItem>)}</SelectGroup></SelectContent>
-            </Select>
-          </Field>
           <TextField label={bn ? "ভর্তি ফি (৳)" : "Admission fee (BDT)"} name="initialAdmissionFee" type="number" />
           <TextField label={bn ? "সম্মত মাসিক (৳)" : "Agreed monthly (BDT)"} name="agreedMonthly" type="number" />
           <Field className="md:col-span-2"><FieldLabel htmlFor="direct-internal-note">{bn ? "অভ্যন্তরীণ নোট" : "Internal note"}</FieldLabel><Textarea id="direct-internal-note" name="internalNote" rows={3} /></Field>
         </FieldGroup>
       </FormSection>
 
-      <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t bg-background py-4 sm:flex-row sm:justify-end">
+      <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[var(--border)] bg-background py-4 sm:flex-row sm:justify-end">
         <Button variant="ghost" type="button" onClick={onCancel}>{bn ? "বাতিল" : "Cancel"}</Button>
         <Button type="submit" disabled={busy || !courseId || !batchId}>
           {busy ? <Spinner data-icon="inline-start" /> : null}

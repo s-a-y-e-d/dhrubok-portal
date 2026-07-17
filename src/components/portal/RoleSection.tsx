@@ -10,6 +10,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { useQuery } from "convex/react";
+import type { Id } from "@convex/_generated/dataModel";
 import React, { useState, useEffect, useRef } from "react";
 import { api } from "@convex/_generated/api";
 import { PortalPageState } from "./PortalPageState";
@@ -23,6 +24,11 @@ import { FinanceEditor } from "./FinanceWorkspace";
 import { AdmissionsEditor as AdmissionsWorkflow } from "./AdmissionsEditor";
 import { AttendanceEditor as AttendanceWorkflow } from "./AttendanceEditor";
 import { ExamEditor } from "./ExamEditor";
+import {
+  OwnerExamCreatePage,
+  OwnerExamDetailPage,
+  OwnerExamListPage,
+} from "./exams/owner/OwnerExams";
 import { StudentExamResults } from "./exams/StudentExamResults";
 import { ContentEditor } from "./ContentEditor";
 import { ReportsEditor } from "./ReportsEditor";
@@ -1681,32 +1687,44 @@ export function RoleSection({
 }: {
   role: "owner" | "teacher" | "student";
   locale: "bn" | "en";
-  section?: string;
+  section?: string | string[];
 }) {
+  const segments = Array.isArray(section) ? section : section ? [section] : [];
+  const activeSection = segments[0];
   if (role === "owner") {
-    if (section === "students") return <OwnerStudents locale={locale} />;
-    if (section === "admissions") return <OwnerAdmissions locale={locale} />;
-    if (section === "messages") return <OwnerMessages locale={locale} />;
-    if (section === "notices")
+    if (activeSection === "students") return <OwnerStudents locale={locale} />;
+    if (activeSection === "admissions") return <OwnerAdmissions locale={locale} />;
+    if (activeSection === "messages") return <OwnerMessages locale={locale} />;
+    if (activeSection === "notices")
       return (
         <ContentEditor locale={locale} role="owner" initialTab="notices" />
       );
-    if (section === "materials")
+    if (activeSection === "materials")
       return <ContentEditor locale={locale} role="owner" />;
-    if (section === "courses") return <CoursesWorkspace locale={locale} />;
-    if (section === "batches") return <BatchesWorkspace locale={locale} />;
-    if (section === "teachers") return <TeachersWorkspace locale={locale} />;
-    if (section === "schedule") return <ScheduleWorkspace locale={locale} />;
-    if (section === "attendance") return <AttendanceWorkflow locale={locale} />;
-    if (section === "finance") return <FinanceEditor locale={locale} />;
-    if (section === "exams") return <ExamEditor locale={locale} role="owner" />;
-    if (section === "reports") return <ReportsEditor locale={locale} />;
-    if (section === "website") return <OwnerWebsiteEditor locale={locale} />;
-    if (section === "settings") return <OwnerSettingsEditor locale={locale} />;
+    if (activeSection === "courses") return <CoursesWorkspace locale={locale} />;
+    if (activeSection === "batches") return <BatchesWorkspace locale={locale} />;
+    if (activeSection === "teachers") return <TeachersWorkspace locale={locale} />;
+    if (activeSection === "schedule") return <ScheduleWorkspace locale={locale} />;
+    if (activeSection === "attendance") return <AttendanceWorkflow locale={locale} />;
+    if (activeSection === "finance") return <FinanceEditor locale={locale} />;
+    if (activeSection === "exams") {
+      if (segments[1] === "create") return <OwnerExamCreatePage locale={locale} />;
+      if (segments[1])
+        return (
+          <OwnerExamDetailPage
+            locale={locale}
+            examId={segments[1] as Id<"exams">}
+          />
+        );
+      return <OwnerExamListPage locale={locale} />;
+    }
+    if (activeSection === "reports") return <ReportsEditor locale={locale} />;
+    if (activeSection === "website") return <OwnerWebsiteEditor locale={locale} />;
+    if (activeSection === "settings") return <OwnerSettingsEditor locale={locale} />;
     return <OwnerDashboard locale={locale} />;
   }
   if (role === "teacher") {
-    if (section === "batches") return <TeacherBatches locale={locale} />;
+    if (activeSection === "batches") return <TeacherBatches locale={locale} />;
     if (section === "routine") return <TeacherRoutine locale={locale} />;
     if (section === "attendance") return <TeacherAttendance locale={locale} />;
     if (section === "exams")

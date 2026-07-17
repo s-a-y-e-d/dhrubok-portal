@@ -173,7 +173,7 @@ export function AdmissionsEditor({ locale }: { locale: "bn" | "en" }) {
         </Alert>
       ) : null}
 
-      <Card>
+      <Card className="border-[var(--border)] bg-[var(--canvas)] shadow-none">
         <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col gap-1">
             <CardTitle>{bn ? "আবেদনসমূহ" : "Applications"}</CardTitle>
@@ -219,7 +219,7 @@ export function AdmissionsEditor({ locale }: { locale: "bn" | "en" }) {
             <div className="p-6"><SheetTitle className="sr-only">{bn ? "আবেদন লোড হচ্ছে" : "Loading application"}</SheetTitle><PortalPageState state="loading" locale={locale} /></div>
           ) : detail ? (
             <>
-              <SheetHeader className="border-b p-6 pe-14">
+              <SheetHeader className="border-b border-[var(--border)] p-6 pe-14">
                 <div className="flex flex-wrap items-center gap-2"><Badge variant={detail.status === "new" ? "info" : "warning"}>{detail.status === "new" ? (bn ? "নতুন" : "New") : (bn ? "পর্যালোচনায়" : "Under review")}</Badge><span className="text-sm text-muted-foreground">{detail.applicationNumber}</span></div>
                 <SheetTitle>{detail.studentDisplayName}</SheetTitle>
                 <SheetDescription>{bn ? "আবেদনের তথ্য যাচাই করে পরবর্তী পদক্ষেপ নিন।" : "Verify the application details and choose the next action."}</SheetDescription>
@@ -270,7 +270,7 @@ export function AdmissionsEditor({ locale }: { locale: "bn" | "en" }) {
                     <Field><FieldLabel htmlFor="review-monthly">{bn ? "সম্মত মাসিক (৳)" : "Agreed monthly (BDT)"}</FieldLabel><Input id="review-monthly" name="agreedMonthly" type="number" min="0" step="0.01" /></Field>
                     <Field className="sm:col-span-2"><FieldLabel htmlFor="review-note">{bn ? "অভ্যন্তরীণ নোট" : "Internal note"}</FieldLabel><Textarea id="review-note" name="internalNote" rows={3} /><FieldDescription>{bn ? "শুধু অভ্যন্তরীণ ব্যবহারের জন্য।" : "For internal use only."}</FieldDescription></Field>
                   </FieldGroup>
-                  <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t bg-background py-4 sm:flex-row sm:flex-wrap sm:justify-end">
+                  <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[var(--border)] bg-background py-4 sm:flex-row sm:flex-wrap sm:justify-end">
                     <Button variant="ghost" type="button" disabled={busy} onClick={() => setDecision("withdraw")}>{bn ? "প্রত্যাহার" : "Withdraw"}</Button>
                     <Button variant="danger" type="button" disabled={busy} onClick={() => setDecision("reject")}>{bn ? "প্রত্যাখ্যান" : "Reject"}</Button>
                     <Button variant="secondary" type="button" disabled={busy || detail.status === "under_review"} onClick={() => void execute(() => review({ applicationId: detail.applicationId, status: "under_review" }))}>{bn ? "পর্যালোচনায় রাখুন" : "Mark under review"}</Button>
@@ -287,7 +287,7 @@ export function AdmissionsEditor({ locale }: { locale: "bn" | "en" }) {
 
       <Sheet open={directAdmission} onOpenChange={setDirectAdmission}>
         <SheetContent className="w-[min(760px,calc(100%-24px))] gap-0 p-0">
-          <SheetHeader className="border-b p-6 pe-14"><SheetTitle>{bn ? "নতুন শিক্ষার্থী ভর্তি" : "Admit a new student"}</SheetTitle><SheetDescription>{bn ? "পাবলিক আবেদন ছাড়াই শিক্ষার্থী ও এনরোলমেন্ট তৈরি করুন।" : "Create a student and enrolment without a public application."}</SheetDescription></SheetHeader>
+          <SheetHeader className="border-b border-[var(--border)] p-6 pe-14"><SheetTitle>{bn ? "নতুন শিক্ষার্থী ভর্তি" : "Admit a new student"}</SheetTitle><SheetDescription>{bn ? "পাবলিক আবেদন ছাড়াই শিক্ষার্থী ও এনরোলমেন্ট তৈরি করুন।" : "Create a student and enrolment without a public application."}</SheetDescription></SheetHeader>
           <div className="px-6 pb-6 pt-5"><DirectAdmissionForm locale={locale} onCancel={() => setDirectAdmission(false)} /></div>
         </SheetContent>
       </Sheet>

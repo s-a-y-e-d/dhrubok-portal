@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Inter, Noto_Sans_Bengali } from "next/font/google";
 import { notFound } from "next/navigation";
 import { ConvexClientProvider } from "@/app/ConvexClientProvider";
+import { Toaster } from "@/components/ui/sonner";
 import { defaultLocale, isLocale, locales } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import "@/app/globals.css";
@@ -33,6 +34,7 @@ export default async function LocaleLayout({ children, params }: { children: Rea
         <ClerkProvider signInUrl={`/${locale}/sign-in`}>
           <ConvexClientProvider>{children}</ConvexClientProvider>
         </ClerkProvider>
+        <Toaster closeButton position="bottom-right" />
       </body>
     </html>
   );

@@ -9,7 +9,7 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "bg-[var(--brand)] text-[var(--on-brand)] hover:bg-[var(--brand-deep)]",
+        primary: "bg-[var(--brand)] text-[var(--on-brand)] hover:bg-[var(--brand-deep)] [&:not(:disabled)]:!text-[var(--on-brand)]",
         secondary: "border-[var(--border-strong)] bg-[var(--canvas)] text-[var(--ink)] hover:bg-[var(--canvas-subtle)]",
         ghost: "bg-transparent text-[var(--ink-secondary)] hover:bg-[var(--canvas-subtle)] hover:text-[var(--ink)]",
         danger: "border-[var(--danger)] bg-[var(--danger)] text-white hover:border-[var(--danger-deep)] hover:bg-[var(--danger-deep)] active:border-[#991b1b] active:bg-[#991b1b]",
@@ -40,6 +40,8 @@ export function Button({
   if (asChild) {
     return (
       <Slot
+        data-slot="button"
+        data-variant={variant}
         className={cn(buttonVariants({ variant, size }), className)}
         aria-busy={loading || undefined}
         {...props}
@@ -51,6 +53,8 @@ export function Button({
 
   return (
     <button
+      data-slot="button"
+      data-variant={variant}
       className={cn(buttonVariants({ variant, size }), className)}
       type={type}
       disabled={disabled || loading}

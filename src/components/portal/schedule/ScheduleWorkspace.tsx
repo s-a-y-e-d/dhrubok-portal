@@ -854,6 +854,12 @@ export function ScheduleWorkspace({ locale }: { locale: Locale }) {
     subjectId: subjectId === "all" ? undefined : (subjectId as Id<"subjects">),
     status,
   });
+  const examRows = useQuery(api.exams.ownerWorkflow.scheduleItems, {
+    startDate: weekStart,
+    endDate: addDays(weekStart, 6),
+    courseId: courseId === "all" ? undefined : (courseId as Id<"courses">),
+    batchId: batchId === "all" ? undefined : (batchId as Id<"batches">),
+  });
   const details = useQuery(
     api.academics.scheduleWorkspace.getDetails,
     selectedId ? { sessionId: selectedId } : "skip",
@@ -1082,6 +1088,50 @@ export function ScheduleWorkspace({ locale }: { locale: Locale }) {
           </Select>
         </div>
       </section>
+      {examRows === undefined ? (
+        <Skeleton className="h-24 w-full" />
+      ) : examRows.length > 0 ? (
+        <section className="grid gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--canvas)] p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="eyebrow">{bn ? "পরীক্ষা" : "Exams"}</p>
+              <h2 className="text-lg font-semibold">
+                {bn ? "এই সপ্তাহের পরীক্ষা" : "Exams this week"}
+              </h2>
+            </div>
+            <Button asChild variant="secondary" size="sm">
+              <Link href={`/${locale}/owner/exams`}>
+                {bn ? "সব পরীক্ষা" : "All exams"}
+              </Link>
+            </Button>
+          </div>
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+            {examRows.map((exam) => (
+              <Link
+                key={exam.id}
+                href={`/${locale}/owner/exams/${exam.id}`}
+                className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--canvas-subtle)] p-3 transition-colors hover:border-[var(--brand)]"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <strong>{bn ? exam.nameBn : exam.nameEn}</strong>
+                  <Badge variant="neutral">
+                    {exam.status.replaceAll("_", " ")}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-sm text-[var(--ink-mute)]">
+                  {displayDate(exam.examDate, locale)} ·{" "}
+                  {String(Math.floor(exam.startsAtMinutes / 60)).padStart(
+                    2,
+                    "0",
+                  )}
+                  :{String(exam.startsAtMinutes % 60).padStart(2, "0")} ·{" "}
+                  {bn ? exam.batchNameBn : exam.batchNameEn}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
       {rows === undefined || !options ? (
         <div className="grid gap-3">
           <Skeleton className="h-16 w-full" />

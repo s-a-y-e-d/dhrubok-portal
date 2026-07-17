@@ -1082,6 +1082,8 @@ export default defineSchema({
   exams: defineTable({
     examNumber: v.string(),
     courseId: v.id("courses"),
+    // Optional during the compatibility window for existing multi-batch exams.
+    batchId: v.optional(v.id("batches")),
     nameBn: v.string(),
     nameEn: v.string(),
     examDate: v.string(),
@@ -1092,6 +1094,7 @@ export default defineSchema({
     passMarksScaled: v.number(),
     status: v.union(
       v.literal("draft"),
+      v.literal("scheduled"),
       v.literal("marks_initializing"),
       v.literal("marks_entry"),
       v.literal("ready_for_review"),
@@ -1120,6 +1123,7 @@ export default defineSchema({
     ),
     startsAtMinutes: v.optional(v.number()),
     endsAtMinutes: v.optional(v.number()),
+    durationMinutes: v.optional(v.number()),
     venue: v.optional(v.string()),
     audienceMode: v.optional(
       v.union(
@@ -1156,6 +1160,7 @@ export default defineSchema({
     completedResultCount: v.optional(v.number()),
   })
     .index("by_courseId_and_examDate", ["courseId", "examDate"])
+    .index("by_batchId_and_examDate", ["batchId", "examDate"])
     .index("by_status_and_examDate", ["status", "examDate"])
     .index("by_courseId_and_status", ["courseId", "status"])
     .index("by_examNumber", ["examNumber"]),

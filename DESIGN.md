@@ -286,7 +286,8 @@ never appear merely as decoration.
 | Admission  | Accepted         | `success`                   |
 | Admission  | Rejected         | `danger`                    |
 | Admission  | Withdrawn        | `ink-mute` (neutral)        |
-| Exam       | Draft            | `ink-mute` (neutral)        |
+| Exam       | Scheduled        | `ink-mute` (neutral)        |
+| Exam       | Marks in progress| `info`                      |
 | Exam       | Ready for review | `warning`                   |
 | Exam       | Published        | `info`                      |
 | Student    | Active           | `success`                   |
@@ -1127,8 +1128,15 @@ See "Print Design" section below.
 
 ## Exam Operations Patterns
 
-- The exam creation wizard uses five numbered steps, a single primary action per
-  step, and a read-only confirmation summary before the roster is frozen.
+- Owner exam creation uses four numbered client-local steps: batch and schedule,
+  subjects/marks/teachers, student inclusion, and read-only review. Nothing is
+  persisted until the final atomic create action; a complete exam is immediately
+  `scheduled`, with one batch and a frozen included/excluded roster.
+- The owner exam workspace keeps Overview, Marks, Review and publish, and Results
+  as URL-synced tabs on one route. Selecting the exam is sufficient context for
+  marks entry; subject navigation stays inside the Marks tab.
+- Required date, start time, and duration surface the exam in the weekly owner
+  Schedule. Same-batch class or exam overlap is an inline blocking validation.
 - Dense marks tables keep the student identity column sticky, use compact 40px
   desktop cells, show a visible focus ring, and retain 44px toolbar and mobile
   controls. Mobile may scroll the table horizontally; never compress Bangla
