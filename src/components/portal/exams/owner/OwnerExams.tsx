@@ -184,7 +184,7 @@ export function OwnerExamListPage({ locale }: { locale: Locale }) {
               <Skeleton className="h-12 w-full" />
             </div>
           ) : result.page.length ? (
-            <div className="overflow-x-auto rounded-[var(--radius-md)] border border-[var(--border)]">
+            <><div className="hidden overflow-x-auto rounded-[var(--radius-md)] border border-[var(--border)] md:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -268,7 +268,7 @@ export function OwnerExamListPage({ locale }: { locale: Locale }) {
                   ))}
                 </TableBody>
               </Table>
-            </div>
+            </div><div className="grid gap-3 md:hidden">{result.page.map(({ exam, batch, course }) => <Link key={exam._id} href={`/${locale}/owner/exams/${exam._id}`} className="flex min-h-44 flex-col gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--canvas)] p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"><span className="flex items-start justify-between gap-3"><span className="min-w-0"><strong className="block truncate">{locale === "bn" ? exam.nameBn : exam.nameEn}</strong><span className="font-mono text-xs text-muted-foreground">{exam.examNumber} · {exam.subjectCount ?? 0} {locale === "bn" ? "বিষয়" : "subjects"}</span></span><Badge variant={exam.status === "published" ? "info" : exam.status === "ready_for_review" ? "warning" : "neutral"}>{exam.status.replaceAll("_", " ")}</Badge></span><span className="grid grid-cols-2 gap-3 text-sm"><span><span className="block text-xs text-muted-foreground">{locale === "bn" ? "ব্যাচ" : "Batch"}</span>{batch ? (locale === "bn" ? batch.nameBn : batch.nameEn) : "—"}<span className="block text-xs text-muted-foreground">{course ? (locale === "bn" ? course.nameBn : course.nameEn) : ""}</span></span><span><span className="block text-xs text-muted-foreground">{locale === "bn" ? "সময়" : "Schedule"}</span>{exam.examDate}<span className="block text-xs text-muted-foreground">{formatMinutes(exam.startsAtMinutes)}–{formatMinutes(exam.endsAtMinutes)}</span></span></span><span className="mt-auto flex items-center justify-end gap-1 border-t border-[var(--border-muted)] pt-3 text-sm font-medium">{locale === "bn" ? "খুলুন" : "Open"}<ArrowRight /></span></Link>)}</div></>
           ) : (
             <EmptyState
               title={locale === "bn" ? "কোনো পরীক্ষা নেই" : "No exams yet"}

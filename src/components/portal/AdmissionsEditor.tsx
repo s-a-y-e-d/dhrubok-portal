@@ -186,7 +186,8 @@ export function AdmissionsEditor({ locale }: { locale: "bn" | "en" }) {
         </CardHeader>
         <CardContent className="px-0 pb-0">
           {applications.page.length ? (
-            <Table>
+            <>
+            <div className="hidden md:block"><Table>
               <TableHeader><TableRow><TableHead>{bn ? "আবেদনকারী" : "Applicant"}</TableHead><TableHead>{bn ? "অভিভাবক" : "Guardian"}</TableHead><TableHead>{bn ? "পছন্দ" : "Requested"}</TableHead><TableHead>{bn ? "জমা হয়েছে" : "Submitted"}</TableHead><TableHead>{bn ? "অবস্থা" : "Status"}</TableHead></TableRow></TableHeader>
               <TableBody>
                 {applications.page.map((application) => (
@@ -206,7 +207,28 @@ export function AdmissionsEditor({ locale }: { locale: "bn" | "en" }) {
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+            </Table></div>
+            <div className="grid gap-3 px-4 pb-4 md:hidden">
+              {applications.page.map((application) => (
+                <button
+                  key={application.applicationId}
+                  type="button"
+                  className="flex min-h-44 w-full flex-col gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--canvas)] p-4 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
+                  onClick={() => choose(application.applicationId)}
+                >
+                  <span className="flex w-full items-start justify-between gap-3">
+                    <span className="min-w-0"><strong className="block truncate">{application.studentDisplayName}</strong><span className="mt-1 block font-mono text-xs text-muted-foreground">{application.applicationNumber}</span></span>
+                    <Badge variant={application.status === "new" ? "info" : "warning"}>{application.status === "new" ? (bn ? "নতুন" : "New") : (bn ? "পর্যালোচনায়" : "Under review")}</Badge>
+                  </span>
+                  <span className="grid w-full grid-cols-2 gap-3 text-sm">
+                    <span><span className="block text-xs text-muted-foreground">{bn ? "অভিভাবক" : "Guardian"}</span>{application.guardianName}<span className="block text-xs text-muted-foreground">{application.guardianPhone}</span></span>
+                    <span><span className="block text-xs text-muted-foreground">{bn ? "পছন্দ" : "Requested"}</span>{courseNames.get(application.requestedCourseId) ?? "—"}<span className="block text-xs text-muted-foreground">{batchNames.get(application.requestedBatchId) ?? "—"}</span></span>
+                  </span>
+                  <span className="w-full border-t border-[var(--border-muted)] pt-3 text-xs text-muted-foreground">{dateFormatter.format(application.submittedAt)}</span>
+                </button>
+              ))}
+            </div>
+            </>
           ) : (
             <div className="p-6"><EmptyState title={bn ? "এই অবস্থায় কোনো আবেদন নেই" : "No applications in this state"} description={bn ? "অন্য অবস্থা নির্বাচন করে দেখুন।" : "Try selecting the other status."} /></div>
           )}
@@ -214,7 +236,7 @@ export function AdmissionsEditor({ locale }: { locale: "bn" | "en" }) {
       </Card>
 
       <Sheet open={Boolean(selectedId)} onOpenChange={(open) => { if (!open) { setSelectedId(""); setDecision(null); } }}>
-        <SheetContent className="w-[min(760px,calc(100%-24px))] gap-6 p-0">
+        <SheetContent className="w-full gap-6 p-0 sm:w-[min(760px,calc(100%-24px))]">
           {selectedId && detail === undefined ? (
             <div className="p-6"><SheetTitle className="sr-only">{bn ? "আবেদন লোড হচ্ছে" : "Loading application"}</SheetTitle><PortalPageState state="loading" locale={locale} /></div>
           ) : detail ? (

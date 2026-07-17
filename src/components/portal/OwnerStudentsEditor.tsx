@@ -153,7 +153,7 @@ export function OwnerStudentsEditor({ locale }: { locale: "bn" | "en" }) {
         </div>
 
         <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--canvas)]">
-          <Table>
+          <div className="hidden md:block"><Table>
             <TableHeader><TableRow>
               <TableHead>{bn ? "শিক্ষার্থী" : "Student"}</TableHead><TableHead>{bn ? "আইডি" : "ID"}</TableHead>
               <TableHead>{bn ? "কোর্স" : "Course"}</TableHead><TableHead>{bn ? "ব্যাচ" : "Batch"}</TableHead>
@@ -169,7 +169,13 @@ export function OwnerStudentsEditor({ locale }: { locale: "bn" | "en" }) {
               <TableCell><Badge variant={student.status === "active" ? "success" : "neutral"}>{student.status === "active" ? (bn ? "সক্রিয়" : "Active") : (bn ? "নিষ্ক্রিয়" : "Inactive")}</Badge></TableCell>
               <TableCell><Button size="icon" variant="ghost" aria-label={bn ? `${student.displayName} দেখুন` : `View ${student.displayName}`} onClick={(event) => { event.stopPropagation(); setSelectedId(student.studentId); }}><MoreHorizontal /></Button></TableCell>
             </TableRow>)}</TableBody>
-          </Table>
+          </Table></div>
+          <div className="grid gap-3 p-4 md:hidden">
+            {filtered.map((student) => <button key={student.studentId} type="button" className="flex min-h-44 w-full flex-col gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--canvas)] p-4 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]" onClick={() => setSelectedId(student.studentId)}>
+              <span className="flex w-full items-start gap-3"><span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-full bg-[var(--canvas-subtle)] font-medium">{student.photoUrl ? <img className="size-full object-cover" src={student.photoUrl} alt="" /> : student.displayName.charAt(0)}</span><span className="min-w-0 flex-1"><strong className="block truncate">{student.displayName}</strong><span className="font-mono text-xs text-muted-foreground">{student.studentNumber}</span></span><Badge variant={student.status === "active" ? "success" : "neutral"}>{student.status === "active" ? (bn ? "সক্রিয়" : "Active") : (bn ? "নিষ্ক্রিয়" : "Inactive")}</Badge></span>
+              <span className="grid w-full grid-cols-2 gap-3 text-sm"><span><span className="block text-xs text-muted-foreground">{bn ? "কোর্স" : "Course"}</span>{bn ? student.courseNameBn : student.courseNameEn || "—"}</span><span><span className="block text-xs text-muted-foreground">{bn ? "ব্যাচ" : "Batch"}</span>{bn ? student.batchNameBn : student.batchNameEn || "—"}</span><span><span className="block text-xs text-muted-foreground">{bn ? "শ্রেণি" : "Class"}</span>{student.currentClass}</span><span><span className="block text-xs text-muted-foreground">{bn ? "বকেয়া" : "Outstanding"}</span><span className="font-mono tabular-nums">{money(student.outstandingMinor, locale)}</span></span></span>
+            </button>)}
+          </div>
           {filtered.length === 0 && <p className="p-8 text-center text-sm text-[var(--ink-mute)]">{bn ? "কোনো শিক্ষার্থী পাওয়া যায়নি।" : "No students found."}</p>}
         </div>
       </section>

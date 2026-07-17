@@ -981,7 +981,7 @@ export function CoursesWorkspace({ locale }: { locale: Locale }) {
           </div>
         </div>
         {courses.results.length ? (
-          <Table>
+          <><div className="hidden md:block"><Table>
             <TableHeader>
               <TableRow>
                 <TableHead>{bn ? "কোর্স" : "Course"}</TableHead>
@@ -1038,7 +1038,7 @@ export function CoursesWorkspace({ locale }: { locale: Locale }) {
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+          </Table></div><div className="grid gap-3 md:hidden">{courses.results.map((course) => <button key={course.courseId} type="button" onClick={() => setSelectedId(course.courseId)} className="flex min-h-40 w-full flex-col gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--canvas)] p-4 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"><span className="flex w-full items-start justify-between gap-3"><span><strong className="block">{bn ? course.nameBn : course.nameEn}</strong><span className="font-mono text-xs text-[var(--ink-mute)]">{course.code}</span></span><Badge variant={course.isPublic ? "info" : "neutral"}>{course.isPublic ? (bn ? "প্রকাশিত" : "Published") : (bn ? "প্রাইভেট" : "Private")}</Badge></span><span className="grid w-full grid-cols-2 gap-3 text-sm"><span><span className="block text-xs text-[var(--ink-mute)]">{bn ? "বিষয়" : "Subjects"}</span>{course.subjectCount}</span><span><span className="block text-xs text-[var(--ink-mute)]">{bn ? "শিক্ষক" : "Teachers"}</span>{course.teacherCount}</span><span><span className="block text-xs text-[var(--ink-mute)]">{bn ? "ব্যাচ" : "Batches"}</span>{course.activeBatchCount}</span><span><span className="block text-xs text-[var(--ink-mute)]">{bn ? "শিক্ষার্থী" : "Students"}</span>{course.activeEnrolmentCount}</span></span></button>)}</div></>
         ) : (
           <div className="grid place-items-center gap-2 py-16 text-center">
             <BookOpen className="size-8 text-[var(--ink-faint)]" />

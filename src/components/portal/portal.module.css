@@ -579,8 +579,11 @@
     display: none; /* Mobile topbar acts as header */
   }
   .pageContentArea {
-    padding: 16px 16px calc(56px + 24px + env(safe-area-inset-bottom));
+    min-width: 0;
+    padding: 16px 12px calc(56px + 24px + env(safe-area-inset-bottom));
+    overflow-x: hidden;
   }
+  .mobileTitle { max-width: min(62vw, 260px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 
 /* Tablet layout: collapse sidebar to icon-only (64px) */

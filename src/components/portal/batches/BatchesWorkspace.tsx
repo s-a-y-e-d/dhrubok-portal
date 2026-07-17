@@ -913,7 +913,7 @@ export function BatchesWorkspace({ locale }: { locale: Locale }) {
           </Select>
         </div>
         {batches.results.length ? (
-          <Table>
+          <><div className="hidden md:block"><Table>
             <TableHeader>
               <TableRow>
                 <TableHead>{bn ? "ব্যাচ" : "Batch"}</TableHead>
@@ -976,7 +976,7 @@ export function BatchesWorkspace({ locale }: { locale: Locale }) {
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+          </Table></div><div className="grid gap-3 md:hidden">{batches.results.map((batch) => <button key={batch.batchId} type="button" onClick={() => setSelectedId(batch.batchId)} className="flex min-h-40 w-full flex-col gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--canvas)] p-4 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"><span className="flex w-full items-start justify-between gap-3"><span><strong className="block">{bn ? batch.nameBn : batch.nameEn}</strong><span className="font-mono text-xs text-[var(--ink-mute)]">{batch.code}</span></span><Badge variant={batch.status === "active" ? "success" : "neutral"}>{batchStatusLabel(batch.status, bn)}</Badge></span><span className="text-sm"><span className="block text-xs text-[var(--ink-mute)]">{bn ? "কোর্স" : "Course"}</span>{bn ? batch.courseNameBn : batch.courseNameEn}</span><span className="grid w-full grid-cols-3 gap-3 text-sm"><span><span className="block text-xs text-[var(--ink-mute)]">{bn ? "ক্লাস" : "Classes"}</span>{batch.routineCount}</span><span><span className="block text-xs text-[var(--ink-mute)]">{bn ? "শিক্ষক" : "Teachers"}</span>{batch.teacherCount}</span><span><span className="block text-xs text-[var(--ink-mute)]">{bn ? "শিক্ষার্থী" : "Students"}</span>{batch.activeEnrolmentCount}</span></span></button>)}</div></>
         ) : (
           <EmptyState
             title={bn ? "কোনো ব্যাচ নেই" : "No batches found"}

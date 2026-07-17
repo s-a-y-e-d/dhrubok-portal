@@ -387,7 +387,7 @@ export function TeachersWorkspace({ locale }: { locale: Locale }) {
           </Select>
         </div>
         {teachers.results.length ? (
-          <Table>
+          <><div className="hidden md:block"><Table>
             <TableHeader>
               <TableRow>
                 <TableHead>{bn ? "শিক্ষক" : "Teacher"}</TableHead>
@@ -465,7 +465,7 @@ export function TeachersWorkspace({ locale }: { locale: Locale }) {
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+          </Table></div><div className="grid gap-3 md:hidden">{teachers.results.map((teacher) => <button key={teacher.teacherId} type="button" onClick={() => setSelectedId(teacher.teacherId)} className="flex min-h-44 w-full flex-col gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--canvas)] p-4 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"><span className="flex w-full items-start justify-between gap-3"><span className="min-w-0"><strong className="block truncate">{teacher.displayName}</strong><span className="font-mono text-xs text-[var(--ink-mute)]">{teacher.employeeCode}</span></span><Badge variant={teacher.status === "active" ? "success" : "neutral"}>{teacherStatusLabel(teacher.status, bn)}</Badge></span><span className="min-w-0 text-sm"><span className="block truncate">{teacher.loginEmail}</span><span className="text-xs text-[var(--ink-mute)]">{teacher.phone}</span></span><span className="grid w-full grid-cols-3 gap-3 text-sm"><span><span className="block text-xs text-[var(--ink-mute)]">{bn ? "বিষয়" : "Subjects"}</span>{teacher.courseSubjectCount}</span><span><span className="block text-xs text-[var(--ink-mute)]">{bn ? "ব্যাচ" : "Batches"}</span>{teacher.activeBatchCount}</span><span><span className="block text-xs text-[var(--ink-mute)]">{bn ? "ক্লাস" : "Classes"}</span>{teacher.weeklyClassCount}</span></span></button>)}</div></>
         ) : (
           <EmptyState
             title={bn ? "কোনো শিক্ষক নেই" : "No teachers found"}
