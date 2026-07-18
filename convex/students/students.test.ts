@@ -15,6 +15,9 @@ const modules = Object.fromEntries(
 const updateMyProfile = makeFunctionReference<"mutation">("students/self:updateMyProfile");
 const requestSensitiveChange = makeFunctionReference<"mutation">("students/self:requestSensitiveChange");
 const transferEnrolment = makeFunctionReference<"mutation">("students/owner:transferEnrolment");
+const addEnrolment = makeFunctionReference<"mutation">("students/owner:addEnrolment");
+const endEnrolment = makeFunctionReference<"mutation">("students/owner:endEnrolment");
+const updateMonthlyFee = makeFunctionReference<"mutation">("students/owner:updateMonthlyFee");
 
 async function seedStudent(t: ReturnType<typeof convexTest>) {
   return await t.run(async (ctx) => {
@@ -127,14 +130,40 @@ describe("student enrolment management", () => {
       const secondCourseId = await ctx.db.insert("courses", { code: "C-2", slug: "course-2", nameBn: "কোর্স ২", nameEn: "Course 2", ...courseFields });
       const batchFields = { startDate: "2026-07-01", status: "active" as const, admissionOpen: true, isPublic: false, publicSortOrder: 0, createdAt: now, updatedAt: now };
       const firstBatchId = await ctx.db.insert("batches", { courseId: firstCourseId, code: "B-1", slug: "batch-1", nameBn: "ব্যাচ ১", nameEn: "Batch 1", ...batchFields });
-      const secondBatchId = await ctx.db.insert("batches", { courseId: secondCourseId, code: "B-2", slug: "batch-2", nameBn: "ব্যাচ ২", nameEn: "Batch 2", ...batchFields });
+      const secondBatchId = await ctx.db.insert("batches", { courseId: firstCourseId, code: "B-2", slug: "batch-2", nameBn: "ব্যাচ ২", nameEn: "Batch 2", ...batchFields });
+      const secondCourseBatchId = await ctx.db.insert("batches", { courseId: secondCourseId, code: "B-3", slug: "batch-3", nameBn: "ব্যাচ ৩", nameEn: "Batch 3", ...batchFields });
       const oldEnrolmentId = await ctx.db.insert("enrolments", { studentId: seeded.studentId, courseId: firstCourseId, batchId: firstBatchId, enrolledOn: "2026-07-11", status: "active", agreedMonthlyAmountMinor: 75_000, createdAt: now, updatedAt: now, createdByAccountId: owner._id });
-      return { secondCourseId, secondBatchId, oldEnrolmentId };
+      return { firstCourseId, secondCourseId, secondBatchId, secondCourseBatchId, oldEnrolmentId };
     });
     const owner = t.withIdentity({ tokenIdentifier: "clerk|owner", email: "owner@example.com", emailVerified: true });
-    const newEnrolmentId = await owner.mutation(transferEnrolment, { studentId: seeded.studentId, courseId: ids.secondCourseId, batchId: ids.secondBatchId, agreedMonthlyAmountMinor: 90_000, effectiveDate: "2026-07-16" });
+    const newEnrolmentId = await owner.mutation(transferEnrolment, { enrolmentId: ids.oldEnrolmentId, batchId: ids.secondBatchId, agreedMonthlyAmountMinor: 90_000, effectiveDate: "2026-07-16" });
     const [oldEnrolment, newEnrolment] = await t.run(async (ctx) => Promise.all([ctx.db.get("enrolments", ids.oldEnrolmentId), ctx.db.get("enrolments", newEnrolmentId)]));
     expect(oldEnrolment).toMatchObject({ status: "transferred", endedOn: "2026-07-16" });
-    expect(newEnrolment).toMatchObject({ status: "active", courseId: ids.secondCourseId, batchId: ids.secondBatchId, agreedMonthlyAmountMinor: 90_000, enrolledOn: "2026-07-16" });
+    expect(newEnrolment).toMatchObject({ status: "active", courseId: ids.firstCourseId, batchId: ids.secondBatchId, agreedMonthlyAmountMinor: 90_000, enrolledOn: "2026-07-16" });
+    const added = await owner.mutation(addEnrolment, { studentId: seeded.studentId, courseId: ids.secondCourseId, batchId: ids.secondCourseBatchId, agreedMonthlyAmountMinor: 80_000, admissionFeeMinor: 0, effectiveDate: "2026-07-17" });
+    const active = await t.run(async (ctx) => ctx.db.query("enrolments").withIndex("by_studentId_and_status", (q) => q.eq("studentId", seeded.studentId).eq("status", "active")).take(10));
+    expect(active).toHaveLength(2);
+    expect(active.find((row) => row._id === added.enrolmentId)).toMatchObject({ courseId: ids.secondCourseId, batchId: ids.secondCourseBatchId });
+
+    await t.run(async (ctx) => {
+      const now = Date.now();
+      for (const periodKey of ["2026-08", "2026-09"]) {
+        await ctx.db.insert("monthlyFeeRecords", {
+          studentId: seeded.studentId,
+          enrolmentId: added.enrolmentId,
+          courseId: ids.secondCourseId,
+          batchId: ids.secondCourseBatchId,
+          periodKey,
+          dueDate: `${periodKey}-01`,
+          amountMinor: 80_000,
+          status: "unpaid",
+          createdAt: now,
+        });
+      }
+    });
+    await owner.mutation(endEnrolment, { enrolmentId: added.enrolmentId, status: "withdrawn", effectiveDate: "2026-07-20" });
+    const remainingPeriods = await t.run(async (ctx) => (await ctx.db.query("monthlyFeeRecords").withIndex("by_enrolmentId_and_periodKey", (q) => q.eq("enrolmentId", added.enrolmentId)).take(10)).map((row) => row.periodKey));
+    expect(remainingPeriods).toEqual(["2026-07"]);
+    await expect(owner.mutation(updateMonthlyFee, { enrolmentId: added.enrolmentId, agreedMonthlyAmountMinor: 95_000 })).rejects.toThrow("Active enrolment not found");
   });
 });

@@ -87,6 +87,7 @@ type CollectionItemInput = {
   amountMinor: number;
   periodKey?: string;
   monthlyFeeRecordId?: Id<"monthlyFeeRecords">;
+  enrolmentId?: Id<"enrolments">;
 };
 
 export async function postCollection(
@@ -104,18 +105,12 @@ export async function postCollection(
     throw new Error("A collection must contain between 1 and 24 items");
   const student = await ctx.db.get("students", args.studentId);
   if (!student) throw new Error("Student not found");
-  const enrolment = await ctx.db
+  const defaultEnrolment = await ctx.db
     .query("enrolments")
     .withIndex("by_studentId_and_status", (q) =>
       q.eq("studentId", student._id).eq("status", "active"),
     )
     .first();
-  const course = enrolment
-    ? await ctx.db.get("courses", enrolment.courseId)
-    : null;
-  const batch = enrolment
-    ? await ctx.db.get("batches", enrolment.batchId)
-    : null;
   const amountMinor = args.items.reduce((sum, item) => {
     assertMinorUnits(item.amountMinor);
     if (item.amountMinor <= 0)
@@ -144,6 +139,24 @@ export async function postCollection(
     createdAt,
   });
   for (const item of args.items) {
+    const monthlyFeeRecord = item.monthlyFeeRecordId
+      ? await ctx.db.get("monthlyFeeRecords", item.monthlyFeeRecordId)
+      : null;
+    if (monthlyFeeRecord && monthlyFeeRecord.studentId !== student._id)
+      throw new Error("Collection item does not belong to this student");
+    const enrolment = item.enrolmentId
+      ? await ctx.db.get("enrolments", item.enrolmentId)
+      : monthlyFeeRecord
+        ? await ctx.db.get("enrolments", monthlyFeeRecord.enrolmentId)
+        : defaultEnrolment;
+    if (item.enrolmentId && (!enrolment || enrolment.studentId !== student._id))
+      throw new Error("Collection item enrolment does not belong to this student");
+    const courseId = monthlyFeeRecord?.courseId ?? enrolment?.courseId;
+    const batchId = monthlyFeeRecord?.batchId ?? enrolment?.batchId;
+    const [course, batch] = await Promise.all([
+      courseId ? ctx.db.get("courses", courseId) : null,
+      batchId ? ctx.db.get("batches", batchId) : null,
+    ]);
     await ctx.db.insert("feeCollectionItems", {
       collectionId,
       studentId: student._id,

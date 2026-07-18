@@ -11,6 +11,7 @@ import { scheduleCourseSnapshot } from "../academics/snapshotHooks";
 import { optionalText, requiredText } from "../admissions/model";
 import { applySensitiveField, sensitiveFieldValidator, studentSearchText } from "./model";
 import { assertPeriodKey, materializeEnrolmentMonths } from "../fees/model";
+import { postCollection } from "../fees/model";
 
 const studentListItemValidator = v.object({
   studentId: v.id("students"),
@@ -23,13 +24,11 @@ const studentListItemValidator = v.object({
   status: v.union(v.literal("active"), v.literal("inactive")),
   photoUrl: v.union(v.string(), v.null()),
   currentClass: v.string(),
-  courseId: v.union(v.id("courses"), v.null()),
-  courseNameBn: v.union(v.string(), v.null()),
-  courseNameEn: v.union(v.string(), v.null()),
-  batchId: v.union(v.id("batches"), v.null()),
-  batchNameBn: v.union(v.string(), v.null()),
-  batchNameEn: v.union(v.string(), v.null()),
-  agreedMonthlyAmountMinor: v.union(v.number(), v.null()),
+  activeEnrolments: v.array(v.object({
+    enrolmentId: v.id("enrolments"), courseId: v.id("courses"), batchId: v.id("batches"),
+    courseNameBn: v.string(), courseNameEn: v.string(), batchNameBn: v.string(), batchNameEn: v.string(),
+    agreedMonthlyAmountMinor: v.union(v.number(), v.null()),
+  })),
   outstandingMinor: v.number(),
 });
 
@@ -95,12 +94,15 @@ export const listStudents = query({
     await requireOwner(ctx);
     const result = await ctx.db.query("students").order("desc").paginate(args.paginationOpts);
     const page = await Promise.all(result.page.map(async (student) => {
-        const activeEnrolment = await ctx.db.query("enrolments")
+        const activeEnrolments = await ctx.db.query("enrolments")
           .withIndex("by_studentId_and_status", (q) => q.eq("studentId", student._id).eq("status", "active"))
-          .first();
-        const [course, batch, summary] = await Promise.all([
-          activeEnrolment ? ctx.db.get("courses", activeEnrolment.courseId) : null,
-          activeEnrolment ? ctx.db.get("batches", activeEnrolment.batchId) : null,
+          .take(100);
+        const [enrolmentRows, summary] = await Promise.all([
+          Promise.all(activeEnrolments.map(async (enrolment) => {
+            const [course, batch] = await Promise.all([ctx.db.get("courses", enrolment.courseId), ctx.db.get("batches", enrolment.batchId)]);
+            if (!course || !batch) throw new Error("Enrolment course or batch not found");
+            return { enrolmentId: enrolment._id, courseId: course._id, batchId: batch._id, courseNameBn: course.nameBn, courseNameEn: course.nameEn, batchNameBn: batch.nameBn, batchNameEn: batch.nameEn, agreedMonthlyAmountMinor: enrolment.agreedMonthlyAmountMinor ?? null };
+          })),
           ctx.db.query("studentFinancialSummaries").withIndex("by_studentId", (q) => q.eq("studentId", student._id)).unique(),
         ]);
         return {
@@ -108,12 +110,10 @@ export const listStudents = query({
           displayName: student.displayName, loginEmail: student.loginEmail,
           guardianName: student.guardianName, guardianPhone: student.guardianPhone,
           admissionDate: student.admissionDate,
-          status: activeEnrolment ? "active" as const : "inactive" as const,
+          status: activeEnrolments.length ? "active" as const : "inactive" as const,
           photoUrl: student.photoStorageId ? await ctx.storage.getUrl(student.photoStorageId) : null,
           currentClass: student.currentClass,
-          courseId: course?._id ?? null, courseNameBn: course?.nameBn ?? null, courseNameEn: course?.nameEn ?? null,
-          batchId: batch?._id ?? null, batchNameBn: batch?.nameBn ?? null, batchNameEn: batch?.nameEn ?? null,
-          agreedMonthlyAmountMinor: activeEnrolment?.agreedMonthlyAmountMinor ?? null,
+          activeEnrolments: enrolmentRows,
           outstandingMinor: summary?.outstandingMinor ?? 0,
         };
       }));
@@ -271,9 +271,36 @@ export const updateStudent = mutation({
   },
 });
 
+export const addEnrolment = mutation({
+  args: { studentId: v.id("students"), courseId: v.id("courses"), batchId: v.id("batches"), agreedMonthlyAmountMinor: v.number(), effectiveDate: v.string(), firstBillingMonth: v.optional(v.string()), admissionFeeMinor: v.number() },
+  returns: v.object({ enrolmentId: v.id("enrolments"), receiptNumber: v.union(v.string(), v.null()) }),
+  handler: async (ctx, args) => {
+    const { account } = await requireOwner(ctx);
+    assertLocalDate(args.effectiveDate); assertMinorUnits(args.agreedMonthlyAmountMinor, "agreedMonthlyAmountMinor"); assertMinorUnits(args.admissionFeeMinor, "admissionFeeMinor");
+    if (args.agreedMonthlyAmountMinor <= 0) throw new Error("Monthly fee must be greater than zero");
+    const firstBillingMonth = args.firstBillingMonth ?? args.effectiveDate.slice(0, 7); assertPeriodKey(firstBillingMonth);
+    if (firstBillingMonth < args.effectiveDate.slice(0, 7)) throw new Error("First billing month cannot be before the enrolment start");
+    const [student, course, batch, duplicate] = await Promise.all([
+      ctx.db.get("students", args.studentId), ctx.db.get("courses", args.courseId), ctx.db.get("batches", args.batchId),
+      ctx.db.query("enrolments").withIndex("by_studentId_and_status", q => q.eq("studentId", args.studentId).eq("status", "active")).take(100),
+    ]);
+    if (!student) throw new Error("Student not found"); if (!course || course.status !== "active") throw new Error("Choose an active course");
+    if (!batch || batch.status !== "active" || batch.courseId !== course._id) throw new Error("Choose an active batch from the selected course");
+    if (duplicate.some(row => row.courseId === course._id)) throw new Error("Student is already actively enrolled in this course");
+    const now = Date.now();
+    const enrolmentId = await ctx.db.insert("enrolments", { studentId: student._id, courseId: course._id, batchId: batch._id, enrolledOn: args.effectiveDate, status: "active", agreedMonthlyAmountMinor: args.agreedMonthlyAmountMinor, firstBillingMonth, createdAt: now, updatedAt: now, createdByAccountId: account._id });
+    const enrolment = await ctx.db.get("enrolments", enrolmentId); if (!enrolment) throw new Error("Enrolment was not created");
+    await materializeEnrolmentMonths(ctx, enrolment, dhakaDate().slice(0, 7));
+    const collection = args.admissionFeeMinor > 0 ? await postCollection(ctx, { studentId: student._id, collectionType: "admission", collectedOn: args.effectiveDate, collectedByAccountId: account._id, items: [{ itemType: "admission", description: `Admission Fee - ${course.nameEn}`, amountMinor: args.admissionFeeMinor, enrolmentId }] }) : null;
+    await ctx.db.patch("students", student._id, { status: "active", updatedAt: now, updatedByAccountId: account._id });
+    await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: "student.enrolment_added", entityType: "student", entityId: student._id, summary: "Student enrolled in an additional course", metadata: { enrolmentId, courseId: course._id, batchId: batch._id } });
+    await scheduleCourseSnapshot(ctx, course._id); return { enrolmentId, receiptNumber: collection?.receiptNumber ?? null };
+  },
+});
+
 export const transferEnrolment = mutation({
   args: {
-    studentId: v.id("students"), courseId: v.id("courses"), batchId: v.id("batches"),
+    enrolmentId: v.id("enrolments"), batchId: v.id("batches"),
     agreedMonthlyAmountMinor: v.number(), effectiveDate: v.string(), firstBillingMonth: v.optional(v.string()),
   },
   returns: v.id("enrolments"),
@@ -285,20 +312,23 @@ export const transferEnrolment = mutation({
     const firstBillingMonth = args.firstBillingMonth ?? args.effectiveDate.slice(0, 7);
     assertPeriodKey(firstBillingMonth);
     if (firstBillingMonth < args.effectiveDate.slice(0, 7)) throw new Error("First billing month cannot be before the enrolment start");
-    const [student, course, batch, activeEnrolments] = await Promise.all([
-      ctx.db.get("students", args.studentId), ctx.db.get("courses", args.courseId), ctx.db.get("batches", args.batchId),
-      ctx.db.query("enrolments").withIndex("by_studentId_and_status", (q) => q.eq("studentId", args.studentId).eq("status", "active")).take(2),
-    ]);
+    const current = await ctx.db.get("enrolments", args.enrolmentId); if (!current || current.status !== "active") throw new Error("Active enrolment not found");
+    const [student, course, batch] = await Promise.all([ctx.db.get("students", current.studentId), ctx.db.get("courses", current.courseId), ctx.db.get("batches", args.batchId)]);
     if (!student) throw new Error("Student not found");
     if (!course || course.status !== "active") throw new Error("Choose an active course");
-    if (!batch || batch.status !== "active" || batch.courseId !== course._id) throw new Error("Choose an active batch from the selected course");
-    if (activeEnrolments.length > 1) throw new Error("Student has multiple active enrolments; resolve the data before transferring");
-    const current = activeEnrolments[0];
-    if (current && current.courseId === course._id && current.batchId === batch._id) throw new Error("Choose a different course or batch");
+    if (!batch || batch.status !== "active" || batch.courseId !== course._id) throw new Error("Choose an active batch from the enrolment course");
+    if (current.batchId === batch._id) throw new Error("Choose a different batch");
+    const finalPeriod = args.effectiveDate.slice(0, 7);
+    const laterFees = await ctx.db.query("monthlyFeeRecords")
+      .withIndex("by_enrolmentId_and_periodKey", (q) => q.eq("enrolmentId", current._id).gt("periodKey", finalPeriod))
+      .take(240);
+    if (laterFees.some((record) => record.status === "paid"))
+      throw new Error("Void later monthly fee collections before transferring this enrolment");
+    for (const record of laterFees) await ctx.db.delete(record._id);
     const now = Date.now();
-    if (current) await ctx.db.patch("enrolments", current._id, { status: "transferred", endedOn: args.effectiveDate, updatedAt: now });
+    await ctx.db.patch("enrolments", current._id, { status: "transferred", endedOn: args.effectiveDate, updatedAt: now });
     const enrolmentId = await ctx.db.insert("enrolments", {
-      studentId: student._id, courseId: course._id, batchId: batch._id, enrolledOn: args.effectiveDate,
+      studentId: student._id, courseId: current.courseId, batchId: batch._id, enrolledOn: args.effectiveDate,
       status: "active", agreedMonthlyAmountMinor: args.agreedMonthlyAmountMinor, firstBillingMonth,
       createdAt: now, updatedAt: now, createdByAccountId: account._id,
     });
@@ -308,23 +338,47 @@ export const transferEnrolment = mutation({
     await writeAudit(ctx, {
       actorAccountId: account._id, actorRole: "owner", action: "student.enrolment_transferred",
       entityType: "student", entityId: student._id, summary: "Student course and batch changed",
-      metadata: { previousEnrolmentId: current?._id, enrolmentId, courseId: course._id, batchId: batch._id, effectiveDate: args.effectiveDate, agreedMonthlyAmountMinor: args.agreedMonthlyAmountMinor },
+      metadata: { previousEnrolmentId: current._id, enrolmentId, courseId: course._id, batchId: batch._id, effectiveDate: args.effectiveDate, agreedMonthlyAmountMinor: args.agreedMonthlyAmountMinor },
     });
-    if (current) await scheduleCourseSnapshot(ctx, current.courseId);
     await scheduleCourseSnapshot(ctx, course._id);
     return enrolmentId;
   },
 });
 
+export const endEnrolment = mutation({
+  args: { enrolmentId: v.id("enrolments"), status: v.union(v.literal("completed"), v.literal("withdrawn")), effectiveDate: v.string(), note: v.optional(v.string()) }, returns: v.null(),
+  handler: async (ctx, args) => {
+    const { account } = await requireOwner(ctx);
+    assertLocalDate(args.effectiveDate);
+    const enrolment = await ctx.db.get("enrolments", args.enrolmentId);
+    if (!enrolment || enrolment.status !== "active") throw new Error("Active enrolment not found");
+    if (args.effectiveDate < enrolment.enrolledOn) throw new Error("End date cannot be before enrolment date");
+    const finalPeriod = args.effectiveDate.slice(0, 7);
+    const laterFees = await ctx.db.query("monthlyFeeRecords")
+      .withIndex("by_enrolmentId_and_periodKey", (q) => q.eq("enrolmentId", enrolment._id).gt("periodKey", finalPeriod))
+      .take(240);
+    if (laterFees.some((record) => record.status === "paid"))
+      throw new Error("Void later monthly fee collections before ending this enrolment");
+    for (const record of laterFees) await ctx.db.delete(record._id);
+    const now = Date.now();
+    await ctx.db.patch("enrolments", enrolment._id, { status: args.status, endedOn: args.effectiveDate, updatedAt: now });
+    const remaining = await ctx.db.query("enrolments").withIndex("by_studentId_and_status", q => q.eq("studentId", enrolment.studentId).eq("status", "active")).take(1);
+    if (!remaining.length) await ctx.db.patch("students", enrolment.studentId, { status: "inactive", updatedAt: now, updatedByAccountId: account._id });
+    await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: `student.enrolment_${args.status}`, entityType: "enrolment", entityId: enrolment._id, summary: `Student enrolment marked ${args.status}`, metadata: args.note ? { note: args.note } : undefined });
+    await scheduleCourseSnapshot(ctx, enrolment.courseId);
+    return null;
+  },
+});
+
 export const updateMonthlyFee = mutation({
-  args: { studentId: v.id("students"), agreedMonthlyAmountMinor: v.number() },
+  args: { enrolmentId: v.id("enrolments"), agreedMonthlyAmountMinor: v.number() },
   returns: v.null(),
   handler: async (ctx, args) => {
     const { account } = await requireOwner(ctx);
     assertMinorUnits(args.agreedMonthlyAmountMinor, "agreedMonthlyAmountMinor");
     if (args.agreedMonthlyAmountMinor <= 0) throw new Error("Monthly fee must be greater than zero");
-    const enrolment = await ctx.db.query("enrolments").withIndex("by_studentId_and_status", (q) => q.eq("studentId", args.studentId).eq("status", "active")).first();
-    if (!enrolment) throw new Error("Active enrolment not found");
+    const enrolment = await ctx.db.get("enrolments", args.enrolmentId);
+    if (!enrolment || enrolment.status !== "active") throw new Error("Active enrolment not found");
     await ctx.db.patch(enrolment._id, { agreedMonthlyAmountMinor: args.agreedMonthlyAmountMinor, updatedAt: Date.now() });
     await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: "student.monthly_fee_updated", entityType: "enrolment", entityId: enrolment._id, summary: "Updated agreed monthly fee", metadata: { amountMinor: args.agreedMonthlyAmountMinor } });
     return null;

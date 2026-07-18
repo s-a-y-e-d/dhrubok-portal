@@ -45,6 +45,8 @@ export function OwnerStudentsEditor({ locale }: { locale: "bn" | "en" }) {
   const update = useMutation(api.students.owner.updateStudent);
   const review = useMutation(api.students.owner.reviewChangeRequest);
   const transfer = useMutation(api.students.owner.transferEnrolment);
+  const addEnrolment = useMutation(api.students.owner.addEnrolment);
+  const endEnrolment = useMutation(api.students.owner.endEnrolment);
   const generatePhotoUploadUrl = useMutation(api.students.owner.generatePhotoUploadUrl);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"all" | "active" | "inactive">("all");
@@ -55,19 +57,26 @@ export function OwnerStudentsEditor({ locale }: { locale: "bn" | "en" }) {
   const [batchId, setBatchId] = useState<Id<"batches"> | "">("");
   const [monthlyFee, setMonthlyFee] = useState("");
   const [effectiveDate, setEffectiveDate] = useState(dhakaToday());
+  const [selectedEnrolmentId, setSelectedEnrolmentId] = useState<Id<"enrolments"> | null>(null);
+  const [admissionFee, setAdmissionFee] = useState("0");
+  const [endTarget, setEndTarget] = useState<Id<"enrolments"> | null>(null);
+  const [endStatus, setEndStatus] = useState<"completed" | "withdrawn">("completed");
+  const [endDate, setEndDate] = useState(dhakaToday());
+  const [endNote, setEndNote] = useState("");
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return (students?.page ?? []).filter((student) => {
       const matchesStatus = status === "all" || student.status === status;
-      const matchesQuery = !needle || [student.displayName, student.studentNumber, student.guardianPhone, student.courseNameBn, student.courseNameEn, student.batchNameBn, student.batchNameEn]
+      const matchesQuery = !needle || [student.displayName, student.studentNumber, student.guardianPhone, ...student.activeEnrolments.flatMap((row) => [row.courseNameBn, row.courseNameEn, row.batchNameBn, row.batchNameEn])]
         .some((value) => value?.toLowerCase().includes(needle));
       return matchesStatus && matchesQuery;
     });
   }, [query, status, students]);
 
   const availableBatches = useMemo(() => scopes?.batches.filter((batch) => batch.courseId === courseId) ?? [], [courseId, scopes]);
-  const activeEnrolment = selected?.enrolments.find((enrolment) => enrolment.status === "active");
+  const activeEnrolments = selected?.enrolments.filter((enrolment) => enrolment.status === "active") ?? [];
+  const editingEnrolment = activeEnrolments.find((row) => row.enrolmentId === selectedEnrolmentId);
 
   async function run(work: () => Promise<unknown>, success: string) {
     setBusy(true); setMessage(null);
@@ -76,23 +85,35 @@ export function OwnerStudentsEditor({ locale }: { locale: "bn" | "en" }) {
     finally { setBusy(false); }
   }
 
-  function openTransfer() {
+  function openAdd() {
     if (!selected) return;
-    const current = selected.enrolments.find((row) => row.status === "active");
-    setCourseId(current?.courseId ?? "");
-    setBatchId(current?.batchId ?? "");
-    setMonthlyFee(current?.agreedMonthlyAmountMinor ? String(current.agreedMonthlyAmountMinor / 100) : "");
+    setSelectedEnrolmentId(null); setCourseId(""); setBatchId(""); setMonthlyFee(""); setAdmissionFee("0");
     setEffectiveDate(dhakaToday());
     setMessage(null);
     setTransferOpen(true);
+  }
+
+  function openTransfer(enrolment: NonNullable<typeof selected>["enrolments"][number]) {
+    setSelectedEnrolmentId(enrolment.enrolmentId); setCourseId(enrolment.courseId); setBatchId(enrolment.batchId);
+    setMonthlyFee(enrolment.agreedMonthlyAmountMinor ? String(enrolment.agreedMonthlyAmountMinor / 100) : "");
+    setEffectiveDate(dhakaToday()); setMessage(null); setTransferOpen(true);
   }
 
   async function submitTransfer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selected || !courseId || !batchId) return;
     const amountMinor = Math.round(Number(monthlyFee) * 100);
-    const ok = await run(() => transfer({ studentId: selected.studentId, courseId, batchId, agreedMonthlyAmountMinor: amountMinor, effectiveDate }), bn ? "কোর্স ও ব্যাচ পরিবর্তন হয়েছে।" : "Course and batch changed.");
+    const ok = await run(() => editingEnrolment
+      ? transfer({ enrolmentId: editingEnrolment.enrolmentId, batchId, agreedMonthlyAmountMinor: amountMinor, effectiveDate })
+      : addEnrolment({ studentId: selected.studentId, courseId, batchId, agreedMonthlyAmountMinor: amountMinor, admissionFeeMinor: Math.round(Number(admissionFee) * 100), effectiveDate }),
+    editingEnrolment ? (bn ? "ব্যাচ পরিবর্তন হয়েছে।" : "Batch changed.") : (bn ? "নতুন কোর্স যোগ হয়েছে।" : "Course added."));
     if (ok) setTransferOpen(false);
+  }
+
+  async function submitEnd(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); if (!endTarget) return;
+    const ok = await run(() => endEnrolment({ enrolmentId: endTarget, status: endStatus, effectiveDate: endDate, note: endNote.trim() || undefined }), bn ? "এনরোলমেন্ট শেষ হয়েছে।" : "Enrolment ended.");
+    if (ok) setEndTarget(null);
   }
 
   async function submitProfile(event: FormEvent<HTMLFormElement>) {
@@ -163,7 +184,7 @@ export function OwnerStudentsEditor({ locale }: { locale: "bn" | "en" }) {
             <TableBody>{filtered.map((student) => <TableRow key={student.studentId} tabIndex={0} role="button" className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--focus)]" onClick={() => setSelectedId(student.studentId)} onKeyDown={(event) => rowKeyDown(event, student.studentId)}>
               <TableCell><div className="flex min-w-44 items-center gap-3"><div className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-full bg-[var(--canvas-subtle)] font-medium">{student.photoUrl ? <img className="size-full object-cover" src={student.photoUrl} alt="" /> : student.displayName.charAt(0)}</div><strong className="font-medium">{student.displayName}</strong></div></TableCell>
               <TableCell className="font-mono text-xs">{student.studentNumber}</TableCell>
-              <TableCell>{bn ? student.courseNameBn : student.courseNameEn || "—"}</TableCell><TableCell>{bn ? student.batchNameBn : student.batchNameEn || "—"}</TableCell>
+              <TableCell>{student.activeEnrolments.map((row) => bn ? row.courseNameBn : row.courseNameEn).join(", ") || "—"}</TableCell><TableCell>{student.activeEnrolments.map((row) => bn ? row.batchNameBn : row.batchNameEn).join(", ") || "—"}</TableCell>
               <TableCell>{student.currentClass}</TableCell><TableCell>{student.guardianPhone}</TableCell>
               <TableCell className="text-end font-mono tabular-nums">{money(student.outstandingMinor, locale)}</TableCell>
               <TableCell><Badge variant={student.status === "active" ? "success" : "neutral"}>{student.status === "active" ? (bn ? "সক্রিয়" : "Active") : (bn ? "নিষ্ক্রিয়" : "Inactive")}</Badge></TableCell>
@@ -173,7 +194,7 @@ export function OwnerStudentsEditor({ locale }: { locale: "bn" | "en" }) {
           <div className="grid gap-3 p-4 md:hidden">
             {filtered.map((student) => <button key={student.studentId} type="button" className="flex min-h-44 w-full flex-col gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--canvas)] p-4 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]" onClick={() => setSelectedId(student.studentId)}>
               <span className="flex w-full items-start gap-3"><span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-full bg-[var(--canvas-subtle)] font-medium">{student.photoUrl ? <img className="size-full object-cover" src={student.photoUrl} alt="" /> : student.displayName.charAt(0)}</span><span className="min-w-0 flex-1"><strong className="block truncate">{student.displayName}</strong><span className="font-mono text-xs text-muted-foreground">{student.studentNumber}</span></span><Badge variant={student.status === "active" ? "success" : "neutral"}>{student.status === "active" ? (bn ? "সক্রিয়" : "Active") : (bn ? "নিষ্ক্রিয়" : "Inactive")}</Badge></span>
-              <span className="grid w-full grid-cols-2 gap-3 text-sm"><span><span className="block text-xs text-muted-foreground">{bn ? "কোর্স" : "Course"}</span>{bn ? student.courseNameBn : student.courseNameEn || "—"}</span><span><span className="block text-xs text-muted-foreground">{bn ? "ব্যাচ" : "Batch"}</span>{bn ? student.batchNameBn : student.batchNameEn || "—"}</span><span><span className="block text-xs text-muted-foreground">{bn ? "শ্রেণি" : "Class"}</span>{student.currentClass}</span><span><span className="block text-xs text-muted-foreground">{bn ? "বকেয়া" : "Outstanding"}</span><span className="font-mono tabular-nums">{money(student.outstandingMinor, locale)}</span></span></span>
+              <span className="grid w-full grid-cols-2 gap-3 text-sm"><span><span className="block text-xs text-muted-foreground">{bn ? "কোর্স" : "Courses"}</span>{student.activeEnrolments.map((row) => bn ? row.courseNameBn : row.courseNameEn).join(", ") || "—"}</span><span><span className="block text-xs text-muted-foreground">{bn ? "ব্যাচ" : "Batches"}</span>{student.activeEnrolments.map((row) => bn ? row.batchNameBn : row.batchNameEn).join(", ") || "—"}</span><span><span className="block text-xs text-muted-foreground">{bn ? "শ্রেণি" : "Class"}</span>{student.currentClass}</span><span><span className="block text-xs text-muted-foreground">{bn ? "বকেয়া" : "Outstanding"}</span><span className="font-mono tabular-nums">{money(student.outstandingMinor, locale)}</span></span></span>
             </button>)}
           </div>
           {filtered.length === 0 && <p className="p-8 text-center text-sm text-[var(--ink-mute)]">{bn ? "কোনো শিক্ষার্থী পাওয়া যায়নি।" : "No students found."}</p>}
@@ -190,7 +211,7 @@ export function OwnerStudentsEditor({ locale }: { locale: "bn" | "en" }) {
           {selected === undefined ? <PortalPageState state="loading" locale={locale} /> : selected ? <form className="flex flex-col gap-6" onSubmit={submitProfile}>
             <div className="flex items-center gap-3"><div className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-full bg-[var(--canvas-subtle)] text-lg font-medium">{selected.photoUrl ? <img className="size-full object-cover" src={selected.photoUrl} alt="" /> : selected.displayName.charAt(0)}</div><p className="text-sm text-[var(--ink-mute)]">{bn ? "শিক্ষার্থীর প্রোফাইল ও ভর্তি তথ্য" : "Student profile and enrolment details"}</p></div>
 
-            <section className="flex flex-col gap-3"><div className="flex items-center justify-between"><div><h2 className="font-semibold">{bn ? "কোর্স ও ব্যাচ" : "Course & batch"}</h2><p className="text-sm text-[var(--ink-mute)]">{activeEnrolment ? `${bn ? activeEnrolment.courseNameBn : activeEnrolment.courseNameEn} · ${bn ? activeEnrolment.batchNameBn : activeEnrolment.batchNameEn}` : (bn ? "কোনো সক্রিয় ভর্তি নেই" : "No active enrolment")}</p></div><Button variant="secondary" size="sm" onClick={openTransfer}><ArrowRightLeft data-icon="inline-start" />{activeEnrolment ? (bn ? "পরিবর্তন" : "Change") : (bn ? "ভর্তি করুন" : "Enrol")}</Button></div>{activeEnrolment && <dl className="grid grid-cols-2 gap-3 rounded-[var(--radius-md)] bg-[var(--canvas-soft)] p-3 text-sm"><div><dt className="text-[var(--ink-mute)]">{bn ? "সম্মত মাসিক" : "Agreed monthly"}</dt><dd className="font-mono">{activeEnrolment.agreedMonthlyAmountMinor ? money(activeEnrolment.agreedMonthlyAmountMinor, locale) : "—"}</dd></div><div><dt className="text-[var(--ink-mute)]">{bn ? "ভর্তির তারিখ" : "Enrolled on"}</dt><dd>{activeEnrolment.enrolledOn}</dd></div></dl>}</section>
+            <section className="flex flex-col gap-3"><div className="flex items-center justify-between"><div><h2 className="font-semibold">{bn ? "কোর্স ও ব্যাচ" : "Courses & batches"}</h2><p className="text-sm text-[var(--ink-mute)]">{activeEnrolments.length ? (bn ? `${activeEnrolments.length}টি সক্রিয় কোর্স` : `${activeEnrolments.length} active course${activeEnrolments.length === 1 ? "" : "s"}`) : (bn ? "কোনো সক্রিয় ভর্তি নেই" : "No active enrolment")}</p></div><Button variant="secondary" size="sm" onClick={openAdd}>{bn ? "কোর্স যোগ করুন" : "Add course"}</Button></div><div className="flex flex-col gap-2">{activeEnrolments.map((row) => <div key={row.enrolmentId} className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] bg-[var(--canvas-soft)] p-3 text-sm"><div><strong>{bn ? row.courseNameBn : row.courseNameEn} · {bn ? row.batchNameBn : row.batchNameEn}</strong><p className="text-[var(--ink-mute)]">{row.agreedMonthlyAmountMinor ? money(row.agreedMonthlyAmountMinor, locale) : "—"} · {row.enrolledOn}</p></div><Button type="button" size="sm" variant="ghost" onClick={() => openTransfer(row)}><ArrowRightLeft />{bn ? "ব্যাচ বদলান" : "Change batch"}</Button></div>)}</div></section>
             <Separator />
 
             <section className="flex flex-col gap-3"><h2 className="font-semibold">{bn ? "ব্যক্তিগত তথ্য" : "Personal information"}</h2><FieldGroup className="grid sm:grid-cols-2">
@@ -220,7 +241,7 @@ export function OwnerStudentsEditor({ locale }: { locale: "bn" | "en" }) {
             <section className="flex flex-col gap-3"><h2 className="font-semibold">{bn ? "পোর্টাল অ্যাক্সেস" : "Portal access"}</h2><div><Badge variant={selected.portalAccountStatus === "active" ? "success" : selected.portalAccountStatus === "reserved" ? "warning" : "neutral"}>{selected.portalAccountStatus ?? (bn ? "অ্যাকাউন্ট নেই" : "No account")}</Badge></div></section>
             <Separator />
 
-            <section className="flex flex-col gap-3"><h2 className="font-semibold">{bn ? "ভর্তির ইতিহাস" : "Enrolment history"}</h2><div className="flex flex-col gap-2">{selected.enrolments.map((row) => <div key={row.enrolmentId} className="rounded-[var(--radius-md)] border border-[var(--border)] p-3 text-sm"><div className="flex justify-between gap-3"><strong>{bn ? row.courseNameBn : row.courseNameEn} · {bn ? row.batchNameBn : row.batchNameEn}</strong><Badge variant={row.status === "active" ? "success" : "neutral"}>{row.status}</Badge></div><p className="mt-1 text-[var(--ink-mute)]">{row.enrolledOn}{row.endedOn ? ` → ${row.endedOn}` : ""}</p></div>)}</div></section>
+            <section className="flex flex-col gap-3"><h2 className="font-semibold">{bn ? "ভর্তির ইতিহাস" : "Enrolment history"}</h2><div className="flex flex-col gap-2">{selected.enrolments.map((row) => <div key={row.enrolmentId} className="rounded-[var(--radius-md)] border border-[var(--border)] p-3 text-sm"><div className="flex justify-between gap-3"><strong>{bn ? row.courseNameBn : row.courseNameEn} · {bn ? row.batchNameBn : row.batchNameEn}</strong><div className="flex items-center gap-2"><Badge variant={row.status === "active" ? "success" : "neutral"}>{row.status}</Badge>{row.status === "active" && <Button type="button" size="sm" variant="ghost" onClick={() => { setEndTarget(row.enrolmentId); setEndDate(dhakaToday()); setEndNote(""); }}>{bn ? "শেষ করুন" : "End"}</Button>}</div></div><p className="mt-1 text-[var(--ink-mute)]">{row.enrolledOn}{row.endedOn ? ` → ${row.endedOn}` : ""}</p></div>)}</div></section>
             <Separator />
 
             <Field><FieldLabel htmlFor="student-note">{bn ? "অভ্যন্তরীণ নোট" : "Internal notes"}</FieldLabel><Textarea id="student-note" name="internalNote" defaultValue={selected.internalNote ?? ""} /></Field>
@@ -230,16 +251,21 @@ export function OwnerStudentsEditor({ locale }: { locale: "bn" | "en" }) {
 
       <Dialog open={transferOpen} onOpenChange={setTransferOpen}>
         <DialogContent><form className="flex flex-col gap-5" onSubmit={submitTransfer}>
-          <DialogHeader><DialogTitle>{activeEnrolment ? (bn ? "কোর্স ও ব্যাচ পরিবর্তন" : "Change course and batch") : (bn ? "কোর্সে ভর্তি করুন" : "Enrol in a course")}</DialogTitle><DialogDescription>{activeEnrolment ? (bn ? "বর্তমান ভর্তি transferred হবে। আগের ফি, পেমেন্ট, উপস্থিতি ও ফলাফল অপরিবর্তিত থাকবে।" : "The current enrolment will be marked transferred. Previous fees, payments, attendance, and results remain unchanged.") : (bn ? "নতুন সক্রিয় ভর্তি তৈরি করুন।" : "Create a new active enrolment.")}</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>{editingEnrolment ? (bn ? "ব্যাচ পরিবর্তন" : "Change batch") : (bn ? "কোর্স যোগ করুন" : "Add course")}</DialogTitle><DialogDescription>{editingEnrolment ? (bn ? "শুধু নির্বাচিত কোর্সের ব্যাচ পরিবর্তন হবে।" : "Only this course enrolment will move to the new batch.") : (bn ? "বিদ্যমান কোর্স অপরিবর্তিত রেখে নতুন কোর্স যোগ করুন।" : "Add a course without changing existing enrolments.")}</DialogDescription></DialogHeader>
           <FieldGroup>
-            <Field><FieldLabel>{bn ? "কোর্স" : "Course"}</FieldLabel><Select value={courseId} onValueChange={(value) => { setCourseId(value as Id<"courses">); setBatchId(""); }}><SelectTrigger><SelectValue placeholder={bn ? "কোর্স নির্বাচন" : "Select course"} /></SelectTrigger><SelectContent><SelectGroup>{scopes.courses.map((course) => <SelectItem key={course.courseId} value={course.courseId}>{bn ? course.nameBn : course.nameEn}</SelectItem>)}</SelectGroup></SelectContent></Select></Field>
+            <Field><FieldLabel>{bn ? "কোর্স" : "Course"}</FieldLabel><Select disabled={Boolean(editingEnrolment)} value={courseId} onValueChange={(value) => { setCourseId(value as Id<"courses">); setBatchId(""); }}><SelectTrigger><SelectValue placeholder={bn ? "কোর্স নির্বাচন" : "Select course"} /></SelectTrigger><SelectContent><SelectGroup>{scopes.courses.filter(course => editingEnrolment || !activeEnrolments.some(row => row.courseId === course.courseId)).map((course) => <SelectItem key={course.courseId} value={course.courseId}>{bn ? course.nameBn : course.nameEn}</SelectItem>)}</SelectGroup></SelectContent></Select></Field>
             <Field><FieldLabel>{bn ? "ব্যাচ" : "Batch"}</FieldLabel><Select value={batchId} onValueChange={(value) => setBatchId(value as Id<"batches">)} disabled={!courseId}><SelectTrigger><SelectValue placeholder={bn ? "ব্যাচ নির্বাচন" : "Select batch"} /></SelectTrigger><SelectContent><SelectGroup>{availableBatches.map((batch) => <SelectItem key={batch.batchId} value={batch.batchId}>{bn ? batch.nameBn : batch.nameEn}</SelectItem>)}</SelectGroup></SelectContent></Select></Field>
             <Field><FieldLabel htmlFor="transfer-monthly">{bn ? "সম্মত মাসিক (৳)" : "Agreed monthly (BDT)"}</FieldLabel><Input id="transfer-monthly" type="number" min="0.01" step="0.01" required value={monthlyFee} onChange={(event) => setMonthlyFee(event.target.value)} /><FieldDescription>{bn ? "বর্তমান মাসিক ফি থেকে আগে থেকেই পূরণ করা হয়েছে।" : "Prefilled from the current monthly fee."}</FieldDescription></Field>
+            {!editingEnrolment && <Field><FieldLabel htmlFor="add-admission-fee">{bn ? "ভর্তি ফি (৳)" : "Admission fee (BDT)"}</FieldLabel><Input id="add-admission-fee" type="number" min="0" step="0.01" required value={admissionFee} onChange={(event) => setAdmissionFee(event.target.value)} /></Field>}
             <Field><FieldLabel htmlFor="transfer-date">{bn ? "কার্যকর তারিখ" : "Effective date"}</FieldLabel><DatePicker id="transfer-date" value={effectiveDate} onChange={setEffectiveDate} locale={locale} ariaLabel={bn ? "কার্যকর তারিখ বেছে নিন" : "Choose effective date"} required /></Field>
             {message && !message.ok && <FieldError>{message.text}</FieldError>}
           </FieldGroup>
-          <DialogFooter><Button variant="secondary" onClick={() => setTransferOpen(false)}>{bn ? "বাতিল" : "Cancel"}</Button><Button type="submit" loading={busy} disabled={!courseId || !batchId || !monthlyFee}>{activeEnrolment ? (bn ? "পরিবর্তন নিশ্চিত করুন" : "Confirm change") : (bn ? "ভর্তি নিশ্চিত করুন" : "Confirm enrolment")}</Button></DialogFooter>
+          <DialogFooter><Button variant="secondary" onClick={() => setTransferOpen(false)}>{bn ? "বাতিল" : "Cancel"}</Button><Button type="submit" loading={busy} disabled={!courseId || !batchId || !monthlyFee}>{editingEnrolment ? (bn ? "পরিবর্তন নিশ্চিত করুন" : "Confirm change") : (bn ? "কোর্স যোগ করুন" : "Add course")}</Button></DialogFooter>
         </form></DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(endTarget)} onOpenChange={(open) => { if (!open) setEndTarget(null); }}>
+        <DialogContent><form className="flex flex-col gap-5" onSubmit={submitEnd}><DialogHeader><DialogTitle>{bn ? "এনরোলমেন্ট শেষ করুন" : "End enrolment"}</DialogTitle><DialogDescription>{bn ? "ফি, পেমেন্ট, উপস্থিতি ও ফলাফলের ইতিহাস সংরক্ষিত থাকবে।" : "Fee, payment, attendance, and result history will be preserved."}</DialogDescription></DialogHeader><FieldGroup><Field><FieldLabel>{bn ? "শেষ করার ধরন" : "Outcome"}</FieldLabel><Select value={endStatus} onValueChange={(value) => setEndStatus(value as "completed" | "withdrawn")}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="completed">{bn ? "সম্পন্ন" : "Completed"}</SelectItem><SelectItem value="withdrawn">{bn ? "প্রত্যাহার" : "Withdrawn"}</SelectItem></SelectContent></Select></Field><Field><FieldLabel>{bn ? "কার্যকর তারিখ" : "Effective date"}</FieldLabel><DatePicker value={endDate} onChange={setEndDate} locale={locale} ariaLabel={bn ? "শেষ করার তারিখ" : "End date"} required /></Field><Field><FieldLabel>{bn ? "নোট (ঐচ্ছিক)" : "Note (optional)"}</FieldLabel><Textarea value={endNote} onChange={(event) => setEndNote(event.target.value)} /></Field></FieldGroup><DialogFooter><Button type="button" variant="secondary" onClick={() => setEndTarget(null)}>{bn ? "বাতিল" : "Cancel"}</Button><Button type="submit" variant="danger" loading={busy}>{bn ? "এনরোলমেন্ট শেষ করুন" : "End enrolment"}</Button></DialogFooter></form></DialogContent>
       </Dialog>
 
       {requests.page.length > 0 && <section className="mt-8 flex flex-col gap-3"><h2 className="text-lg font-semibold">{bn ? "অপেক্ষমাণ প্রোফাইল অনুরোধ" : "Pending profile requests"}</h2>{requests.page.map((request) => <div key={request.requestId} className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-[var(--border)] p-4 sm:flex-row sm:items-center sm:justify-between"><div><strong>{request.fieldKey}</strong><p className="text-sm text-[var(--ink-mute)]">{request.oldValue} → {request.requestedValue}</p></div><div className="flex gap-2"><Button size="sm" loading={busy} onClick={() => void run(() => review({ requestId: request.requestId, decision: "approved" }), bn ? "অনুমোদিত হয়েছে।" : "Request approved.")}>{bn ? "অনুমোদন" : "Approve"}</Button><Button size="sm" variant="danger" loading={busy} onClick={() => void run(() => review({ requestId: request.requestId, decision: "rejected" }), bn ? "প্রত্যাখ্যাত হয়েছে।" : "Request rejected.")}>{bn ? "প্রত্যাখ্যান" : "Reject"}</Button></div></div>)}</section>}

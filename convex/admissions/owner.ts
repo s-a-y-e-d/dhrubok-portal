@@ -1,6 +1,7 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { mutation, query, type MutationCtx } from "../_generated/server";
+import type { Id } from "../_generated/dataModel";
 import { requireOwner } from "../model/auth";
 import { writeAudit } from "../model/audit";
 import { scheduleCourseSnapshot } from "../academics/snapshotHooks";
@@ -28,6 +29,14 @@ const applicationStatusValidator = v.union(
   v.literal("rejected"),
   v.literal("withdrawn"),
 );
+
+const enrolmentInputValidator = v.object({
+  courseId: v.id("courses"),
+  batchId: v.id("batches"),
+  agreedMonthlyAmountMinor: v.number(),
+  firstBillingMonth: v.string(),
+  admissionFeeMinor: v.number(),
+});
 
 const inboxItemValidator = v.object({
   applicationId: v.id("admissionApplications"),
@@ -416,16 +425,13 @@ export const acceptApplication = mutation({
     conversionKey: v.string(),
     studentNumber: v.string(),
     admissionDate: v.string(),
-    confirmedCourseId: v.id("courses"),
-    confirmedBatchId: v.id("batches"),
-    agreedMonthlyAmountMinor: v.number(),
-    admissionFeeMinor: v.number(),
-    firstBillingMonth: v.string(),
+    enrolments: v.array(enrolmentInputValidator),
     internalNote: v.optional(v.string()),
   },
   returns: v.object({
     studentId: v.id("students"),
     enrolmentId: v.id("enrolments"),
+    enrolmentIds: v.array(v.id("enrolments")),
     collectionId: v.union(v.id("feeCollections"), v.null()),
     receiptNumber: v.union(v.string(), v.null()),
     replayed: v.boolean(),
@@ -439,13 +445,13 @@ export const acceptApplication = mutation({
     if (!application) throw new Error("Application not found");
     if (application.status === "accepted" && application.acceptedStudentId) {
       const acceptedStudentId = application.acceptedStudentId;
-      const enrolment = await ctx.db
+      const enrolments = await ctx.db
         .query("enrolments")
         .withIndex("by_studentId_and_status", (q) =>
           q.eq("studentId", acceptedStudentId).eq("status", "active"),
         )
-        .take(1);
-      if (!enrolment[0])
+        .take(100);
+      if (!enrolments[0])
         throw new Error("Accepted application has no active enrolment");
       const admissionCollection = (
         await ctx.db
@@ -457,7 +463,8 @@ export const acceptApplication = mutation({
       ).find((collection) => collection.collectionType === "admission");
       return {
         studentId: acceptedStudentId,
-        enrolmentId: enrolment[0]._id,
+        enrolmentId: enrolments[0]._id,
+        enrolmentIds: enrolments.map((row) => row._id),
         collectionId: admissionCollection?._id ?? null,
         receiptNumber: admissionCollection?.receiptNumber ?? null,
         replayed: true,
@@ -512,18 +519,18 @@ export const acceptApplication = mutation({
         .unique()
     )
       throw new Error("Student Google email already has portal access");
-    const { course, batch } = await validateOwnerSelection(
-      ctx,
-      args.confirmedCourseId,
-      args.confirmedBatchId,
-    );
-    assertMinorUnits(args.agreedMonthlyAmountMinor, "agreedMonthlyAmountMinor");
-    if (args.agreedMonthlyAmountMinor <= 0)
-      throw new Error("Monthly fee must be greater than zero");
-    assertMinorUnits(args.admissionFeeMinor, "admissionFeeMinor");
-    assertPeriodKey(args.firstBillingMonth);
-    if (args.firstBillingMonth < args.admissionDate.slice(0, 7))
-      throw new Error("First billing month cannot be before admission");
+    if (args.enrolments.length === 0) throw new Error("Choose at least one course");
+    const courseIds = new Set<string>();
+    const selections = await Promise.all(args.enrolments.map(async (selection) => {
+      if (courseIds.has(selection.courseId)) throw new Error("A course can only be selected once");
+      courseIds.add(selection.courseId);
+      const { course, batch } = await validateOwnerSelection(ctx, selection.courseId, selection.batchId);
+      assertMinorUnits(selection.agreedMonthlyAmountMinor, "agreedMonthlyAmountMinor");
+      if (selection.agreedMonthlyAmountMinor <= 0) throw new Error("Monthly fee must be greater than zero");
+      assertMinorUnits(selection.admissionFeeMinor, "admissionFeeMinor"); assertPeriodKey(selection.firstBillingMonth);
+      if (selection.firstBillingMonth < args.admissionDate.slice(0, 7)) throw new Error("First billing month cannot be before admission");
+      return { ...selection, course, batch };
+    }));
     const now = Date.now();
     const studentId = await ctx.db.insert("students", {
       studentNumber,
@@ -558,18 +565,9 @@ export const acceptApplication = mutation({
       createdByAccountId: account._id,
       updatedByAccountId: account._id,
     });
-    const enrolmentId = await ctx.db.insert("enrolments", {
-      studentId,
-      courseId: course._id,
-      batchId: batch._id,
-      enrolledOn: args.admissionDate,
-      status: "active",
-      agreedMonthlyAmountMinor: args.agreedMonthlyAmountMinor,
-      firstBillingMonth: args.firstBillingMonth,
-      createdAt: now,
-      updatedAt: now,
-      createdByAccountId: account._id,
-    });
+    const enrolmentIds: Id<"enrolments">[] = [];
+    for (const selection of selections) enrolmentIds.push(await ctx.db.insert("enrolments", { studentId, courseId: selection.course._id, batchId: selection.batch._id, enrolledOn: args.admissionDate, status: "active", agreedMonthlyAmountMinor: selection.agreedMonthlyAmountMinor, firstBillingMonth: selection.firstBillingMonth, createdAt: now, updatedAt: now, createdByAccountId: account._id }));
+    const enrolmentId = enrolmentIds[0];
     await ctx.db.insert("portalAccounts", {
       role: "student",
       status: "reserved",
@@ -581,23 +579,15 @@ export const acceptApplication = mutation({
       updatedAt: now,
       createdByAccountId: account._id,
     });
-    const enrolment = await ctx.db.get("enrolments", enrolmentId);
-    if (!enrolment) throw new Error("Enrolment was not created");
-    await materializeEnrolmentMonths(ctx, enrolment, dhakaDate().slice(0, 7));
+    for (const id of enrolmentIds) { const enrolment = await ctx.db.get("enrolments", id); if (!enrolment) throw new Error("Enrolment was not created"); await materializeEnrolmentMonths(ctx, enrolment, dhakaDate().slice(0, 7)); }
     const admissionCollection =
-      args.admissionFeeMinor > 0
+      selections.some((row) => row.admissionFeeMinor > 0)
         ? await postCollection(ctx, {
             studentId,
             collectionType: "admission",
             collectedOn: args.admissionDate,
             collectedByAccountId: account._id,
-            items: [
-              {
-                itemType: "admission",
-                description: "Admission Fee",
-                amountMinor: args.admissionFeeMinor,
-              },
-            ],
+            items: selections.flatMap((row, index) => row.admissionFeeMinor > 0 ? [{ itemType: "admission" as const, description: `Admission Fee - ${row.course.nameEn}`, amountMinor: row.admissionFeeMinor, enrolmentId: enrolmentIds[index] }] : []),
           })
         : null;
     const today = dhakaDate();
@@ -652,14 +642,14 @@ export const acceptApplication = mutation({
       metadata: {
         studentId,
         enrolmentId,
-        courseId: course._id,
-        batchId: batch._id,
+        enrolmentIds: enrolmentIds.join(","),
       },
     });
-    await scheduleCourseSnapshot(ctx, course._id);
+    for (const selection of selections) await scheduleCourseSnapshot(ctx, selection.course._id);
     return {
       studentId,
       enrolmentId,
+      enrolmentIds,
       collectionId: admissionCollection?.collectionId ?? null,
       receiptNumber: admissionCollection?.receiptNumber ?? null,
       replayed: false,
@@ -687,18 +677,15 @@ export const createDirectAdmission = mutation({
     motherName: v.optional(v.string()),
     motherPhone: v.optional(v.string()),
     preferredSmsLocale: v.union(v.literal("bn"), v.literal("en")),
-    courseId: v.id("courses"),
-    batchId: v.id("batches"),
-    agreedMonthlyAmountMinor: v.number(),
-    firstBillingMonth: v.string(),
+    enrolments: v.array(enrolmentInputValidator),
     internalNote: v.optional(v.string()),
-    initialAdmissionFeeMinor: v.number(),
     photoStorageId: v.optional(v.id("_storage")),
   },
   returns: v.object({
     studentId: v.id("students"),
     studentNumber: v.string(),
     enrolmentId: v.id("enrolments"),
+    enrolmentIds: v.array(v.id("enrolments")),
     collectionId: v.union(v.id("feeCollections"), v.null()),
     receiptNumber: v.union(v.string(), v.null()),
   }),
@@ -725,18 +712,9 @@ export const createDirectAdmission = mutation({
         .unique()
     )
       throw new Error("Student Google email already has portal access");
-    const { course, batch } = await validateOwnerSelection(
-      ctx,
-      args.courseId,
-      args.batchId,
-    );
-    assertMinorUnits(args.agreedMonthlyAmountMinor, "agreedMonthlyAmountMinor");
-    if (args.agreedMonthlyAmountMinor <= 0)
-      throw new Error("Monthly fee must be greater than zero");
-    assertMinorUnits(args.initialAdmissionFeeMinor, "initialAdmissionFeeMinor");
-    assertPeriodKey(args.firstBillingMonth);
-    if (args.firstBillingMonth < args.admissionDate.slice(0, 7))
-      throw new Error("First billing month cannot be before admission");
+    if (args.enrolments.length === 0) throw new Error("Choose at least one course");
+    const courseIds = new Set<string>();
+    const selections = await Promise.all(args.enrolments.map(async (selection) => { if (courseIds.has(selection.courseId)) throw new Error("A course can only be selected once"); courseIds.add(selection.courseId); const { course, batch } = await validateOwnerSelection(ctx, selection.courseId, selection.batchId); assertMinorUnits(selection.agreedMonthlyAmountMinor, "agreedMonthlyAmountMinor"); if (selection.agreedMonthlyAmountMinor <= 0) throw new Error("Monthly fee must be greater than zero"); assertMinorUnits(selection.admissionFeeMinor, "admissionFeeMinor"); assertPeriodKey(selection.firstBillingMonth); if (selection.firstBillingMonth < args.admissionDate.slice(0, 7)) throw new Error("First billing month cannot be before admission"); return { ...selection, course, batch }; }));
     const studentNumber = await generateUniqueStudentNumber(ctx);
     const now = Date.now();
     const studentId = await ctx.db.insert("students", {
@@ -771,19 +749,10 @@ export const createDirectAdmission = mutation({
       createdByAccountId: account._id,
       updatedByAccountId: account._id,
     });
-    const enrolmentId = await ctx.db.insert("enrolments", {
-      studentId,
-      courseId: course._id,
-      batchId: batch._id,
-      enrolledOn: args.admissionDate,
-      status: "active",
-      agreedMonthlyAmountMinor: args.agreedMonthlyAmountMinor,
-      firstBillingMonth: args.firstBillingMonth,
-      createdAt: now,
-      updatedAt: now,
-      createdByAccountId: account._id,
-    });
-    await scheduleCourseSnapshot(ctx, course._id);
+    const enrolmentIds: Id<"enrolments">[] = [];
+    for (const selection of selections) enrolmentIds.push(await ctx.db.insert("enrolments", { studentId, courseId: selection.course._id, batchId: selection.batch._id, enrolledOn: args.admissionDate, status: "active", agreedMonthlyAmountMinor: selection.agreedMonthlyAmountMinor, firstBillingMonth: selection.firstBillingMonth, createdAt: now, updatedAt: now, createdByAccountId: account._id }));
+    const enrolmentId = enrolmentIds[0];
+    for (const selection of selections) await scheduleCourseSnapshot(ctx, selection.course._id);
     await ctx.db.insert("portalAccounts", {
       role: "student",
       status: "reserved",
@@ -795,23 +764,15 @@ export const createDirectAdmission = mutation({
       updatedAt: now,
       createdByAccountId: account._id,
     });
-    const enrolment = await ctx.db.get("enrolments", enrolmentId);
-    if (!enrolment) throw new Error("Enrolment was not created");
-    await materializeEnrolmentMonths(ctx, enrolment, dhakaDate().slice(0, 7));
+    for (const id of enrolmentIds) { const enrolment = await ctx.db.get("enrolments", id); if (!enrolment) throw new Error("Enrolment was not created"); await materializeEnrolmentMonths(ctx, enrolment, dhakaDate().slice(0, 7)); }
     const admissionCollection =
-      args.initialAdmissionFeeMinor > 0
+      selections.some((row) => row.admissionFeeMinor > 0)
         ? await postCollection(ctx, {
             studentId,
             collectionType: "admission",
             collectedOn: args.admissionDate,
             collectedByAccountId: account._id,
-            items: [
-              {
-                itemType: "admission",
-                description: "Admission Fee",
-                amountMinor: args.initialAdmissionFeeMinor,
-              },
-            ],
+            items: selections.flatMap((row, index) => row.admissionFeeMinor > 0 ? [{ itemType: "admission" as const, description: `Admission Fee - ${row.course.nameEn}`, amountMinor: row.admissionFeeMinor, enrolmentId: enrolmentIds[index] }] : []),
           })
         : null;
     const today = dhakaDate();
@@ -832,12 +793,13 @@ export const createDirectAdmission = mutation({
       entityType: "student",
       entityId: studentId,
       summary: "Student directly admitted by owner",
-      metadata: { enrolmentId, courseId: course._id, batchId: batch._id },
+      metadata: { enrolmentIds: enrolmentIds.join(",") },
     });
     return {
       studentId,
       studentNumber,
       enrolmentId,
+      enrolmentIds,
       collectionId: admissionCollection?.collectionId ?? null,
       receiptNumber: admissionCollection?.receiptNumber ?? null,
     };

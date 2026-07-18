@@ -106,6 +106,7 @@ export function AdmissionsEditor({ locale }: { locale: "bn" | "en" }) {
   const [firstBillingMonth, setFirstBillingMonth] = useState(() =>
     dhakaToday().slice(0, 7),
   );
+  const [additionalEnrolments, setAdditionalEnrolments] = useState<Array<{ courseId: Id<"courses"> | ""; batchId: Id<"batches"> | ""; agreedMonthly: string; admissionFee: string; firstBillingMonth: string }>>([]);
   const [decision, setDecision] = useState<"reject" | "withdraw" | null>(null);
   const [reason, setReason] = useState("");
   const review = useMutation(api.admissions.owner.setReviewState);
@@ -156,6 +157,8 @@ export function AdmissionsEditor({ locale }: { locale: "bn" | "en" }) {
     setCourseId("");
     setBatchId("");
     setAdmissionDate(dhakaToday());
+    setFirstBillingMonth(dhakaToday().slice(0, 7));
+    setAdditionalEnrolments([]);
   }
 
   async function execute(work: () => Promise<unknown>, closeAfter = false) {
@@ -169,7 +172,7 @@ export function AdmissionsEditor({ locale }: { locale: "bn" | "en" }) {
       });
       setDecision(null);
       setReason("");
-      if (closeAfter) setSelectedId("");
+      if (closeAfter) { setSelectedId(""); setAdditionalEnrolments([]); }
     } catch (cause) {
       setFeedback({
         ok: false,
@@ -194,6 +197,14 @@ export function AdmissionsEditor({ locale }: { locale: "bn" | "en" }) {
     const agreedMonthlyAmountMinor = Math.round(
       Number(data.get("agreedMonthly") || 0) * 100,
     );
+    if (additionalEnrolments.some((row) => !row.courseId || !row.batchId || Number(row.agreedMonthly) <= 0 || !row.firstBillingMonth)) {
+      setFeedback({ ok: false, text: bn ? "প্রতিটি অতিরিক্ত কোর্সের সব তথ্য পূরণ করুন।" : "Complete every additional course row." });
+      return;
+    }
+    if (new Set([confirmedCourseId, ...additionalEnrolments.map((row) => row.courseId)]).size !== additionalEnrolments.length + 1) {
+      setFeedback({ ok: false, text: bn ? "একই কোর্স একাধিকবার যোগ করা যাবে না।" : "A course can only be selected once." });
+      return;
+    }
     await execute(
       () =>
         accept({
@@ -201,11 +212,10 @@ export function AdmissionsEditor({ locale }: { locale: "bn" | "en" }) {
           conversionKey: crypto.randomUUID(),
           studentNumber: String(data.get("studentNumber")),
           admissionDate: String(data.get("admissionDate")),
-          confirmedCourseId,
-          confirmedBatchId,
-          agreedMonthlyAmountMinor,
-          admissionFeeMinor,
-          firstBillingMonth,
+          enrolments: [
+            { courseId: confirmedCourseId, batchId: confirmedBatchId, agreedMonthlyAmountMinor, admissionFeeMinor, firstBillingMonth },
+            ...additionalEnrolments.map((row) => ({ courseId: row.courseId as Id<"courses">, batchId: row.batchId as Id<"batches">, agreedMonthlyAmountMinor: Math.round(Number(row.agreedMonthly) * 100), admissionFeeMinor: Math.round(Number(row.admissionFee || 0) * 100), firstBillingMonth: row.firstBillingMonth })),
+          ],
           internalNote: String(data.get("internalNote") || "") || undefined,
         }),
       true,
@@ -677,7 +687,7 @@ export function AdmissionsEditor({ locale }: { locale: "bn" | "en" }) {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
-                            {scopes.courses.map((row) => (
+                            {scopes.courses.filter((row) => !additionalEnrolments.some((selection) => selection.courseId === row.courseId)).map((row) => (
                               <SelectItem
                                 key={row.courseId}
                                 value={row.courseId}
@@ -741,6 +751,15 @@ export function AdmissionsEditor({ locale }: { locale: "bn" | "en" }) {
                         required
                       />
                     </Field>
+                    {additionalEnrolments.map((row, index) => <div key={index} className="sm:col-span-2 grid gap-4 rounded-[var(--radius-md)] border border-[var(--border)] p-4 sm:grid-cols-2">
+                      <Field><FieldLabel>{bn ? "অতিরিক্ত কোর্স" : "Additional course"}</FieldLabel><Select value={row.courseId} onValueChange={(value) => setAdditionalEnrolments((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, courseId: value as Id<"courses">, batchId: "" } : item))}><SelectTrigger><SelectValue placeholder={bn ? "কোর্স নির্বাচন" : "Select course"} /></SelectTrigger><SelectContent><SelectGroup>{scopes.courses.filter((course) => course.courseId === row.courseId || (course.courseId !== (courseId || detail.requestedCourseId) && !additionalEnrolments.some((selection, selectionIndex) => selectionIndex !== index && selection.courseId === course.courseId))).map((course) => <SelectItem key={course.courseId} value={course.courseId}>{bn ? course.nameBn : course.nameEn}</SelectItem>)}</SelectGroup></SelectContent></Select></Field>
+                      <Field><FieldLabel>{bn ? "ব্যাচ" : "Batch"}</FieldLabel><Select disabled={!row.courseId} value={row.batchId} onValueChange={(value) => setAdditionalEnrolments((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, batchId: value as Id<"batches"> } : item))}><SelectTrigger><SelectValue placeholder={bn ? "ব্যাচ নির্বাচন" : "Select batch"} /></SelectTrigger><SelectContent><SelectGroup>{scopes.batches.filter((batch) => batch.courseId === row.courseId).map((batch) => <SelectItem key={batch.batchId} value={batch.batchId}>{bn ? batch.nameBn : batch.nameEn}</SelectItem>)}</SelectGroup></SelectContent></Select></Field>
+                      <Field><FieldLabel>{bn ? "সম্মত মাসিক (৳)" : "Agreed monthly (BDT)"}</FieldLabel><Input type="number" min="0.01" step="0.01" value={row.agreedMonthly} onChange={(event) => setAdditionalEnrolments((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, agreedMonthly: event.target.value } : item))} /></Field>
+                      <Field><FieldLabel>{bn ? "ভর্তি ফি (৳)" : "Admission fee (BDT)"}</FieldLabel><Input type="number" min="0" step="0.01" value={row.admissionFee} onChange={(event) => setAdditionalEnrolments((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, admissionFee: event.target.value } : item))} /></Field>
+                      <Field><FieldLabel>{bn ? "প্রথম বিলিং মাস" : "First billing month"}</FieldLabel><Input type="month" min={admissionDate.slice(0, 7)} value={row.firstBillingMonth} onChange={(event) => setAdditionalEnrolments((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, firstBillingMonth: event.target.value } : item))} /></Field>
+                      <div className="flex items-end justify-end"><Button type="button" variant="danger" onClick={() => setAdditionalEnrolments((current) => current.filter((_, itemIndex) => itemIndex !== index))}>{bn ? "সরান" : "Remove"}</Button></div>
+                    </div>)}
+                    <div className="sm:col-span-2"><Button type="button" variant="secondary" disabled={additionalEnrolments.length + 1 >= scopes.courses.length} onClick={() => setAdditionalEnrolments((current) => [...current, { courseId: "", batchId: "", agreedMonthly: "", admissionFee: "0", firstBillingMonth: admissionDate.slice(0, 7) }])}>{bn ? "আরেকটি কোর্স যোগ করুন" : "Add another course"}</Button></div>
                     <Field className="sm:col-span-2">
                       <FieldLabel htmlFor="review-note">
                         {bn ? "অভ্যন্তরীণ নোট" : "Internal note"}
