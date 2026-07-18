@@ -67,12 +67,31 @@ function isBangladeshPhone(value: string) {
   return /^1[3-9]\d{8}$/.test(local);
 }
 
-function admissionErrorMessage(cause: unknown, bn: boolean) {
+type AdmissionErrorData = {
+  message?: unknown;
+  field?: unknown;
+};
+
+function getAdmissionErrorData(cause: unknown): AdmissionErrorData | null {
+  if (!cause || typeof cause !== "object" || !("data" in cause)) return null;
+  const data = (cause as { data?: unknown }).data;
+  return data && typeof data === "object" ? (data as AdmissionErrorData) : null;
+}
+
+function rawAdmissionErrorMessage(cause: unknown) {
+  const dataMessage = getAdmissionErrorData(cause)?.message;
+  if (typeof dataMessage === "string" && dataMessage.trim()) {
+    return dataMessage.trim();
+  }
   const raw = cause instanceof Error ? cause.message : "";
-  const message = raw
+  return raw
     .replace(/^[\s\S]*?Uncaught Error:\s*/, "")
     .replace(/\s+Called by client[\s\S]*$/, "")
     .trim();
+}
+
+function admissionErrorMessage(cause: unknown, bn: boolean) {
+  const message = rawAdmissionErrorMessage(cause);
 
   const fallback = bn
     ? "\u09ad\u09b0\u09cd\u09a4\u09bf \u09b8\u09ae\u09cd\u09aa\u09a8\u09cd\u09a8 \u0995\u09b0\u09be \u09af\u09be\u09af\u09bc\u09a8\u09bf\u0964 \u09a4\u09a5\u09cd\u09af\u0997\u09c1\u09b2\u09cb \u09a6\u09c7\u0996\u09c7 \u0986\u09ac\u09be\u09b0 \u099a\u09c7\u09b7\u09cd\u099f\u09be \u0995\u09b0\u09c1\u09a8\u0964"
@@ -95,23 +114,46 @@ function admissionErrorMessage(cause: unknown, bn: boolean) {
       return bn
         ? "\u09ab\u09cb\u09a8 \u09a8\u09ae\u09cd\u09ac\u09b0\u099f\u09bf \u09b8\u09a0\u09bf\u0995 \u09a8\u09af\u09bc\u0964 \u0989\u09a6\u09be\u09b9\u09b0\u09a3: 01712345678 \u0985\u09a5\u09ac\u09be +8801712345678\u0964"
         : "Enter a valid Bangladesh mobile number, for example 01712345678 or +8801712345678.";
+    case "Month must use YYYY-MM":
+      return bn
+        ? "\u09aa\u09cd\u09b0\u09a5\u09ae \u09ac\u09bf\u09b2\u09bf\u0982 \u09ae\u09be\u09b8\u099f\u09bf \u09b8\u09a0\u09bf\u0995\u09ad\u09be\u09ac\u09c7 \u09a6\u09bf\u09a8\u0964"
+        : "Enter a valid first billing month.";
+    case "Enter a valid amount":
+      return bn
+        ? "\u09b8\u09a0\u09bf\u0995 \u09ab\u09bf \u09aa\u09b0\u09bf\u09ae\u09be\u09a3 \u09a6\u09bf\u09a8\u0964"
+        : "Enter a valid fee amount.";
+    case "Choose at least one course":
+      return bn
+        ? "\u0995\u09ae\u09aa\u0995\u09cd\u09b7\u09c7 \u098f\u0995\u099f\u09bf \u0995\u09cb\u09b0\u09cd\u09b8 \u09a8\u09bf\u09b0\u09cd\u09ac\u09be\u099a\u09a8 \u0995\u09b0\u09c1\u09a8\u0964"
+        : "Choose at least one course.";
+    case "A course can only be selected once":
+      return bn
+        ? "\u098f\u0995\u0987 \u0995\u09cb\u09b0\u09cd\u09b8 \u098f\u0995\u09ac\u09be\u09b0\u09c7\u09b0 \u09ac\u09c7\u09b6\u09bf \u09a8\u09bf\u09b0\u09cd\u09ac\u09be\u099a\u09a8 \u0995\u09b0\u09be \u09af\u09be\u09ac\u09c7 \u09a8\u09be\u0964"
+        : "A course can only be selected once.";
     default:
       return message || fallback;
   }
 }
 
 function admissionErrorField(cause: unknown, data: FormData) {
-  const raw = cause instanceof Error ? cause.message : "";
-  const message = raw
-    .replace(/^[\s\S]*?Uncaught Error:\s*/, "")
-    .replace(/\s+Called by client[\s\S]*$/, "")
-    .trim();
+  const dataField = getAdmissionErrorData(cause)?.field;
+  if (typeof dataField === "string" && dataField.trim()) {
+    return dataField.trim();
+  }
+  const message = rawAdmissionErrorMessage(cause);
 
   switch (message) {
     case "Student Google email already has portal access":
     case "Student Google email is already admitted":
     case "Invalid email address":
       return "studentEmail";
+    case "Enter a valid amount":
+      return "agreedMonthly";
+    case "Month must use YYYY-MM":
+      return "firstBillingMonth";
+    case "Choose at least one course":
+    case "A course can only be selected once":
+      return "courseId";
     case "Monthly fee must be greater than zero":
       return "agreedMonthly";
     case "First billing month cannot be before admission":

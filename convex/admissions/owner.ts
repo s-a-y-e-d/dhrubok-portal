@@ -1,5 +1,5 @@
 import { paginationOptsValidator } from "convex/server";
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation, query, type MutationCtx } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
 import { requireOwner } from "../model/auth";
@@ -96,6 +96,49 @@ const STUDENT_NUMBER_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 const STUDENT_NUMBER_LENGTH = 5;
 const STUDENT_NUMBER_ATTEMPTS = 25;
 
+function admissionUserError(
+  code: string,
+  field: string | null,
+  message: string,
+): never {
+  throw new ConvexError({ code, field, message });
+}
+
+function admissionValidationError(
+  cause: unknown,
+  fallbackField: string | null = null,
+): never {
+  const message = cause instanceof Error ? cause.message : "";
+  switch (message) {
+    case "Invalid email address":
+      return admissionUserError("INVALID_EMAIL", "studentEmail", message);
+    case "Invalid Bangladesh mobile number":
+      return admissionUserError("INVALID_PHONE", null, message);
+    case "Invalid calendar date":
+    case "Date must use YYYY-MM-DD":
+      return admissionUserError(
+        "INVALID_DATE",
+        fallbackField ?? "dateOfBirth",
+        message,
+      );
+    case "Month must use YYYY-MM":
+      return admissionUserError(
+        "INVALID_BILLING_MONTH",
+        fallbackField ?? "firstBillingMonth",
+        message,
+      );
+    default:
+      if (message.endsWith(" must be a non-negative integer in minor units")) {
+        return admissionUserError(
+          "INVALID_MONEY_AMOUNT",
+          fallbackField,
+          "Enter a valid amount",
+        );
+      }
+      throw cause;
+  }
+}
+
 function randomStudentNumber() {
   const values = new Uint8Array(STUDENT_NUMBER_LENGTH);
   crypto.getRandomValues(values);
@@ -114,7 +157,11 @@ async function generateUniqueStudentNumber(ctx: MutationCtx) {
       .unique();
     if (!existing) return studentNumber;
   }
-  throw new Error("Could not generate a unique student ID. Please try again.");
+  return admissionUserError(
+    "STUDENT_ID_GENERATION_FAILED",
+    null,
+    "Could not generate a unique student ID. Please try again.",
+  );
 }
 
 function assertReviewable(status: string) {
@@ -691,9 +738,22 @@ export const createDirectAdmission = mutation({
   }),
   handler: async (ctx, args) => {
     const { account } = await requireOwner(ctx);
-    assertLocalDate(args.admissionDate);
-    const profile = normalizeSubmission(args);
-    if (profile.dateOfBirth) assertLocalDate(profile.dateOfBirth);
+    try {
+      assertLocalDate(args.admissionDate);
+    } catch (cause) {
+      return admissionUserError(
+        "INVALID_ADMISSION_DATE",
+        "admissionDate",
+        cause instanceof Error ? cause.message : "Invalid admission date",
+      );
+    }
+    let profile: ReturnType<typeof normalizeSubmission>;
+    try {
+      profile = normalizeSubmission(args);
+      if (profile.dateOfBirth) assertLocalDate(profile.dateOfBirth);
+    } catch (cause) {
+      return admissionValidationError(cause);
+    }
     if (
       await ctx.db
         .query("students")
@@ -702,7 +762,11 @@ export const createDirectAdmission = mutation({
         )
         .unique()
     )
-      throw new Error("Student Google email is already admitted");
+      admissionUserError(
+        "STUDENT_EMAIL_ALREADY_ADMITTED",
+        "studentEmail",
+        "Student Google email is already admitted",
+      );
     if (
       await ctx.db
         .query("portalAccounts")
@@ -711,10 +775,79 @@ export const createDirectAdmission = mutation({
         )
         .unique()
     )
-      throw new Error("Student Google email already has portal access");
-    if (args.enrolments.length === 0) throw new Error("Choose at least one course");
+      admissionUserError(
+        "STUDENT_EMAIL_HAS_PORTAL_ACCESS",
+        "studentEmail",
+        "Student Google email already has portal access",
+      );
+    if (args.enrolments.length === 0)
+      admissionUserError(
+        "NO_COURSE_SELECTED",
+        "courseId",
+        "Choose at least one course",
+      );
     const courseIds = new Set<string>();
-    const selections = await Promise.all(args.enrolments.map(async (selection) => { if (courseIds.has(selection.courseId)) throw new Error("A course can only be selected once"); courseIds.add(selection.courseId); const { course, batch } = await validateOwnerSelection(ctx, selection.courseId, selection.batchId); assertMinorUnits(selection.agreedMonthlyAmountMinor, "agreedMonthlyAmountMinor"); if (selection.agreedMonthlyAmountMinor <= 0) throw new Error("Monthly fee must be greater than zero"); assertMinorUnits(selection.admissionFeeMinor, "admissionFeeMinor"); assertPeriodKey(selection.firstBillingMonth); if (selection.firstBillingMonth < args.admissionDate.slice(0, 7)) throw new Error("First billing month cannot be before admission"); return { ...selection, course, batch }; }));
+    const selections = await Promise.all(
+      args.enrolments.map(async (selection) => {
+        if (courseIds.has(selection.courseId))
+          admissionUserError(
+            "DUPLICATE_COURSE_SELECTION",
+            "courseId",
+            "A course can only be selected once",
+          );
+        courseIds.add(selection.courseId);
+        let ownerSelection: Awaited<ReturnType<typeof validateOwnerSelection>>;
+        try {
+          ownerSelection = await validateOwnerSelection(
+            ctx,
+            selection.courseId,
+            selection.batchId,
+          );
+        } catch (cause) {
+          const message =
+            cause instanceof Error
+              ? cause.message
+              : "Selected course or batch is not available";
+          admissionUserError(
+            message.includes("Course") ? "COURSE_NOT_ACTIVE" : "BATCH_NOT_OPEN",
+            message.includes("Course") ? "courseId" : "batchId",
+            message,
+          );
+        }
+        const { course, batch } = ownerSelection;
+        try {
+          assertMinorUnits(
+            selection.agreedMonthlyAmountMinor,
+            "agreedMonthlyAmountMinor",
+          );
+        } catch (cause) {
+          return admissionValidationError(cause, "agreedMonthly");
+        }
+        if (selection.agreedMonthlyAmountMinor <= 0)
+          admissionUserError(
+            "MONTHLY_FEE_NOT_POSITIVE",
+            "agreedMonthly",
+            "Monthly fee must be greater than zero",
+          );
+        try {
+          assertMinorUnits(selection.admissionFeeMinor, "admissionFeeMinor");
+        } catch (cause) {
+          return admissionValidationError(cause, "initialAdmissionFee");
+        }
+        try {
+          assertPeriodKey(selection.firstBillingMonth);
+        } catch (cause) {
+          return admissionValidationError(cause, "firstBillingMonth");
+        }
+        if (selection.firstBillingMonth < args.admissionDate.slice(0, 7))
+          admissionUserError(
+            "FIRST_BILLING_MONTH_BEFORE_ADMISSION",
+            "firstBillingMonth",
+            "First billing month cannot be before admission",
+          );
+        return { ...selection, course, batch };
+      }),
+    );
     const studentNumber = await generateUniqueStudentNumber(ctx);
     const now = Date.now();
     const studentId = await ctx.db.insert("students", {
