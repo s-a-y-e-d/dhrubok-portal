@@ -99,7 +99,6 @@ export const seedOperations = mutation({
     charges: v.number(),
     payments: v.number(),
     results: v.number(),
-    materials: v.number(),
     notices: v.number(),
   }),
   handler: async (ctx) => {
@@ -110,7 +109,6 @@ export const seedOperations = mutation({
       charges: 0,
       payments: 0,
       results: 0,
-      materials: 0,
       notices: 0,
     };
   },

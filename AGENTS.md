@@ -23,7 +23,7 @@ one coaching centre.
   admission fields, and convert an accepted application into a student.
 - The core workflows are student admission, course and batch enrolment, class
   routines, attendance, manual fee collection, due tracking, offline exam and
-  result management, learning materials, notices, printable payment receipts,
+  result management, notices, printable payment receipts,
   and guardian SMS notifications.
 - Attendance is recorded once per batch class with exactly three states:
   present, late, and absent. Submitted attendance is immutable for owners and
@@ -39,10 +39,10 @@ one coaching centre.
 - SMS delivery uses SMS.BD behind a provider adapter. Payment, result, late, and
   absent messages are automatic; due reminders are owner initiated. Failed SMS
   delivery never rolls back the originating attendance, payment, or result.
-- Students can view their routines, attendance, fees and dues, results, notices,
-  and materials, and can update permitted profile fields. Teachers can work with
-  assigned batches, record attendance, enter marks, publish materials, and send
-  notices within their allowed scope.
+- Students can view their routines, attendance, fees and dues, results, and
+  notices, and can update permitted profile fields. Teachers can work with
+  assigned batches, record attendance, enter marks, and send notices within
+  their allowed scope.
 - The interface, public content, SMS templates, receipts, and reports support
   both Bangla and English.
 

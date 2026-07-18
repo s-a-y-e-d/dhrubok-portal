@@ -5,16 +5,39 @@ import { useState, type FormEvent } from "react";
 import { api } from "@convex/_generated/api";
 import { PortalPageState } from "./PortalPageState";
 import { WebsiteCmsEditor } from "./WebsiteCmsEditor";
-import { Save, Mail, AlertTriangle, Sliders, ToggleLeft, FileText } from "lucide-react";
+import {
+  Save,
+  Mail,
+  AlertTriangle,
+  Sliders,
+  ToggleLeft,
+  FileText,
+} from "lucide-react";
 import type { FunctionReturnType } from "convex/server";
 
-const keys = ["hero", "about_summary", "contact", "achievement_intro", "admission_intro", "footer"] as const;
+const keys = [
+  "hero",
+  "about_summary",
+  "contact",
+  "achievement_intro",
+  "admission_intro",
+  "footer",
+] as const;
 
 export type CoachingSettings = NonNullable<
   FunctionReturnType<typeof api.settings.getOwner>
 >;
 
-function Feedback({ value }: { value: { ok: boolean; text: string } | null }) { return value ? <p className={`form-message ${value.ok ? "success" : "error"}`} role={value.ok ? "status" : "alert"}>{value.text}</p> : null; }
+function Feedback({ value }: { value: { ok: boolean; text: string } | null }) {
+  return value ? (
+    <p
+      className={`form-message ${value.ok ? "success" : "error"}`}
+      role={value.ok ? "status" : "alert"}
+    >
+      {value.text}
+    </p>
+  ) : null;
+}
 
 export function OwnerSettingsEditor({
   locale,
@@ -28,7 +51,10 @@ export function OwnerSettingsEditor({
   const update = useMutation(api.settings.updateOperations);
   const seed = useMutation(api.messaging.templateFunctions.seedDefaults);
   const [busy, setBusy] = useState(false);
-  const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+  const [feedback, setFeedback] = useState<{
+    ok: boolean;
+    text: string;
+  } | null>(null);
   const bn = locale === "bn";
 
   // Concurrency tracking states
@@ -36,19 +62,25 @@ export function OwnerSettingsEditor({
   const [showConcurrencyAlert, setShowConcurrencyAlert] = useState(false);
 
   // Form input states
-  const [monthlyDueDay, setMonthlyDueDay] = useState(settings.monthlyDueDay);
   const [defaultLocale, setDefaultLocale] = useState(settings.defaultLocale);
-  const [defaultGuardianSmsLocale, setDefaultGuardianSmsLocale] = useState(settings.defaultGuardianSmsLocale);
-  const [publicAdmissionsOpen, setPublicAdmissionsOpen] = useState(settings.publicAdmissionsOpen);
+  const [defaultGuardianSmsLocale, setDefaultGuardianSmsLocale] = useState(
+    settings.defaultGuardianSmsLocale,
+  );
+  const [publicAdmissionsOpen, setPublicAdmissionsOpen] = useState(
+    settings.publicAdmissionsOpen,
+  );
   const [smsEnabled, setSmsEnabled] = useState(settings.smsEnabled);
-  const [receiptFooterBn, setReceiptFooterBn] = useState(settings.receiptFooterBn);
-  const [receiptFooterEn, setReceiptFooterEn] = useState(settings.receiptFooterEn);
+  const [receiptFooterBn, setReceiptFooterBn] = useState(
+    settings.receiptFooterBn,
+  );
+  const [receiptFooterEn, setReceiptFooterEn] = useState(
+    settings.receiptFooterEn,
+  );
 
   const [prevUpdatedAt, setPrevUpdatedAt] = useState(settings.updatedAt);
   if (settings.updatedAt !== prevUpdatedAt) {
     setPrevUpdatedAt(settings.updatedAt);
     if (!isDirty) {
-      setMonthlyDueDay(settings.monthlyDueDay);
       setDefaultLocale(settings.defaultLocale);
       setDefaultGuardianSmsLocale(settings.defaultGuardianSmsLocale);
       setPublicAdmissionsOpen(settings.publicAdmissionsOpen);
@@ -61,7 +93,6 @@ export function OwnerSettingsEditor({
   }
 
   const handleReload = () => {
-    setMonthlyDueDay(settings.monthlyDueDay);
     setDefaultLocale(settings.defaultLocale);
     setDefaultGuardianSmsLocale(settings.defaultGuardianSmsLocale);
     setPublicAdmissionsOpen(settings.publicAdmissionsOpen);
@@ -85,7 +116,6 @@ export function OwnerSettingsEditor({
     try {
       await update({
         expectedUpdatedAt: prevUpdatedAt,
-        monthlyDueDay,
         defaultLocale,
         defaultGuardianSmsLocale,
         publicAdmissionsOpen,
@@ -93,11 +123,18 @@ export function OwnerSettingsEditor({
         receiptFooterBn,
         receiptFooterEn,
       });
-      setFeedback({ ok: true, text: bn ? "সেটিংস সংরক্ষিত হয়েছে।" : "Settings saved." });
+      setFeedback({
+        ok: true,
+        text: bn ? "সেটিংস সংরক্ষিত হয়েছে।" : "Settings saved.",
+      });
       setIsDirty(false);
       setPrevUpdatedAt(Date.now());
     } catch (cause) {
-      setFeedback({ ok: false, text: cause instanceof Error ? cause.message : "Could not save settings" });
+      setFeedback({
+        ok: false,
+        text:
+          cause instanceof Error ? cause.message : "Could not save settings",
+      });
     } finally {
       setBusy(false);
     }
@@ -138,11 +175,26 @@ export function OwnerSettingsEditor({
         >
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
             <AlertTriangle style={{ color: "var(--warning)", flexShrink: 0 }} />
-            <p style={{ margin: 0, fontWeight: 600, fontSize: "14px", color: "var(--ink)" }}>
-              {bn ? "অন্য একজন মালিক সেটিংস পরিবর্তন করেছেন!" : "Settings were updated by another owner!"}
+            <p
+              style={{
+                margin: 0,
+                fontWeight: 600,
+                fontSize: "14px",
+                color: "var(--ink)",
+              }}
+            >
+              {bn
+                ? "অন্য একজন মালিক সেটিংস পরিবর্তন করেছেন!"
+                : "Settings were updated by another owner!"}
             </p>
           </div>
-          <p style={{ margin: 0, fontSize: "13px", color: "var(--ink-secondary)" }}>
+          <p
+            style={{
+              margin: 0,
+              fontSize: "13px",
+              color: "var(--ink-secondary)",
+            }}
+          >
             {bn
               ? "সংরক্ষণ করার আগে পরিবর্তনটি যাচাই করুন। আপনার পরিবর্তনগুলো রাখলে পূর্ববর্তী পরিবর্তনটি ওভাররাইট হয়ে যাবে।"
               : "Review before saving. Keeping your edits and saving will overwrite the changes made elsewhere."}
@@ -151,7 +203,11 @@ export function OwnerSettingsEditor({
             <button
               className="button button-secondary"
               type="button"
-              style={{ padding: "4px 10px", minHeight: "auto", fontSize: "12px" }}
+              style={{
+                padding: "4px 10px",
+                minHeight: "auto",
+                fontSize: "12px",
+              }}
               onClick={handleReload}
             >
               {bn ? "সর্বশেষ সেটিংস লোড করুন" : "Reload latest settings"}
@@ -159,7 +215,11 @@ export function OwnerSettingsEditor({
             <button
               className="button button-tertiary"
               type="button"
-              style={{ padding: "4px 10px", minHeight: "auto", fontSize: "12px" }}
+              style={{
+                padding: "4px 10px",
+                minHeight: "auto",
+                fontSize: "12px",
+              }}
               onClick={handleKeepEdits}
             >
               {bn ? "আমার এডিটগুলো রাখুন" : "Keep my edits"}
@@ -176,24 +236,6 @@ export function OwnerSettingsEditor({
           </legend>
           <div className="form-grid-thirds">
             <label>
-              {bn ? "মাসিক বকেয়ার দিন" : "Monthly due day"}
-              <input
-                name="monthlyDueDay"
-                type="number"
-                min={1}
-                max={28}
-                value={monthlyDueDay}
-                onChange={(e) => {
-                  setMonthlyDueDay(Number(e.target.value));
-                  markDirty();
-                }}
-                required
-              />
-              <span style={{ fontSize: "12px", color: "var(--ink-mute)", marginTop: "2px" }}>
-                {bn ? "প্রতি মাসের এই দিনের পর মাসিক ফি বকেয়া হিসাবে চিহ্নিত হবে।" : "Monthly fees become due after this day of the month by default."}
-              </span>
-            </label>
-            <label>
               {bn ? "ইন্টারফেস ভাষা" : "Interface locale"}
               <select
                 name="defaultLocale"
@@ -206,7 +248,13 @@ export function OwnerSettingsEditor({
                 <option value="bn">বাংলা</option>
                 <option value="en">English</option>
               </select>
-              <span style={{ fontSize: "12px", color: "var(--ink-mute)", marginTop: "2px" }}>
+              <span
+                style={{
+                  fontSize: "12px",
+                  color: "var(--ink-mute)",
+                  marginTop: "2px",
+                }}
+              >
                 {bn
                   ? "কোচিং সেন্টারের পছন্দের ডিফল্ট ভাষা নির্ধারণ করে। এটি আপনার বর্তমান পেজের ভাষা পরিবর্তন করবে না।"
                   : "Sets the coaching centre’s preferred default language for supported workflows. It does not change your current page language or existing account preferences."}
@@ -234,7 +282,14 @@ export function OwnerSettingsEditor({
             <ToggleLeft size={16} />
             {bn ? "সুবিধা" : "Features"}
           </legend>
-          <div className="card-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px", marginTop: "8px" }}>
+          <div
+            className="card-grid"
+            style={{
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: "16px",
+              marginTop: "8px",
+            }}
+          >
             <label className="feature-option-card">
               <input
                 name="publicAdmissionsOpen"
@@ -244,14 +299,36 @@ export function OwnerSettingsEditor({
                   setPublicAdmissionsOpen(e.target.checked);
                   markDirty();
                 }}
-                style={{ width: "18px", height: "18px", marginTop: "2px", flexShrink: 0 }}
+                style={{
+                  width: "18px",
+                  height: "18px",
+                  marginTop: "2px",
+                  flexShrink: 0,
+                }}
               />
               <div>
-                <strong style={{ display: "block", fontSize: "14px", fontWeight: 600, color: "var(--ink)" }}>
+                <strong
+                  style={{
+                    display: "block",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    color: "var(--ink)",
+                  }}
+                >
                   {bn ? "পাবলিক ভর্তি আবেদন" : "Public Admissions"}
                 </strong>
-                <span style={{ display: "block", fontSize: "12px", color: "var(--ink-mute)", marginTop: "4px", lineHeight: "1.4" }}>
-                  {bn ? "পাবলিক ভর্তি আবেদন চালু করুন যেন আগ্রহী শিক্ষার্থীরা ওয়েবসাইট থেকে আবেদন করতে পারে।" : "Enable public online application submissions for prospective students on the public website."}
+                <span
+                  style={{
+                    display: "block",
+                    fontSize: "12px",
+                    color: "var(--ink-mute)",
+                    marginTop: "4px",
+                    lineHeight: "1.4",
+                  }}
+                >
+                  {bn
+                    ? "পাবলিক ভর্তি আবেদন চালু করুন যেন আগ্রহী শিক্ষার্থীরা ওয়েবসাইট থেকে আবেদন করতে পারে।"
+                    : "Enable public online application submissions for prospective students on the public website."}
                 </span>
               </div>
             </label>
@@ -265,38 +342,109 @@ export function OwnerSettingsEditor({
                   setSmsEnabled(e.target.checked);
                   markDirty();
                 }}
-                style={{ width: "18px", height: "18px", marginTop: "2px", flexShrink: 0 }}
+                style={{
+                  width: "18px",
+                  height: "18px",
+                  marginTop: "2px",
+                  flexShrink: 0,
+                }}
               />
               <div>
-                <strong style={{ display: "block", fontSize: "14px", fontWeight: 600, color: "var(--ink)" }}>
+                <strong
+                  style={{
+                    display: "block",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    color: "var(--ink)",
+                  }}
+                >
                   {bn ? "SMS ডেলিভারি" : "SMS Delivery"}
                 </strong>
-                <span style={{ display: "block", fontSize: "12px", color: "var(--ink-mute)", marginTop: "4px", lineHeight: "1.4" }}>
-                  {bn ? "উপস্থিতি, পেমেন্ট ও পরীক্ষার ফলাফলের জন্য অভিভাবকদের স্বয়ংক্রিয় SMS নোটিফিকেশন পাঠান।" : "Send automated SMS notifications to guardians for attendance records, manual payments, and exam results."}
+                <span
+                  style={{
+                    display: "block",
+                    fontSize: "12px",
+                    color: "var(--ink-mute)",
+                    marginTop: "4px",
+                    lineHeight: "1.4",
+                  }}
+                >
+                  {bn
+                    ? "উপস্থিতি, পেমেন্ট ও পরীক্ষার ফলাফলের জন্য অভিভাবকদের স্বয়ংক্রিয় SMS নোটিফিকেশন পাঠান।"
+                    : "Send automated SMS notifications to guardians for attendance records, manual payments, and exam results."}
                 </span>
-                <div style={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                <div
+                  style={{
+                    marginTop: "10px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "6px",
+                  }}
+                >
                   {settings.smsConfigured ? (
-                    <span className="status-pill active" style={{ fontSize: "11px", padding: "1px 6px", alignSelf: "flex-start" }}>
-                      {bn ? "SMS গেটওয়ে কনফিগার করা আছে" : "SMS Gateway Configured"}
+                    <span
+                      className="status-pill active"
+                      style={{
+                        fontSize: "11px",
+                        padding: "1px 6px",
+                        alignSelf: "flex-start",
+                      }}
+                    >
+                      {bn
+                        ? "SMS গেটওয়ে কনফিগার করা আছে"
+                        : "SMS Gateway Configured"}
                     </span>
                   ) : (
-                    <span className="status-pill suspended" style={{ fontSize: "11px", padding: "1px 6px", alignSelf: "flex-start" }}>
-                      {bn ? "SMS গেটওয়ে কনফিগার করা নেই" : "SMS Gateway Not Configured"}
+                    <span
+                      className="status-pill suspended"
+                      style={{
+                        fontSize: "11px",
+                        padding: "1px 6px",
+                        alignSelf: "flex-start",
+                      }}
+                    >
+                      {bn
+                        ? "SMS গেটওয়ে কনফিগার করা নেই"
+                        : "SMS Gateway Not Configured"}
                     </span>
                   )}
                   {!settings.smsConfigured && (
-                    <span style={{ display: "block", fontSize: "11px", color: "var(--danger)", fontWeight: 500, lineHeight: "1.3" }}>
+                    <span
+                      style={{
+                        display: "block",
+                        fontSize: "11px",
+                        color: "var(--danger)",
+                        fontWeight: 500,
+                        lineHeight: "1.3",
+                      }}
+                    >
                       {bn
                         ? "সতর্কতা: সার্ভার এনভায়রনমেন্ট ভেরিয়েবলে SMS প্রোভাইডার API কী পাওয়া যায়নি। চালুর পরেও SMS ডেলিভারি ব্যর্থ হবে।"
                         : "Warning: SMS provider API key is missing in environment variables. SMS delivery will fail even if enabled."}
                     </span>
                   )}
                   {settings.smsSenderIdConfigured ? (
-                    <span className="status-pill active" style={{ fontSize: "11px", padding: "1px 6px", alignSelf: "flex-start" }}>
-                      {bn ? "সেন্ডার আইডি কনফিগার করা আছে" : "Sender ID Configured"}
+                    <span
+                      className="status-pill active"
+                      style={{
+                        fontSize: "11px",
+                        padding: "1px 6px",
+                        alignSelf: "flex-start",
+                      }}
+                    >
+                      {bn
+                        ? "সেন্ডার আইডি কনফিগার করা আছে"
+                        : "Sender ID Configured"}
                     </span>
                   ) : (
-                    <span style={{ display: "block", fontSize: "11px", color: "var(--ink-mute)", lineHeight: "1.3" }}>
+                    <span
+                      style={{
+                        display: "block",
+                        fontSize: "11px",
+                        color: "var(--ink-mute)",
+                        lineHeight: "1.3",
+                      }}
+                    >
                       {bn
                         ? "সেন্ডার আইডি কনফিগার করা নেই; প্রোভাইডারের ডিফল্ট সেন্ডার ব্যবহারের অনুরোধ করা হবে।"
                         : "Sender ID not configured; the provider’s default sender will be requested."}
@@ -339,17 +487,39 @@ export function OwnerSettingsEditor({
               />
             </label>
           </div>
-          <span style={{ display: "block", fontSize: "12px", color: "var(--ink-mute)", marginTop: "8px" }}>
-            {bn ? "প্রতিটি প্রিন্ট করা রশিদের নিচে এই টেক্সটটি প্রদর্শিত হবে।" : "This message is printed at the bottom of payment receipts."}
+          <span
+            style={{
+              display: "block",
+              fontSize: "12px",
+              color: "var(--ink-mute)",
+              marginTop: "8px",
+            }}
+          >
+            {bn
+              ? "প্রতিটি প্রিন্ট করা রশিদের নিচে এই টেক্সটটি প্রদর্শিত হবে।"
+              : "This message is printed at the bottom of payment receipts."}
           </span>
         </fieldset>
 
         <Feedback value={feedback} />
 
         <div className="form-actions">
-          <button className="button button-primary" type="submit" disabled={busy}>
-            <Save size={16} style={{ marginRight: "6px", verticalAlign: "middle" }} />
-            {busy ? (bn ? "সংরক্ষণ করা হচ্ছে..." : "Saving...") : (bn ? "সংরক্ষণ করুন" : "Save settings")}
+          <button
+            className="button button-primary"
+            type="submit"
+            disabled={busy}
+          >
+            <Save
+              size={16}
+              style={{ marginRight: "6px", verticalAlign: "middle" }}
+            />
+            {busy
+              ? bn
+                ? "সংরক্ষণ করা হচ্ছে..."
+                : "Saving..."
+              : bn
+                ? "সংরক্ষণ করুন"
+                : "Save settings"}
           </button>
           <button
             className="button button-secondary"
@@ -360,16 +530,34 @@ export function OwnerSettingsEditor({
               setFeedback(null);
               try {
                 const count = await seed({});
-                setFeedback({ ok: true, text: `${count} ${bn ? "টি SMS টেমপ্লেট যোগ হয়েছে।" : "SMS templates added."} (Seeding is idempotent; existing templates were kept)` });
+                setFeedback({
+                  ok: true,
+                  text: `${count} ${bn ? "টি SMS টেমপ্লেট যোগ হয়েছে।" : "SMS templates added."} (Seeding is idempotent; existing templates were kept)`,
+                });
               } catch (cause) {
-                setFeedback({ ok: false, text: cause instanceof Error ? cause.message : "Could not seed templates" });
+                setFeedback({
+                  ok: false,
+                  text:
+                    cause instanceof Error
+                      ? cause.message
+                      : "Could not seed templates",
+                });
               } finally {
                 setBusy(false);
               }
             }}
           >
-            <Mail size={16} style={{ marginRight: "6px", verticalAlign: "middle" }} />
-            {busy ? (bn ? "টেমপ্লেট তৈরি হচ্ছে..." : "Seeding...") : (bn ? "ডিফল্ট SMS টেমপ্লেট তৈরি" : "Seed SMS templates")}
+            <Mail
+              size={16}
+              style={{ marginRight: "6px", verticalAlign: "middle" }}
+            />
+            {busy
+              ? bn
+                ? "টেমপ্লেট তৈরি হচ্ছে..."
+                : "Seeding..."
+              : bn
+                ? "ডিফল্ট SMS টেমপ্লেট তৈরি"
+                : "Seed SMS templates"}
           </button>
         </div>
       </form>
@@ -378,11 +566,183 @@ export function OwnerSettingsEditor({
 }
 
 export function LegacyOwnerWebsiteEditor({ locale }: { locale: "bn" | "en" }) {
-  const [key, setKey] = useState<(typeof keys)[number]>("hero"); const preview = useQuery(api.publicSite.cms.getContentPreview, { key }); const save = useMutation(api.publicSite.cms.saveContentDraft); const publish = useMutation(api.publicSite.cms.publishContent);
-  const [busy, setBusy] = useState(false); const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null); const bn = locale === "bn";
-  if (preview === undefined) return <PortalPageState state="loading" locale={locale} />;
-  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const data = new FormData(event.currentTarget); setBusy(true); setFeedback(null); try { await save({ key, content: { titleBn: String(data.get("titleBn") || ""), titleEn: String(data.get("titleEn") || ""), bodyBn: String(data.get("bodyBn") || ""), bodyEn: String(data.get("bodyEn") || ""), primaryCtaLabelBn: String(data.get("primaryCtaLabelBn") || "") || null, primaryCtaLabelEn: String(data.get("primaryCtaLabelEn") || "") || null, primaryCtaHref: String(data.get("primaryCtaHref") || "") || null, mediaStorageId: preview?.mediaStorageId ?? null } }); setFeedback({ ok: true, text: bn ? "খসড়া সংরক্ষিত হয়েছে। প্রকাশ না করা পর্যন্ত এটি পাবলিক হবে না।" : "Draft saved. It remains private until published." }); } catch (cause) { setFeedback({ ok: false, text: cause instanceof Error ? cause.message : "Could not save draft" }); } finally { setBusy(false); } }
-  return <><header className="portal-page-header"><p className="eyebrow">CMS</p><h1>{bn ? "পাবলিক ওয়েবসাইট" : "Public website"}</h1><p>{bn ? "নির্ধারিত দ্বিভাষিক কনটেন্ট স্লট সম্পাদনা, প্রিভিউ এবং প্রকাশ করুন।" : "Edit, preview, and publish fixed bilingual content slots."}</p></header><label className="standalone-field">{bn ? "কনটেন্ট অংশ" : "Content section"}<select value={key} onChange={(event) => { setKey(event.target.value as (typeof keys)[number]); setFeedback(null); }}>{keys.map((value) => <option key={value} value={value}>{value.replaceAll("_", " ")}</option>)}</select></label><form className="operation-form" key={`${key}:${preview?.updatedAt ?? 0}`} onSubmit={submit}><fieldset><legend>{bn ? "শিরোনাম" : "Titles"}</legend><div className="form-grid"><label>বাংলা<input name="titleBn" defaultValue={preview?.titleBn} /></label><label>English<input name="titleEn" defaultValue={preview?.titleEn} /></label></div></fieldset><fieldset><legend>{bn ? "মূল লেখা" : "Body"}</legend><div className="form-grid"><label>বাংলা<textarea name="bodyBn" rows={8} defaultValue={preview?.bodyBn} /></label><label>English<textarea name="bodyEn" rows={8} defaultValue={preview?.bodyEn} /></label></div></fieldset><fieldset><legend>CTA</legend><div className="form-grid"><label>বাংলা<input name="primaryCtaLabelBn" defaultValue={preview?.primaryCtaLabelBn ?? ""} /></label><label>English<input name="primaryCtaLabelEn" defaultValue={preview?.primaryCtaLabelEn ?? ""} /></label><label>URL<input name="primaryCtaHref" defaultValue={preview?.primaryCtaHref ?? ""} placeholder="/bn/admission" /></label></div></fieldset>{preview && <p className="editor-meta">{bn ? "সর্বশেষ সম্পাদনা" : "Last edited"}: {new Date(preview.updatedAt).toLocaleString()} · {bn ? "খসড়া" : "Draft"} v{preview.draftRevision} · {bn ? "প্রকাশিত" : "Published"} v{preview.publishedRevision}</p>}<Feedback value={feedback} /><div className="form-actions"><button className="button button-secondary" disabled={busy}>{bn ? "খসড়া সংরক্ষণ" : "Save draft"}</button><button className="button button-primary" type="button" disabled={busy || !preview} onClick={async () => { setBusy(true); try { await publish({ key }); setFeedback({ ok: true, text: bn ? "কনটেন্ট প্রকাশিত হয়েছে।" : "Content published." }); } catch (cause) { setFeedback({ ok: false, text: cause instanceof Error ? cause.message : "Could not publish" }); } finally { setBusy(false); } }}>{bn ? "প্রকাশ করুন" : "Publish"}</button></div></form></>;
+  const [key, setKey] = useState<(typeof keys)[number]>("hero");
+  const preview = useQuery(api.publicSite.cms.getContentPreview, { key });
+  const save = useMutation(api.publicSite.cms.saveContentDraft);
+  const publish = useMutation(api.publicSite.cms.publishContent);
+  const [busy, setBusy] = useState(false);
+  const [feedback, setFeedback] = useState<{
+    ok: boolean;
+    text: string;
+  } | null>(null);
+  const bn = locale === "bn";
+  if (preview === undefined)
+    return <PortalPageState state="loading" locale={locale} />;
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    setBusy(true);
+    setFeedback(null);
+    try {
+      await save({
+        key,
+        content: {
+          titleBn: String(data.get("titleBn") || ""),
+          titleEn: String(data.get("titleEn") || ""),
+          bodyBn: String(data.get("bodyBn") || ""),
+          bodyEn: String(data.get("bodyEn") || ""),
+          primaryCtaLabelBn:
+            String(data.get("primaryCtaLabelBn") || "") || null,
+          primaryCtaLabelEn:
+            String(data.get("primaryCtaLabelEn") || "") || null,
+          primaryCtaHref: String(data.get("primaryCtaHref") || "") || null,
+          mediaStorageId: preview?.mediaStorageId ?? null,
+        },
+      });
+      setFeedback({
+        ok: true,
+        text: bn
+          ? "খসড়া সংরক্ষিত হয়েছে। প্রকাশ না করা পর্যন্ত এটি পাবলিক হবে না।"
+          : "Draft saved. It remains private until published.",
+      });
+    } catch (cause) {
+      setFeedback({
+        ok: false,
+        text: cause instanceof Error ? cause.message : "Could not save draft",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <>
+      <header className="portal-page-header">
+        <p className="eyebrow">CMS</p>
+        <h1>{bn ? "পাবলিক ওয়েবসাইট" : "Public website"}</h1>
+        <p>
+          {bn
+            ? "নির্ধারিত দ্বিভাষিক কনটেন্ট স্লট সম্পাদনা, প্রিভিউ এবং প্রকাশ করুন।"
+            : "Edit, preview, and publish fixed bilingual content slots."}
+        </p>
+      </header>
+      <label className="standalone-field">
+        {bn ? "কনটেন্ট অংশ" : "Content section"}
+        <select
+          value={key}
+          onChange={(event) => {
+            setKey(event.target.value as (typeof keys)[number]);
+            setFeedback(null);
+          }}
+        >
+          {keys.map((value) => (
+            <option key={value} value={value}>
+              {value.replaceAll("_", " ")}
+            </option>
+          ))}
+        </select>
+      </label>
+      <form
+        className="operation-form"
+        key={`${key}:${preview?.updatedAt ?? 0}`}
+        onSubmit={submit}
+      >
+        <fieldset>
+          <legend>{bn ? "শিরোনাম" : "Titles"}</legend>
+          <div className="form-grid">
+            <label>
+              বাংলা
+              <input name="titleBn" defaultValue={preview?.titleBn} />
+            </label>
+            <label>
+              English
+              <input name="titleEn" defaultValue={preview?.titleEn} />
+            </label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>{bn ? "মূল লেখা" : "Body"}</legend>
+          <div className="form-grid">
+            <label>
+              বাংলা
+              <textarea name="bodyBn" rows={8} defaultValue={preview?.bodyBn} />
+            </label>
+            <label>
+              English
+              <textarea name="bodyEn" rows={8} defaultValue={preview?.bodyEn} />
+            </label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>CTA</legend>
+          <div className="form-grid">
+            <label>
+              বাংলা
+              <input
+                name="primaryCtaLabelBn"
+                defaultValue={preview?.primaryCtaLabelBn ?? ""}
+              />
+            </label>
+            <label>
+              English
+              <input
+                name="primaryCtaLabelEn"
+                defaultValue={preview?.primaryCtaLabelEn ?? ""}
+              />
+            </label>
+            <label>
+              URL
+              <input
+                name="primaryCtaHref"
+                defaultValue={preview?.primaryCtaHref ?? ""}
+                placeholder="/bn/admission"
+              />
+            </label>
+          </div>
+        </fieldset>
+        {preview && (
+          <p className="editor-meta">
+            {bn ? "সর্বশেষ সম্পাদনা" : "Last edited"}:{" "}
+            {new Date(preview.updatedAt).toLocaleString()} ·{" "}
+            {bn ? "খসড়া" : "Draft"} v{preview.draftRevision} ·{" "}
+            {bn ? "প্রকাশিত" : "Published"} v{preview.publishedRevision}
+          </p>
+        )}
+        <Feedback value={feedback} />
+        <div className="form-actions">
+          <button className="button button-secondary" disabled={busy}>
+            {bn ? "খসড়া সংরক্ষণ" : "Save draft"}
+          </button>
+          <button
+            className="button button-primary"
+            type="button"
+            disabled={busy || !preview}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await publish({ key });
+                setFeedback({
+                  ok: true,
+                  text: bn ? "কনটেন্ট প্রকাশিত হয়েছে।" : "Content published.",
+                });
+              } catch (cause) {
+                setFeedback({
+                  ok: false,
+                  text:
+                    cause instanceof Error
+                      ? cause.message
+                      : "Could not publish",
+                });
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {bn ? "প্রকাশ করুন" : "Publish"}
+          </button>
+        </div>
+      </form>
+    </>
+  );
 }
 
 export { WebsiteCmsEditor as OwnerWebsiteEditor };

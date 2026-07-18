@@ -123,12 +123,11 @@ describe("reporting summaries and authorization", () => {
     await expect(t.withIdentity({ tokenIdentifier: data.studentOneToken }).query(studentStatement, { studentId: data.studentTwoId, chargeLimit: 10, paymentLimit: 10 })).rejects.toThrow("Unauthorized");
   });
 
-  it("does not leak another batch's materials or exam results", async () => {
+  it("does not leak another batch's exam results", async () => {
     const t = convexTest(schema, modules);
     const data = await seed(t);
     const examId = await t.run(async (ctx) => {
       const now = Date.now();
-      await ctx.db.insert("materials", { courseId: data.courseId, batchId: data.batchTwoId, titleBn: "গোপন", titleEn: "Foreign batch only", descriptionBn: "", descriptionEn: "", kind: "text", visibility: "batch", status: "published", publishedAt: now, createdByAccountId: data.ownerAccountId, createdAt: now, updatedAt: now });
       const examId = await ctx.db.insert("exams", { examNumber: "E1", courseId: data.courseId, nameBn: "পরীক্ষা", nameEn: "Exam", examDate: "2026-07-10", mode: "written", writtenFullMarksScaled: 10000, totalFullMarksScaled: 10000, passMarksScaled: 3300, status: "published", publicationVersion: 1, publishedAt: now, publishedByAccountId: data.ownerAccountId, createdAt: now, updatedAt: now, createdByAccountId: data.ownerAccountId });
       await ctx.db.insert("examTeacherAssignments", { examId, teacherId: data.teacherOneId, batchId: data.batchOneId, createdAt: now });
       for (const [studentId, enrolmentId, score, merit] of [[data.studentOneId, data.enrolmentOneId, 9000, 1], [data.studentTwoId, data.enrolmentTwoId, 8000, 2]] as const) {
@@ -136,8 +135,6 @@ describe("reporting summaries and authorization", () => {
       }
       return examId;
     });
-    const student = await t.withIdentity({ tokenIdentifier: data.studentOneToken }).query(studentDashboard, {});
-    expect(student.recentMaterials).toEqual([]);
     const results = await t.withIdentity({ tokenIdentifier: data.teacherToken }).query(resultSheet, { examId, entryStatus: "published", paginationOpts: { numItems: 10, cursor: null } });
     expect(results.page.map((row: { studentId: Id<"students"> }) => row.studentId)).toEqual([data.studentOneId]);
     expect(results.page[0].totalScoreScaled).toBe(9000);

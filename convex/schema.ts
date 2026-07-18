@@ -11,7 +11,6 @@ import {
   paymentMethodValidator,
   smsEventTypeValidator,
   smsStatusValidator,
-  studentStatusValidator,
 } from "./model/validators";
 
 const portalAccountBase = {
@@ -43,7 +42,8 @@ export default defineSchema({
     currency: v.literal("BDT"),
     defaultLocale: localeValidator,
     defaultGuardianSmsLocale: localeValidator,
-    monthlyDueDay: v.number(),
+    // Deprecated: monthly fees are always due on the first.
+    monthlyDueDay: v.optional(v.number()),
     logoStorageId: v.optional(v.id("_storage")),
     faviconStorageId: v.optional(v.id("_storage")),
     receiptPrefix: v.string(),
@@ -408,8 +408,12 @@ export default defineSchema({
     admissionDate: v.string(),
     // Legacy states remain accepted until the enrolment-derived migration runs.
     status: v.union(
-      v.literal("active"), v.literal("inactive"), v.literal("paused"),
-      v.literal("completed"), v.literal("left"), v.literal("archived"),
+      v.literal("active"),
+      v.literal("inactive"),
+      v.literal("paused"),
+      v.literal("completed"),
+      v.literal("left"),
+      v.literal("archived"),
     ),
     sourceApplicationId: v.optional(v.id("admissionApplications")),
     internalNote: v.optional(v.string()),
@@ -440,8 +444,10 @@ export default defineSchema({
       v.literal("withdrawn"),
       v.literal("transferred"),
     ),
-    feePlanId: v.optional(v.id("feePlans")),
     agreedMonthlyAmountMinor: v.optional(v.number()),
+    firstBillingMonth: v.optional(v.string()),
+    // Legacy compatibility fields; new finance workflows do not use them.
+    feePlanId: v.optional(v.id("feePlans")),
     agreedCourseAmountMinor: v.optional(v.number()),
     discountPolicyId: v.optional(v.id("discountPolicies")),
     createdAt: v.number(),
@@ -538,6 +544,88 @@ export default defineSchema({
     .index("by_studentId_and_submittedAt", ["studentId", "submittedAt"])
     .index("by_batchId_and_submittedAt", ["batchId", "submittedAt"])
     .index("by_studentId_and_status", ["studentId", "status"]),
+
+  monthlyFeeRecords: defineTable({
+    studentId: v.id("students"),
+    enrolmentId: v.id("enrolments"),
+    courseId: v.id("courses"),
+    batchId: v.id("batches"),
+    periodKey: v.string(),
+    dueDate: v.string(),
+    amountMinor: v.number(),
+    status: v.union(v.literal("unpaid"), v.literal("paid")),
+    collectionId: v.optional(v.id("feeCollections")),
+    createdAt: v.number(),
+    paidAt: v.optional(v.number()),
+  })
+    .index("by_enrolmentId_and_periodKey", ["enrolmentId", "periodKey"])
+    .index("by_studentId_and_dueDate", ["studentId", "dueDate"])
+    .index("by_studentId_and_status", ["studentId", "status"])
+    .index("by_status_and_dueDate", ["status", "dueDate"])
+    .index("by_courseId_and_status_and_dueDate", [
+      "courseId",
+      "status",
+      "dueDate",
+    ])
+    .index("by_batchId_and_status_and_dueDate", [
+      "batchId",
+      "status",
+      "dueDate",
+    ])
+    .index("by_collectionId", ["collectionId"]),
+
+  feeCollections: defineTable({
+    receiptNumber: v.string(),
+    studentId: v.id("students"),
+    collectionType: v.union(
+      v.literal("admission"),
+      v.literal("monthly"),
+      v.literal("other"),
+    ),
+    amountMinor: v.number(),
+    collectedOn: v.string(),
+    note: v.optional(v.string()),
+    status: v.union(v.literal("posted"), v.literal("voided")),
+    collectedByAccountId: v.id("portalAccounts"),
+    createdAt: v.number(),
+    voidedAt: v.optional(v.number()),
+    voidedByAccountId: v.optional(v.id("portalAccounts")),
+    voidReason: v.optional(v.string()),
+  })
+    .index("by_studentId_and_collectedOn", ["studentId", "collectedOn"])
+    .index("by_status_and_collectedOn", ["status", "collectedOn"])
+    .index("by_collectionType_and_collectedOn", [
+      "collectionType",
+      "collectedOn",
+    ])
+    .index("by_receiptNumber", ["receiptNumber"])
+    .index("by_collectedByAccountId_and_collectedOn", [
+      "collectedByAccountId",
+      "collectedOn",
+    ]),
+
+  feeCollectionItems: defineTable({
+    collectionId: v.id("feeCollections"),
+    studentId: v.id("students"),
+    monthlyFeeRecordId: v.optional(v.id("monthlyFeeRecords")),
+    itemType: v.union(
+      v.literal("admission"),
+      v.literal("monthly"),
+      v.literal("other"),
+    ),
+    descriptionSnapshot: v.string(),
+    periodKey: v.optional(v.string()),
+    amountMinor: v.number(),
+    studentNameSnapshot: v.string(),
+    studentNumberSnapshot: v.string(),
+    courseNameSnapshot: v.string(),
+    batchNameSnapshot: v.string(),
+    createdAt: v.number(),
+    reversedAt: v.optional(v.number()),
+  })
+    .index("by_collectionId", ["collectionId"])
+    .index("by_monthlyFeeRecordId", ["monthlyFeeRecordId"])
+    .index("by_studentId_and_createdAt", ["studentId", "createdAt"]),
 
   feePlans: defineTable({
     courseId: v.optional(v.id("courses")),
@@ -1415,35 +1503,6 @@ export default defineSchema({
       "entryStatus",
       "totalScoreScaled",
     ]),
-
-  materials: defineTable({
-    courseId: v.id("courses"),
-    batchId: v.optional(v.id("batches")),
-    subjectId: v.optional(v.id("subjects")),
-    titleBn: v.string(),
-    titleEn: v.string(),
-    descriptionBn: v.string(),
-    descriptionEn: v.string(),
-    kind: v.union(v.literal("file"), v.literal("link"), v.literal("text")),
-    storageId: v.optional(v.id("_storage")),
-    externalUrl: v.optional(v.string()),
-    visibility: v.union(v.literal("course"), v.literal("batch")),
-    status: v.union(
-      v.literal("draft"),
-      v.literal("published"),
-      v.literal("archived"),
-    ),
-    publishedAt: v.optional(v.number()),
-    createdByAccountId: v.id("portalAccounts"),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_courseId_and_status", ["courseId", "status"])
-    .index("by_batchId_and_status", ["batchId", "status"])
-    .index("by_createdByAccountId_and_status", ["createdByAccountId", "status"])
-    .index("by_publishedAt", ["publishedAt"])
-    .index("by_status_and_publishedAt", ["status", "publishedAt"])
-    .index("by_storageId", ["storageId"]),
 
   notices: defineTable({
     titleBn: v.string(),

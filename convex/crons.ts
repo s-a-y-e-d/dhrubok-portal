@@ -9,9 +9,9 @@ crons.interval(
   {},
 );
 crons.interval(
-  "generate monthly charges",
+  "materialize monthly fees",
   { hours: 24 },
-  internal.finance.actions.dailyBilling,
+  internal.fees.actions.dailyMaterialization,
   {},
 );
 crons.interval(
@@ -26,11 +26,4 @@ crons.cron(
   internal.reports.summaries.refreshToday,
   {},
 );
-crons.cron(
-  "refresh finance ageing",
-  "15 18 * * *",
-  internal.finance.receivables.startDailyRefresh,
-  {},
-);
-
 export default crons;

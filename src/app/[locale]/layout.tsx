@@ -9,8 +9,18 @@ import { getDictionary } from "@/lib/i18n/dictionaries";
 import "@/app/globals.css";
 import { getBaseUrl } from "@/app/[locale]/(public)/_metadata";
 
-const inter = Inter({ variable: "--font-inter", subsets: ["latin"], weight: ["400", "500", "600"], display: "swap" });
-const notoBengali = Noto_Sans_Bengali({ variable: "--font-noto-bengali", subsets: ["bengali"], weight: ["400", "500", "600"], display: "swap" });
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  display: "swap",
+});
+const notoBengali = Noto_Sans_Bengali({
+  variable: "--font-noto-bengali",
+  subsets: ["bengali"],
+  weight: ["400", "500", "600"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: getBaseUrl(),
@@ -22,15 +32,26 @@ export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
 }
 
-export default async function LocaleLayout({ children, params }: { children: React.ReactNode; params: Promise<{ locale: string }> }) {
+export default async function LocaleLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ locale: string }>;
+}) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const dictionary = await getDictionary(locale);
 
   return (
-    <html lang={locale ?? defaultLocale} className={`${inter.variable} ${notoBengali.variable}`}>
-      <body>
-        <a className="skip-link" href="#main-content">{dictionary.common.skip}</a>
+    <html
+      lang={locale ?? defaultLocale}
+      className={`${inter.variable} ${notoBengali.variable}`}
+    >
+      <body suppressHydrationWarning>
+        <a className="skip-link" href="#main-content">
+          {dictionary.common.skip}
+        </a>
         <ClerkProvider signInUrl={`/${locale}/sign-in`}>
           <ConvexClientProvider>{children}</ConvexClientProvider>
         </ClerkProvider>

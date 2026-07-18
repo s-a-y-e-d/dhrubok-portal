@@ -20,7 +20,8 @@ import { CoursesWorkspace } from "./courses";
 import { BatchesWorkspace } from "./batches";
 import { TeachersWorkspace } from "./teachers";
 import { ScheduleWorkspace } from "./schedule";
-import { FinanceEditor } from "./FinanceWorkspace";
+import { SimpleFinanceWorkspace } from "./SimpleFinanceWorkspace";
+import { ReceiptPrint } from "./ReceiptPrint";
 import { AdmissionsEditor as AdmissionsWorkflow } from "./AdmissionsEditor";
 import { AttendanceEditor as AttendanceWorkflow } from "./AttendanceEditor";
 import { ExamEditor } from "./ExamEditor";
@@ -38,10 +39,7 @@ import {
   TeacherProfile,
   TeacherRoutine,
 } from "./SelfService";
-import {
-  StudentMaterials as StudentMaterialsFlow,
-  StudentNotices as StudentNoticesFlow,
-} from "./StudentContent";
+import { StudentNotices as StudentNoticesFlow } from "./StudentContent";
 import { OwnerStudentsEditor } from "./OwnerStudentsEditor";
 import { StudentFinance } from "./StudentFinance";
 import { MessageHistory } from "./MessageHistory";
@@ -352,7 +350,7 @@ function OwnerDashboard({ locale }: { locale: "bn" | "en" }) {
                     <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
                       {s.status === "active" && (
                         <Link
-                          href={`/${locale}/owner/finance?view=collect&student=${s.studentId}`}
+                          href={`/${locale}/owner/finance/students/${s.studentId}`}
                           className="button button-secondary"
                           style={{
                             padding: "4px 8px",
@@ -1673,9 +1671,6 @@ function StudentFees({ locale }: { locale: "bn" | "en" }) {
   return <StudentFinance locale={locale} />;
 }
 
-function StudentMaterials({ locale }: { locale: "bn" | "en" }) {
-  return <StudentMaterialsFlow locale={locale} />;
-}
 function StudentNotices({ locale }: { locale: "bn" | "en" }) {
   return <StudentNoticesFlow locale={locale} />;
 }
@@ -1693,22 +1688,43 @@ export function RoleSection({
   const activeSection = segments[0];
   if (role === "owner") {
     if (activeSection === "students") return <OwnerStudents locale={locale} />;
-    if (activeSection === "admissions") return <OwnerAdmissions locale={locale} />;
+    if (activeSection === "admissions")
+      return <OwnerAdmissions locale={locale} />;
     if (activeSection === "messages") return <OwnerMessages locale={locale} />;
     if (activeSection === "notices")
-      return (
-        <ContentEditor locale={locale} role="owner" initialTab="notices" />
-      );
-    if (activeSection === "materials")
       return <ContentEditor locale={locale} role="owner" />;
-    if (activeSection === "courses") return <CoursesWorkspace locale={locale} />;
-    if (activeSection === "batches") return <BatchesWorkspace locale={locale} />;
-    if (activeSection === "teachers") return <TeachersWorkspace locale={locale} />;
-    if (activeSection === "schedule") return <ScheduleWorkspace locale={locale} />;
-    if (activeSection === "attendance") return <AttendanceWorkflow locale={locale} />;
-    if (activeSection === "finance") return <FinanceEditor locale={locale} />;
+    if (activeSection === "courses")
+      return <CoursesWorkspace locale={locale} />;
+    if (activeSection === "batches")
+      return <BatchesWorkspace locale={locale} />;
+    if (activeSection === "teachers")
+      return <TeachersWorkspace locale={locale} />;
+    if (activeSection === "schedule")
+      return <ScheduleWorkspace locale={locale} />;
+    if (activeSection === "attendance")
+      return <AttendanceWorkflow locale={locale} />;
+    if (activeSection === "receipt" && segments[1])
+      return (
+        <ReceiptPrint
+          locale={locale}
+          collectionId={segments[1] as Id<"feeCollections">}
+        />
+      );
+    if (activeSection === "finance") {
+      if (segments[1] === "students" && segments[2])
+        return (
+          <SimpleFinanceWorkspace
+            locale={locale}
+            page="student"
+            studentId={segments[2] as Id<"students">}
+          />
+        );
+      const financePage = segments[1] === "receipts" ? "receipts" : "monthly";
+      return <SimpleFinanceWorkspace locale={locale} page={financePage} />;
+    }
     if (activeSection === "exams") {
-      if (segments[1] === "create") return <OwnerExamCreatePage locale={locale} />;
+      if (segments[1] === "create")
+        return <OwnerExamCreatePage locale={locale} />;
       if (segments[1])
         return (
           <OwnerExamDetailPage
@@ -1719,8 +1735,10 @@ export function RoleSection({
       return <OwnerExamListPage locale={locale} />;
     }
     if (activeSection === "reports") return <ReportsEditor locale={locale} />;
-    if (activeSection === "website") return <OwnerWebsiteEditor locale={locale} />;
-    if (activeSection === "settings") return <OwnerSettingsEditor locale={locale} />;
+    if (activeSection === "website")
+      return <OwnerWebsiteEditor locale={locale} />;
+    if (activeSection === "settings")
+      return <OwnerSettingsEditor locale={locale} />;
     return <OwnerDashboard locale={locale} />;
   }
   if (role === "teacher") {
@@ -1729,12 +1747,8 @@ export function RoleSection({
     if (section === "attendance") return <TeacherAttendance locale={locale} />;
     if (section === "exams")
       return <ExamEditor locale={locale} role="teacher" />;
-    if (section === "materials")
-      return <ContentEditor locale={locale} role="teacher" />;
     if (section === "notices")
-      return (
-        <ContentEditor locale={locale} role="teacher" initialTab="notices" />
-      );
+      return <ContentEditor locale={locale} role="teacher" />;
     if (section === "profile") return <TeacherProfile locale={locale} />;
     return <TeacherDashboard locale={locale} />;
   }
@@ -1742,7 +1756,6 @@ export function RoleSection({
   if (section === "attendance") return <StudentAttendance locale={locale} />;
   if (section === "fees") return <StudentFees locale={locale} />;
   if (section === "results") return <StudentExamResults locale={locale} />;
-  if (section === "materials") return <StudentMaterials locale={locale} />;
   if (section === "notices") return <StudentNotices locale={locale} />;
   if (section === "profile") return <StudentProfile locale={locale} />;
   return <StudentDashboard locale={locale} />;

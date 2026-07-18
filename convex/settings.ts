@@ -13,7 +13,7 @@ const publicSettingsValidator = v.object({
 
 const ownerSettingsValidator = v.object({
   settingsId: v.id("coachingSettings"), nameBn: v.string(), nameEn: v.string(), shortNameBn: v.string(), shortNameEn: v.string(),
-  monthlyDueDay: v.number(), defaultLocale: localeValidator, defaultGuardianSmsLocale: localeValidator,
+  defaultLocale: localeValidator, defaultGuardianSmsLocale: localeValidator,
   publicAdmissionsOpen: v.boolean(), smsEnabled: v.boolean(), receiptFooterBn: v.string(), receiptFooterEn: v.string(), updatedAt: v.number(),
   smsConfigured: v.boolean(), smsSenderIdConfigured: v.boolean(),
 });
@@ -29,7 +29,6 @@ export const getOwner = query({
       nameEn: current.nameEn,
       shortNameBn: current.shortNameBn,
       shortNameEn: current.shortNameEn,
-      monthlyDueDay: current.monthlyDueDay,
       defaultLocale: current.defaultLocale,
       defaultGuardianSmsLocale: current.defaultGuardianSmsLocale,
       publicAdmissionsOpen: current.publicAdmissionsOpen,
@@ -75,7 +74,6 @@ export const initialize = mutation({
       email: normalizeEmail(args.email),
       timezone: "Asia/Dhaka",
       currency: "BDT",
-      monthlyDueDay: 15,
       receiptPrefix: "RCPT",
       studentIdPrefix: "ST",
       applicationPrefix: "APP",
@@ -95,18 +93,18 @@ export const initialize = mutation({
 export const updateOperations = mutation({
   args: {
     expectedUpdatedAt: v.number(),
-    monthlyDueDay: v.number(), defaultLocale: localeValidator, defaultGuardianSmsLocale: localeValidator,
+    monthlyDueDay: v.optional(v.number()),
+    defaultLocale: localeValidator, defaultGuardianSmsLocale: localeValidator,
     publicAdmissionsOpen: v.boolean(), smsEnabled: v.boolean(), receiptFooterBn: v.string(), receiptFooterEn: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     const { account } = await requireOwner(ctx);
-    if (!Number.isInteger(args.monthlyDueDay) || args.monthlyDueDay < 1 || args.monthlyDueDay > 28) throw new Error("Monthly due day must be between 1 and 28");
+    if (args.monthlyDueDay !== undefined && (!Number.isInteger(args.monthlyDueDay) || args.monthlyDueDay < 1 || args.monthlyDueDay > 28)) throw new Error("Monthly due day must be between 1 and 28");
     const settings = (await ctx.db.query("coachingSettings").take(1))[0];
     if (!settings) throw new Error("Coaching settings are not initialized");
     if (settings.updatedAt !== args.expectedUpdatedAt) throw new Error("Settings have been modified by another owner. Please reload and try again.");
     const updateData = {
-      monthlyDueDay: args.monthlyDueDay,
       defaultLocale: args.defaultLocale,
       defaultGuardianSmsLocale: args.defaultGuardianSmsLocale,
       publicAdmissionsOpen: args.publicAdmissionsOpen,

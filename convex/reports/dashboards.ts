@@ -222,7 +222,7 @@ const examCardValidator = v.object({
   mode: v.string(),
 });
 
-const contentCardValidator = v.object({ id: v.string(), kind: v.union(v.literal("material"), v.literal("notice")), title: v.string(), publishedAt: v.number() });
+const contentCardValidator = v.object({ id: v.string(), kind: v.literal("notice"), title: v.string(), publishedAt: v.number() });
 
 export const teacher = query({
   args: { date: v.string() },
@@ -230,11 +230,10 @@ export const teacher = query({
   handler: async (ctx, args) => {
     const { account, teacher: teacherDoc } = await requireTeacher(ctx);
     assertLocalDate(args.date);
-    const [assignments, sessions, examAssignments, materials, noticeCandidates] = await Promise.all([
+    const [assignments, sessions, examAssignments, noticeCandidates] = await Promise.all([
       ctx.db.query("teacherBatchAssignments").withIndex("by_teacherId_and_status", (q) => q.eq("teacherId", teacherDoc._id).eq("status", "active")).take(100),
       ctx.db.query("classSessions").withIndex("by_teacherId_and_sessionDate", (q) => q.eq("teacherId", teacherDoc._id).eq("sessionDate", args.date)).take(100),
       ctx.db.query("examTeacherAssignments").withIndex("by_teacherId", (q) => q.eq("teacherId", teacherDoc._id)).take(50),
-      ctx.db.query("materials").withIndex("by_createdByAccountId_and_status", (q) => q.eq("createdByAccountId", account._id).eq("status", "published")).order("desc").take(10),
       ctx.db.query("notices").withIndex("by_createdByAccountId_and_status", (q) => q.eq("createdByAccountId", account._id).eq("status", "published")).order("desc").take(10),
     ]);
     const todaySessions = await Promise.all(sessions.map(async (session) => {
@@ -282,10 +281,9 @@ export const teacher = query({
       .filter((notice) => notice.publishedAt != null)
       .slice(0, 10)
       .map((notice) => ({ id: notice._id as string, kind: "notice" as const, title: localized(account.locale, notice.titleBn, notice.titleEn), publishedAt: notice.publishedAt! }));
-    const content = [
-      ...materials.filter((material) => material.publishedAt != null).map((material) => ({ id: material._id as string, kind: "material" as const, title: localized(account.locale, material.titleBn, material.titleEn), publishedAt: material.publishedAt! })),
-      ...noticeCards,
-    ].sort((a, b) => b.publishedAt - a.publishedAt).slice(0, 10);
+    const content = noticeCards
+      .sort((a, b) => b.publishedAt - a.publishedAt)
+      .slice(0, 10);
     return {
       assignedBatchCount: new Set(assignments.map((assignment) => assignment.batchId)).size,
       todaySessions,
@@ -308,7 +306,7 @@ export const student = query({
   returns: v.object({
     nextClass: nextClassValidator, attendancePercentage: v.union(v.number(), v.null()), attendanceSampleCapped: v.boolean(), latestAttendance: v.union(v.object({ status: v.string(), submittedAt: v.number() }), v.null()),
     outstandingMinor: v.number(), overdueMinor: v.number(), advanceCreditMinor: v.number(), latestResult: v.union(v.object({ examId: v.id("exams"), examName: v.string(), totalScoreScaled: v.union(v.number(), v.null()), passed: v.union(v.boolean(), v.null()), meritPosition: v.union(v.number(), v.null()), publishedAt: v.number() }), v.null()),
-    unreadNotices: v.number(), unreadNoticesCapped: v.boolean(), recentMaterials: v.array(v.object({ materialId: v.id("materials"), title: v.string(), publishedAt: v.number() })),
+    unreadNotices: v.number(), unreadNoticesCapped: v.boolean(),
     recentNotices: v.array(
       v.object({
         noticeId: v.id("notices"),
@@ -409,17 +407,6 @@ export const student = query({
     const attended = usedAttendance.filter((record) => record.status !== "absent").length;
     const latestResultRow = resultRows[0];
     const latestResultExam = latestResultRow ? await ctx.db.get("exams", latestResultRow.examId) : null;
-    const materialMap = new Map<string, Doc<"materials">>();
-    for (const enrolment of enrolments) {
-      const [courseMaterials, batchMaterials] = await Promise.all([
-        ctx.db.query("materials").withIndex("by_courseId_and_status", (q) => q.eq("courseId", enrolment.courseId).eq("status", "published")).order("desc").take(20),
-        ctx.db.query("materials").withIndex("by_batchId_and_status", (q) => q.eq("batchId", enrolment.batchId).eq("status", "published")).order("desc").take(20),
-      ]);
-      for (const material of courseMaterials.filter((row) => row.visibility === "course")) materialMap.set(material._id, material);
-      for (const material of batchMaterials) materialMap.set(material._id, material);
-    }
-    const recentMaterials = [...materialMap.values()].filter((material) => material.publishedAt != null).sort((a, b) => b.publishedAt! - a.publishedAt!).slice(0, 10)
-      .map((material) => ({ materialId: material._id, title: localized(account.locale, material.titleBn, material.titleEn), publishedAt: material.publishedAt! }));
     const unread = [];
     const recentNotices = [];
     for (const recipient of recipientRows.slice(0, 100)) {
@@ -478,7 +465,6 @@ export const student = query({
       latestResult: latestResultRow?.publishedAt != null && latestResultExam ? { examId: latestResultExam._id, examName: localized(account.locale, latestResultExam.nameBn, latestResultExam.nameEn), totalScoreScaled: latestResultRow.totalScoreScaled ?? null, passed: latestResultRow.passed ?? null, meritPosition: latestResultRow.meritPosition ?? null, publishedAt: latestResultRow.publishedAt } : null,
       unreadNotices: unread.length,
       unreadNoticesCapped: recipientRows.length > 100,
-      recentMaterials,
       recentNotices,
       thisWeekClasses,
       recentResults,

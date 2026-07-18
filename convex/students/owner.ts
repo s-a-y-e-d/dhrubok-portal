@@ -4,12 +4,13 @@ import { mutation, query } from "../_generated/server";
 import { requireOwner } from "../model/auth";
 import { writeAudit } from "../model/audit";
 import { localeValidator, paginationResultFields, studentStatusValidator } from "../model/validators";
-import { assertLocalDate } from "../model/dates";
+import { assertLocalDate, dhakaDate } from "../model/dates";
 import { normalizeBangladeshPhone } from "../model/normalization";
 import { assertMinorUnits } from "../model/money";
 import { scheduleCourseSnapshot } from "../academics/snapshotHooks";
 import { optionalText, requiredText } from "../admissions/model";
 import { applySensitiveField, sensitiveFieldValidator, studentSearchText } from "./model";
+import { assertPeriodKey, materializeEnrolmentMonths } from "../fees/model";
 
 const studentListItemValidator = v.object({
   studentId: v.id("students"),
@@ -273,7 +274,7 @@ export const updateStudent = mutation({
 export const transferEnrolment = mutation({
   args: {
     studentId: v.id("students"), courseId: v.id("courses"), batchId: v.id("batches"),
-    agreedMonthlyAmountMinor: v.number(), effectiveDate: v.string(),
+    agreedMonthlyAmountMinor: v.number(), effectiveDate: v.string(), firstBillingMonth: v.optional(v.string()),
   },
   returns: v.id("enrolments"),
   handler: async (ctx, args) => {
@@ -281,6 +282,9 @@ export const transferEnrolment = mutation({
     assertLocalDate(args.effectiveDate);
     assertMinorUnits(args.agreedMonthlyAmountMinor, "agreedMonthlyAmountMinor");
     if (args.agreedMonthlyAmountMinor <= 0) throw new Error("Monthly fee must be greater than zero");
+    const firstBillingMonth = args.firstBillingMonth ?? args.effectiveDate.slice(0, 7);
+    assertPeriodKey(firstBillingMonth);
+    if (firstBillingMonth < args.effectiveDate.slice(0, 7)) throw new Error("First billing month cannot be before the enrolment start");
     const [student, course, batch, activeEnrolments] = await Promise.all([
       ctx.db.get("students", args.studentId), ctx.db.get("courses", args.courseId), ctx.db.get("batches", args.batchId),
       ctx.db.query("enrolments").withIndex("by_studentId_and_status", (q) => q.eq("studentId", args.studentId).eq("status", "active")).take(2),
@@ -295,9 +299,11 @@ export const transferEnrolment = mutation({
     if (current) await ctx.db.patch("enrolments", current._id, { status: "transferred", endedOn: args.effectiveDate, updatedAt: now });
     const enrolmentId = await ctx.db.insert("enrolments", {
       studentId: student._id, courseId: course._id, batchId: batch._id, enrolledOn: args.effectiveDate,
-      status: "active", agreedMonthlyAmountMinor: args.agreedMonthlyAmountMinor,
+      status: "active", agreedMonthlyAmountMinor: args.agreedMonthlyAmountMinor, firstBillingMonth,
       createdAt: now, updatedAt: now, createdByAccountId: account._id,
     });
+    const createdEnrolment = await ctx.db.get("enrolments", enrolmentId);
+    if (createdEnrolment) await materializeEnrolmentMonths(ctx, createdEnrolment, dhakaDate().slice(0, 7));
     await ctx.db.patch("students", student._id, { status: "active", updatedAt: now, updatedByAccountId: account._id });
     await writeAudit(ctx, {
       actorAccountId: account._id, actorRole: "owner", action: "student.enrolment_transferred",
@@ -307,6 +313,21 @@ export const transferEnrolment = mutation({
     if (current) await scheduleCourseSnapshot(ctx, current.courseId);
     await scheduleCourseSnapshot(ctx, course._id);
     return enrolmentId;
+  },
+});
+
+export const updateMonthlyFee = mutation({
+  args: { studentId: v.id("students"), agreedMonthlyAmountMinor: v.number() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { account } = await requireOwner(ctx);
+    assertMinorUnits(args.agreedMonthlyAmountMinor, "agreedMonthlyAmountMinor");
+    if (args.agreedMonthlyAmountMinor <= 0) throw new Error("Monthly fee must be greater than zero");
+    const enrolment = await ctx.db.query("enrolments").withIndex("by_studentId_and_status", (q) => q.eq("studentId", args.studentId).eq("status", "active")).first();
+    if (!enrolment) throw new Error("Active enrolment not found");
+    await ctx.db.patch(enrolment._id, { agreedMonthlyAmountMinor: args.agreedMonthlyAmountMinor, updatedAt: Date.now() });
+    await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: "student.monthly_fee_updated", entityType: "enrolment", entityId: enrolment._id, summary: "Updated agreed monthly fee", metadata: { amountMinor: args.agreedMonthlyAmountMinor } });
+    return null;
   },
 });
 

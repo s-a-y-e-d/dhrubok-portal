@@ -97,11 +97,13 @@ describe("Owner Settings Workspace & Access Controls", () => {
       smsSenderIdConfigured: true,
     };
 
-    const { rerender } = render(<SettingsEditor locale="en" settings={settings} />);
+    const { rerender } = render(
+      <SettingsEditor locale="en" settings={settings} />,
+    );
 
     // Modify input (make form dirty)
-    const dueDayInput = screen.getByLabelText(/Monthly due day/i);
-    fireEvent.change(dueDayInput, { target: { value: "20" } });
+    const localeInput = screen.getByLabelText(/Interface locale/i);
+    fireEvent.change(localeInput, { target: { value: "bn" } });
 
     // Rerender with a newer updatedAt from query
     const updatedSettings = {
@@ -113,12 +115,18 @@ describe("Owner Settings Workspace & Access Controls", () => {
     rerender(<SettingsEditor locale="en" settings={updatedSettings} />);
 
     // Concurrency warning alert should be rendered
-    expect(screen.getByText(/Settings were updated by another owner!/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Settings were updated by another owner!/i),
+    ).toBeInTheDocument();
 
-    // Discard and Reload button should revert to server value (18) and clear warning
-    const reloadBtn = screen.getByRole("button", { name: "Reload latest settings" });
+    // Discard and Reload should restore the server state and clear the warning.
+    const reloadBtn = screen.getByRole("button", {
+      name: "Reload latest settings",
+    });
     fireEvent.click(reloadBtn);
-    expect(dueDayInput).toHaveValue(18);
-    expect(screen.queryByText(/Settings were updated by another owner!/i)).not.toBeInTheDocument();
+    expect(localeInput).toHaveValue(updatedSettings.defaultLocale);
+    expect(
+      screen.queryByText(/Settings were updated by another owner!/i),
+    ).not.toBeInTheDocument();
   });
 });

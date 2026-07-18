@@ -43,7 +43,6 @@ const RESET_TABLES = [
   "exams",
   "noticeRecipients",
   "notices",
-  "materials",
   "admissionApplications",
   "enrolments",
   "batches",

@@ -14,7 +14,6 @@ import {
   CalendarRange,
   DollarSign,
   FileSpreadsheet,
-  FileText,
   Bell,
   BarChart3,
   Globe,
@@ -120,12 +119,6 @@ const ownerNavGroups: NavGroupDef[] = [
     groupLabelBn: "যোগাযোগ",
     items: [
       {
-        labelEn: "Materials",
-        labelBn: "শেখার সামগ্রী",
-        path: "/materials",
-        icon: FileText,
-      },
-      {
         labelEn: "Notices/SMS",
         labelBn: "নোটিশ ও SMS",
         path: "/notices",
@@ -201,12 +194,6 @@ const teacherNavGroups: NavGroupDef[] = [
     groupLabelEn: "Resources",
     groupLabelBn: "রিসোর্স",
     items: [
-      {
-        labelEn: "Materials",
-        labelBn: "শেখার সামগ্রী",
-        path: "/materials",
-        icon: FileText,
-      },
       { labelEn: "Notices", labelBn: "নোটিশ", path: "/notices", icon: Bell },
     ],
   },
@@ -255,12 +242,6 @@ const studentNavGroups: NavGroupDef[] = [
     groupLabelEn: "Learning",
     groupLabelBn: "শেখার অংশ",
     items: [
-      {
-        labelEn: "Materials",
-        labelBn: "শেখার সামগ্রী",
-        path: "/materials",
-        icon: FileText,
-      },
       { labelEn: "Notices", labelBn: "নোটিশ", path: "/notices", icon: Bell },
     ],
   },
@@ -284,7 +265,7 @@ const ownerQuickActions = [
   {
     labelEn: "Collect payment",
     labelBn: "ফি সংগ্রহ করুন",
-    path: "/finance?view=collect",
+    path: "/finance",
     icon: DollarSign,
   },
   {
@@ -385,12 +366,6 @@ const navMetadata: Record<
     titleBn: "নোটিশ ও ঘোষণা",
     descEn: "Post bulletins, create announcements, and monitor communication.",
     descBn: "নোটিশ বোর্ড, নতুন ঘোষণা এবং নোটিফিকেশন স্ট্যাটাস দেখুন।",
-  },
-  "/materials": {
-    titleEn: "Materials",
-    titleBn: "শেখার সামগ্রী",
-    descEn: "Access and share lecture sheets, syllabus, and study materials.",
-    descBn: "লেকচার শিট, সিলেবাস এবং অন্যান্য পড়ার সামগ্রী ডাউনলোড করুন।",
   },
   "/reports": {
     titleEn: "Reports",
@@ -575,7 +550,7 @@ export function PortalShell({
         {
           labelEn: "Collect Fee",
           labelBn: "ফি সংগ্রহ",
-          path: "/finance?view=collect",
+          path: "/finance",
           icon: DollarSign,
         },
         {

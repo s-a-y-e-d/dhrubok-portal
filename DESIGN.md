@@ -271,41 +271,41 @@ never appear merely as decoration.
 
 ### Semantic mapping for Dhrubok domain states
 
-| Domain     | State            | Colour                      |
-| ---------- | ---------------- | --------------------------- |
-| Attendance | Present          | `success`                   |
-| Attendance | Late             | `warning`                   |
-| Attendance | Absent           | `danger`                    |
-| Finance    | Paid             | `success`                   |
-| Finance    | Partially paid   | `warning`                   |
-| Finance    | Due / Upcoming   | `ink-mute` (neutral)        |
-| Finance    | Overdue          | `danger`                    |
-| Finance    | Voided           | `ink-faint` + strikethrough |
-| Admission  | New              | `info`                      |
-| Admission  | Under review     | `warning`                   |
-| Admission  | Accepted         | `success`                   |
-| Admission  | Rejected         | `danger`                    |
-| Admission  | Withdrawn        | `ink-mute` (neutral)        |
-| Exam       | Scheduled        | `ink-mute` (neutral)        |
-| Exam       | Marks in progress| `info`                      |
-| Exam       | Ready for review | `warning`                   |
-| Exam       | Published        | `info`                      |
-| Student    | Active           | `success`                   |
-| Student    | Paused           | `warning`                   |
-| Student    | Completed        | `info`                      |
-| Student    | Left / Archived  | `ink-mute` (neutral)        |
-| SMS        | Queued           | `info`                      |
-| SMS        | Sending          | `info`                      |
-| SMS        | Accepted / Sent  | `info`                      |
-| SMS        | Delivered        | `success`                   |
-| SMS        | Failed           | `danger`                    |
-| SMS        | Retrying         | `warning`                   |
-| Enrolment  | Active           | `success`                   |
-| Enrolment  | Completed        | `info`                      |
-| Enrolment  | Withdrawn        | `danger`                    |
-| Account    | Active           | `success`                   |
-| Account    | Reserved         | `warning`                   |
-| Account    | Suspended        | `danger`                    |
+| Domain     | State             | Colour                      |
+| ---------- | ----------------- | --------------------------- |
+| Attendance | Present           | `success`                   |
+| Attendance | Late              | `warning`                   |
+| Attendance | Absent            | `danger`                    |
+| Finance    | Paid              | `success`                   |
+| Finance    | Partially paid    | `warning`                   |
+| Finance    | Due / Upcoming    | `ink-mute` (neutral)        |
+| Finance    | Overdue           | `danger`                    |
+| Finance    | Voided            | `ink-faint` + strikethrough |
+| Admission  | New               | `info`                      |
+| Admission  | Under review      | `warning`                   |
+| Admission  | Accepted          | `success`                   |
+| Admission  | Rejected          | `danger`                    |
+| Admission  | Withdrawn         | `ink-mute` (neutral)        |
+| Exam       | Scheduled         | `ink-mute` (neutral)        |
+| Exam       | Marks in progress | `info`                      |
+| Exam       | Ready for review  | `warning`                   |
+| Exam       | Published         | `info`                      |
+| Student    | Active            | `success`                   |
+| Student    | Paused            | `warning`                   |
+| Student    | Completed         | `info`                      |
+| Student    | Left / Archived   | `ink-mute` (neutral)        |
+| SMS        | Queued            | `info`                      |
+| SMS        | Sending           | `info`                      |
+| SMS        | Accepted / Sent   | `info`                      |
+| SMS        | Delivered         | `success`                   |
+| SMS        | Failed            | `danger`                    |
+| SMS        | Retrying          | `warning`                   |
+| Enrolment  | Active            | `success`                   |
+| Enrolment  | Completed         | `info`                      |
+| Enrolment  | Withdrawn         | `danger`                    |
+| Account    | Active            | `success`                   |
+| Account    | Reserved          | `warning`                   |
+| Account    | Suspended         | `danger`                    |
 
 ### Text
 
@@ -545,7 +545,7 @@ component with only default and hover.
 | -------------------- | ------------------------------------------------------------------------------------------------------------ |
 | **Default**          | Base styling as defined by the component                                                                     |
 | **Hover**            | Subtle background shift or border emphasis. No jarring colour change.                                        |
-| **Focus-visible**    | One `{colors.border-focus}` component border. Do not add a second outer border to form controls.            |
+| **Focus-visible**    | One `{colors.border-focus}` component border. Do not add a second outer border to form controls.             |
 | **Pressed / Active** | Darker fill or slight scale reduction (scale 0.98).                                                          |
 | **Selected**         | `{colors.brand-muted}` bg, `{colors.brand}` left border or check.                                            |
 | **Disabled**         | `{colors.canvas-subtle}` bg, `{colors.ink-disabled}` text, `cursor: not-allowed`, reduced opacity (0.5–0.6). |
@@ -759,13 +759,13 @@ When tables collapse on mobile, each row becomes a card:
 - Background and text colour determined by semantic state.
 - No border. Status badges are labels, not selectable filter chips.
 
-| State                            | Background      | Text           | CSS Classes |
-| -------------------------------- | --------------- | -------------- | ----------- |
-| Success (present, paid, active)  | `success-soft`  | `success-deep` | `.status-pill.active` (Accounts), `.status-pill.present` (Attendance), etc. |
+| State                            | Background      | Text           | CSS Classes                                                                     |
+| -------------------------------- | --------------- | -------------- | ------------------------------------------------------------------------------- |
+| Success (present, paid, active)  | `success-soft`  | `success-deep` | `.status-pill.active` (Accounts), `.status-pill.present` (Attendance), etc.     |
 | Warning (late, due, pending)     | `warning-soft`  | `warning-deep` | `.status-pill.reserved` (Accounts), `.status-pill.late` / `.status-pill.queued` |
-| Danger (absent, overdue, failed) | `danger-soft`   | `danger-deep`  | `.status-pill.suspended` / `.status-pill.revoked`, `.status-pill.absent` |
-| Info (published, new, queued)    | `info-soft`     | `info-deep`    | `.status-pill.info` / `.status-pill.published` / `.status-pill.new` |
-| Neutral (draft, archived)        | `canvas-subtle` | `ink-mute`     | `.status-pill` (default) |
+| Danger (absent, overdue, failed) | `danger-soft`   | `danger-deep`  | `.status-pill.suspended` / `.status-pill.revoked`, `.status-pill.absent`        |
+| Info (published, new, queued)    | `info-soft`     | `info-deep`    | `.status-pill.info` / `.status-pill.published` / `.status-pill.new`             |
+| Neutral (draft, archived)        | `canvas-subtle` | `ink-mute`     | `.status-pill` (default)                                                        |
 
 #### Status Dot
 
@@ -841,13 +841,17 @@ When the teacher presses "Submit Attendance":
 
 #### Payment Collection Form
 
-- Student selector with search.
-- Outstanding charges table with checkboxes (oldest pre-selected).
-- Amount input, method select, date picker, optional note.
-- Running allocation summary showing how the payment distributes.
-- "Collect Payment" primary button, disabled until valid.
-- Success state: "Payment recorded. SMS queued." with Print Receipt and
-  View Student actions.
+- Default to Monthly fee, with Other fee as the only alternative.
+- Monthly collection shows whole month snapshots with checkboxes. Partial
+  monthly payments and editable monthly amounts are never shown.
+- Other fee requires an exact free-text fee name and a positive amount.
+- Payment method is fixed to Cash and is not presented as a choice.
+- Collection date defaults to today. A past date is allowed only when the
+  confirmation clearly calls out the backdate.
+- The confirmation previews student, every selected month or exact fee name,
+  and the authoritative total before posting.
+- Success provides the generated receipt number and an immediate receipt action.
+  Payment SMS is intentionally absent until the SMS workflow is implemented.
 
 #### Printable Receipt
 
@@ -913,13 +917,12 @@ See "Print Design" section below.
 
 ### Content Components
 
-#### Notice / Material Card
+#### Notice Card
 
 - Background: `{colors.canvas}`, 1px `{colors.border}`, `{rounded.md}`.
 - Title: `{typography.heading-md}`.
 - Date/author: `{typography.caption}`, `{colors.ink-mute}`.
 - Body preview: `{typography.body-md}`, max 3 lines, truncated.
-- File attachments: icon + filename + size as a chip.
 
 #### Empty State
 
@@ -1153,21 +1156,25 @@ See "Print Design" section below.
 
 - Keep one owner-navigation entry for Finance. Inside it, use a horizontally
   scrollable workspace tab list on narrow screens; never add a second sidebar.
-- Finance overview cards are drill-down controls whose destination contains the
-  exact filtered records composing the displayed metric.
-- Use the fixed ageing buckets Current, 1–15, 16–30, 31–60, 61–90, and 90+ days.
-  Colour communicates risk only and is always paired with text.
-- Payment, adjustment, campaign, import, and drawer-close flows require an
-  explicit preview or confirmation before posting, followed by an authoritative
-  server result and a clear next action.
+- Its visible tabs are Monthly fees (`/owner/finance`) and Receipts
+  (`/owner/finance/receipts`). Manual collection is a contextual student
+  workspace at `/owner/finance/students/[studentId]`, opened by selecting a
+  student row; it is never shown as a general navigation tab.
+- Monthly fees become due on the first day of their month. The worklist exposes
+  only Due now and Future paid; do not reintroduce ageing buckets, partial,
+  credit, promise, campaign, import, cashier-session, or adjustment surfaces.
+- One-click collection previews every due month and amount, then pays all of
+  those months in full in one cash collection.
+- Manual monthly collection may include older dues and any future month in the
+  current calendar year. The preview lists all selected months.
+- A posted collection creates an immutable English receipt snapshot. Corrections
+  use an audited void with a required reason; voiding monthly fees restores the
+  affected months to unpaid.
 - Money columns are right-aligned with tabular numerals. Integer minor units are
   authoritative; formatted BDT values are display-only.
-- Campaign previews show eligible, suppressed, segment, and estimated-cost
-  counts before the cost-incurring confirmation action.
-- Mobile receivables cards preserve student, overdue amount, oldest due date,
-  promise, and last-reminded information.
-- Cash variance is a semantic exception and requires a reason before closing.
-  Closed sessions remain read-only until an explicit, audited reopen.
+- Desktop uses the readable student worklist table; mobile cards preserve
+  student, course/batch, due amount, due months, future-paid months, and the
+  collection action.
 
 ---
 
