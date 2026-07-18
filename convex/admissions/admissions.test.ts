@@ -191,15 +191,17 @@ describe("admission application backend", () => {
       emailVerified: true,
     });
     const result = await owner.mutation(createDirectAdmission, {
-      studentNumber: "STD-2026-0099",
       admissionDate: "2026-07-12",
       studentDisplayName: "Direct Student",
       studentEmail: "direct@example.com",
+      studentPhone: "\u09e6\u09e7\u09ed\u09e7\u09e8\u09e9\u09ea\u09eb\u09ec\u09ed\u09ee",
       schoolCollege: "Example School",
       currentClass: "Class 9",
       guardianName: "Direct Guardian",
-      guardianPhone: "01712345678",
+      guardianPhone: "+880 01712 345678",
       guardianRelationship: "Parent",
+      motherName: "Direct Mother",
+      motherPhone: "\u09e6\u09e7\u09ee\u09e7\u09e8\u09e9\u09ea\u09eb\u09ec\u09ed\u09ee",
       preferredSmsLocale: "bn",
       courseId: seeded.courseId,
       batchId: seeded.openBatchId,
@@ -219,8 +221,13 @@ describe("admission application backend", () => {
     }));
     expect(state.student).toMatchObject({
       displayName: "Direct Student",
+      studentNumber: result.studentNumber,
+      phone: "8801712345678",
+      normalizedGuardianPhone: "8801712345678",
+      motherPhone: "8801812345678",
       status: "active",
     });
+    expect(result.studentNumber).toMatch(/^[A-Z0-9]{5}$/);
     expect(state.enrolment).toMatchObject({
       status: "active",
       batchId: seeded.openBatchId,

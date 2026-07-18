@@ -1,6 +1,6 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { mutation, query } from "../_generated/server";
+import { mutation, query, type MutationCtx } from "../_generated/server";
 import { requireOwner } from "../model/auth";
 import { writeAudit } from "../model/audit";
 import { scheduleCourseSnapshot } from "../academics/snapshotHooks";
@@ -82,6 +82,31 @@ const applicationDetailValidator = v.object({
   acceptedStudentId: v.union(v.id("students"), v.null()),
   duplicateCandidates: v.array(candidateValidator),
 });
+
+const STUDENT_NUMBER_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+const STUDENT_NUMBER_LENGTH = 5;
+const STUDENT_NUMBER_ATTEMPTS = 25;
+
+function randomStudentNumber() {
+  const values = new Uint8Array(STUDENT_NUMBER_LENGTH);
+  crypto.getRandomValues(values);
+  return Array.from(
+    values,
+    (value) => STUDENT_NUMBER_ALPHABET[value % STUDENT_NUMBER_ALPHABET.length],
+  ).join("");
+}
+
+async function generateUniqueStudentNumber(ctx: MutationCtx) {
+  for (let attempt = 0; attempt < STUDENT_NUMBER_ATTEMPTS; attempt += 1) {
+    const studentNumber = randomStudentNumber();
+    const existing = await ctx.db
+      .query("students")
+      .withIndex("by_studentNumber", (q) => q.eq("studentNumber", studentNumber))
+      .unique();
+    if (!existing) return studentNumber;
+  }
+  throw new Error("Could not generate a unique student ID. Please try again.");
+}
 
 function assertReviewable(status: string) {
   if (status !== "new" && status !== "under_review") {
@@ -644,7 +669,6 @@ export const acceptApplication = mutation({
 
 export const createDirectAdmission = mutation({
   args: {
-    studentNumber: v.string(),
     admissionDate: v.string(),
     studentDisplayName: v.string(),
     studentNameBn: v.optional(v.string()),
@@ -669,9 +693,11 @@ export const createDirectAdmission = mutation({
     firstBillingMonth: v.string(),
     internalNote: v.optional(v.string()),
     initialAdmissionFeeMinor: v.number(),
+    photoStorageId: v.optional(v.id("_storage")),
   },
   returns: v.object({
     studentId: v.id("students"),
+    studentNumber: v.string(),
     enrolmentId: v.id("enrolments"),
     collectionId: v.union(v.id("feeCollections"), v.null()),
     receiptNumber: v.union(v.string(), v.null()),
@@ -679,22 +705,8 @@ export const createDirectAdmission = mutation({
   handler: async (ctx, args) => {
     const { account } = await requireOwner(ctx);
     assertLocalDate(args.admissionDate);
-    const studentNumber = requiredText(
-      args.studentNumber,
-      "Student number",
-      40,
-    );
     const profile = normalizeSubmission(args);
     if (profile.dateOfBirth) assertLocalDate(profile.dateOfBirth);
-    if (
-      await ctx.db
-        .query("students")
-        .withIndex("by_studentNumber", (q) =>
-          q.eq("studentNumber", studentNumber),
-        )
-        .unique()
-    )
-      throw new Error("Student number is already used");
     if (
       await ctx.db
         .query("students")
@@ -725,6 +737,7 @@ export const createDirectAdmission = mutation({
     assertPeriodKey(args.firstBillingMonth);
     if (args.firstBillingMonth < args.admissionDate.slice(0, 7))
       throw new Error("First billing month cannot be before admission");
+    const studentNumber = await generateUniqueStudentNumber(ctx);
     const now = Date.now();
     const studentId = await ctx.db.insert("students", {
       studentNumber,
@@ -739,6 +752,7 @@ export const createDirectAdmission = mutation({
       schoolCollege: profile.schoolCollege,
       currentClass: profile.currentClass,
       address: profile.address,
+      photoStorageId: args.photoStorageId,
       guardianName: profile.guardianName,
       guardianPhone: profile.guardianPhone,
       normalizedGuardianPhone: profile.normalizedGuardianPhone,
@@ -822,6 +836,7 @@ export const createDirectAdmission = mutation({
     });
     return {
       studentId,
+      studentNumber,
       enrolmentId,
       collectionId: admissionCollection?.collectionId ?? null,
       receiptNumber: admissionCollection?.receiptNumber ?? null,

@@ -12,6 +12,8 @@ describe("domain primitives", () => {
   it("normalizes Bangladesh mobile numbers", () => {
     expect(normalizeBangladeshPhone("01712-345678")).toBe("8801712345678");
     expect(normalizeBangladeshPhone("+880 1712 345678")).toBe("8801712345678");
+    expect(normalizeBangladeshPhone("+880 01712 345678")).toBe("8801712345678");
+    expect(normalizeBangladeshPhone("\u09e6\u09e7\u09ed\u09e7\u09e8-\u09e9\u09ea\u09eb\u09ec\u09ed\u09ee")).toBe("8801712345678");
     expect(() => normalizeBangladeshPhone("1234")).toThrow("Invalid Bangladesh");
   });
 
