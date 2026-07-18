@@ -1730,9 +1730,6 @@ a {
   .public-actions {
     margin-left: auto;
   }
-  .public-actions .text-link {
-    display: none;
-  }
   .card-grid,
   .card-grid.compact {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1833,7 +1830,8 @@ a {
     width: 36px;
     height: 36px;
   }
-  .language-link {
+  .language-link,
+  .public-actions .text-link {
     min-height: 44px;
   }
   .button {
