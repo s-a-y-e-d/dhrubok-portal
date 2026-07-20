@@ -1559,7 +1559,7 @@ export default defineSchema({
     body: v.string(),
     segmentEstimate: v.number(),
     status: smsStatusValidator,
-    provider: v.literal("sms_bd"),
+    provider: v.union(v.literal("sms_bd"), v.literal("bulksmsbd")),
     providerRequestId: v.optional(v.string()),
     providerStatus: v.optional(v.string()),
     providerChargeMinor: v.optional(v.number()),

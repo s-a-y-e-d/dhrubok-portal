@@ -1,8 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation, query } from "../_generated/server";
 import { localeValidator } from "../model/validators";
-import { enqueueSms } from "../messaging/model";
-import { renderSmsTemplate } from "../messaging/templates";
+import { enqueueSms, renderEnabledSmsTemplate } from "../messaging/model";
 import {
   assertSubmissionKey,
   MAX_PUBLIC_OPTIONS,
@@ -163,19 +162,17 @@ export const submitVerified = internalMutation({
       updatedAt: now,
       submissionKey,
     });
-    const template = await ctx.db.query("smsTemplates").withIndex("by_key", (q) => q.eq("key", "admission_received")).unique();
-    if (template?.enabled) {
-      const rendered = renderSmsTemplate(args.preferredSmsLocale === "bn" ? template.bodyBn : template.bodyEn, {
-        studentName: normalized.studentDisplayName,
-        applicationNumber,
-      });
-      if (rendered.missingVariables.length === 0) {
-        await enqueueSms(ctx, {
+    const body = await renderEnabledSmsTemplate(ctx, "admission_received", args.preferredSmsLocale, {
+      brand: args.preferredSmsLocale === "bn" ? settings.shortNameBn : settings.shortNameEn,
+      studentName: normalized.studentDisplayName,
+      applicationNumber,
+    });
+    if (body) {
+      await enqueueSms(ctx, {
           idempotencyKey: `admission:${applicationId}:received`, eventType: "admission_received",
           relatedEntityType: "admissionApplication", relatedEntityId: applicationId,
-          guardianPhone: normalized.guardianPhone, locale: args.preferredSmsLocale, body: rendered.body,
-        });
-      }
+          guardianPhone: normalized.guardianPhone, locale: args.preferredSmsLocale, body,
+      });
     }
     return { applicationId, applicationNumber, submittedAt: now, replayed: false };
   },

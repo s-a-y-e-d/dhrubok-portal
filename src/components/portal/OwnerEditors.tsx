@@ -370,8 +370,8 @@ export function OwnerSettingsEditor({
                   }}
                 >
                   {bn
-                    ? "উপস্থিতি, পেমেন্ট ও পরীক্ষার ফলাফলের জন্য অভিভাবকদের স্বয়ংক্রিয় SMS নোটিফিকেশন পাঠান।"
-                    : "Send automated SMS notifications to guardians for attendance records, manual payments, and exam results."}
+                    ? "ভর্তি, অনুপস্থিতি/বিলম্ব এবং পেমেন্টের জন্য অভিভাবকদের স্বয়ংক্রিয় SMS পাঠান।"
+                    : "Send automatic guardian SMS for admissions, absence/late attendance, and payments."}
                 </span>
                 <div
                   style={{
@@ -446,8 +446,8 @@ export function OwnerSettingsEditor({
                       }}
                     >
                       {bn
-                        ? "সেন্ডার আইডি কনফিগার করা নেই; প্রোভাইডারের ডিফল্ট সেন্ডার ব্যবহারের অনুরোধ করা হবে।"
-                        : "Sender ID not configured; the provider’s default sender will be requested."}
+                        ? "সেন্ডার আইডি কনফিগার করা নেই; SMS পাঠানো ব্যর্থ হবে।"
+                        : "Sender ID is not configured; SMS sending will fail."}
                     </span>
                   )}
                 </div>

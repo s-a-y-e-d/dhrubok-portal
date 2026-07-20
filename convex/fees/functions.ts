@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
+import type { Id } from "../_generated/dataModel";
 import { internalMutation, mutation, query } from "../_generated/server";
 import { requireAccount, requireOwner, requireStudent } from "../model/auth";
 import { writeAudit } from "../model/audit";
@@ -104,16 +105,13 @@ export const ownerWorklist = query({
         displayName: v.string(),
         photoUrl: v.union(v.string(), v.null()),
         guardianPhone: v.string(),
-        courseId: v.id("courses"),
-        batchId: v.id("batches"),
-        courseNameBn: v.string(),
-        courseNameEn: v.string(),
-        batchNameBn: v.string(),
-        batchNameEn: v.string(),
         monthlyFeeMinor: v.number(),
         dueMinor: v.number(),
-        dueMonths: v.array(v.string()),
-        futurePaidMonths: v.array(v.string()),
+        futurePaidItems: v.number(),
+        dueItems: v.array(v.object({
+          enrolmentId: v.id("enrolments"), periodKey: v.string(), amountMinor: v.number(),
+          courseNameBn: v.string(), courseNameEn: v.string(), batchNameBn: v.string(), batchNameEn: v.string(),
+        })),
       }),
     ),
   }),
@@ -125,9 +123,12 @@ export const ownerWorklist = query({
       .query("enrolments")
       .withIndex("by_status", (q) => q.eq("status", "active"))
       .take(300);
-    const rows = [];
+    const byStudent = new Map<string, {
+      studentId: Id<"students">; studentNumber: string; displayName: string; photoUrl: string | null; guardianPhone: string;
+      monthlyFeeMinor: number; dueMinor: number; futurePaidItems: number;
+      dueItems: Array<{ enrolmentId: Id<"enrolments">; periodKey: string; amountMinor: number; courseNameBn: string; courseNameEn: string; batchNameBn: string; batchNameEn: string }>;
+    }>();
     let totalDueMinor = 0;
-    let studentsWithDue = 0;
     let futurePaidMonths = 0;
     for (const enrolment of enrolments) {
       if (args.courseId && enrolment.courseId !== args.courseId) continue;
@@ -141,7 +142,7 @@ export const ownerWorklist = query({
           .withIndex("by_studentId_and_dueDate", (q) =>
             q.eq("studentId", enrolment.studentId),
           )
-          .take(240),
+          .take(500),
       ]);
       if (!student || student.status !== "active" || !course || !batch)
         continue;
@@ -153,38 +154,27 @@ export const ownerWorklist = query({
           .includes(needle)
       )
         continue;
-      const due = records.filter(
+      const scopedRecords = records.filter((record) => record.enrolmentId === enrolment._id);
+      const due = scopedRecords.filter(
         (record) => record.status === "unpaid" && record.dueDate <= today,
       );
-      const future = records.filter(
+      const future = scopedRecords.filter(
         (record) =>
           record.status === "paid" && record.periodKey > currentPeriod,
       );
       if (args.dueOnly && due.length === 0) continue;
       const dueMinor = due.reduce((sum, record) => sum + record.amountMinor, 0);
       totalDueMinor += dueMinor;
-      if (due.length) studentsWithDue += 1;
       futurePaidMonths += future.length;
-      rows.push({
-        studentId: student._id,
-        studentNumber: student.studentNumber,
-        displayName: student.displayName,
-        photoUrl: student.photoStorageId
-          ? await ctx.storage.getUrl(student.photoStorageId)
-          : null,
-        guardianPhone: student.guardianPhone,
-        courseId: course._id,
-        batchId: batch._id,
-        courseNameBn: course.nameBn,
-        courseNameEn: course.nameEn,
-        batchNameBn: batch.nameBn,
-        batchNameEn: batch.nameEn,
-        monthlyFeeMinor: enrolment.agreedMonthlyAmountMinor ?? 0,
-        dueMinor,
-        dueMonths: due.map((record) => record.periodKey),
-        futurePaidMonths: future.map((record) => record.periodKey),
-      });
+      const existing = byStudent.get(student._id);
+      const row = existing ?? { studentId: student._id, studentNumber: student.studentNumber, displayName: student.displayName, photoUrl: student.photoStorageId ? await ctx.storage.getUrl(student.photoStorageId) : null, guardianPhone: student.guardianPhone, monthlyFeeMinor: 0, dueMinor: 0, futurePaidItems: 0, dueItems: [] };
+      row.monthlyFeeMinor += enrolment.agreedMonthlyAmountMinor ?? 0;
+      row.dueMinor += dueMinor; row.futurePaidItems += future.length;
+      row.dueItems.push(...due.map((record) => ({ enrolmentId: enrolment._id, periodKey: record.periodKey, amountMinor: record.amountMinor, courseNameBn: course.nameBn, courseNameEn: course.nameEn, batchNameBn: batch.nameBn, batchNameEn: batch.nameEn })));
+      byStudent.set(student._id, row);
     }
+    const rows = [...byStudent.values()];
+    const studentsWithDue = rows.filter((row) => row.dueMinor > 0).length;
     rows.sort(
       (a, b) =>
         b.dueMinor - a.dueMinor || a.displayName.localeCompare(b.displayName),
@@ -215,68 +205,45 @@ export const studentCollectionOptions = query({
     displayName: v.string(),
     studentNumber: v.string(),
     photoUrl: v.union(v.string(), v.null()),
-    monthlyFeeMinor: v.number(),
-    months: v.array(
-      v.object({
-        periodKey: v.string(),
-        amountMinor: v.number(),
-        status: v.union(
-          v.literal("due"),
-          v.literal("future"),
-          v.literal("paid"),
-        ),
-      }),
-    ),
+    enrolments: v.array(v.object({
+      enrolmentId: v.id("enrolments"), courseNameBn: v.string(), courseNameEn: v.string(), batchNameBn: v.string(), batchNameEn: v.string(),
+      enrolmentStatus: v.union(v.literal("active"), v.literal("completed"), v.literal("withdrawn"), v.literal("transferred")), monthlyFeeMinor: v.number(),
+      months: v.array(v.object({ periodKey: v.string(), amountMinor: v.number(), status: v.union(v.literal("due"), v.literal("future"), v.literal("paid")) })),
+    })),
   }),
   handler: async (ctx, args) => {
     await requireOwner(ctx);
-    const [student, enrolment, records] = await Promise.all([
+    const [student, enrolments, records] = await Promise.all([
       ctx.db.get("students", args.studentId),
       ctx.db
         .query("enrolments")
-        .withIndex("by_studentId_and_status", (q) =>
-          q.eq("studentId", args.studentId).eq("status", "active"),
-        )
-        .first(),
+        .withIndex("by_studentId_and_status", (q) => q.eq("studentId", args.studentId))
+        .take(100),
       ctx.db
         .query("monthlyFeeRecords")
         .withIndex("by_studentId_and_dueDate", (q) =>
           q.eq("studentId", args.studentId),
         )
-        .take(240),
+        .take(500),
     ]);
-    if (!student || !enrolment)
-      throw new Error("Active student enrolment not found");
+    if (!student) throw new Error("Student not found");
     const today = dhakaDate();
     const currentPeriod = periodFromDate(today);
     const currentYear = currentPeriod.slice(0, 4);
-    const byPeriod = new Map(
-      records.map((record) => [record.periodKey, record]),
-    );
-    const monthlyFeeMinor = enrolment.agreedMonthlyAmountMinor ?? 0;
-    const months: Array<{
-      periodKey: string;
-      amountMinor: number;
-      status: "due" | "future" | "paid";
-    }> = records
-      .filter((record) => record.status === "unpaid" && record.dueDate <= today)
-      .map((record) => ({
-        periodKey: record.periodKey,
-        amountMinor: record.amountMinor,
-        status: "due",
-      }));
-    for (
-      let month = Number(currentPeriod.slice(5, 7)) + 1;
-      month <= 12;
-      month += 1
-    ) {
-      const periodKey = `${currentYear}-${String(month).padStart(2, "0")}`;
-      const record = byPeriod.get(periodKey);
-      months.push({
-        periodKey,
-        amountMinor: record?.amountMinor ?? monthlyFeeMinor,
-        status: record?.status === "paid" ? "paid" : "future",
-      });
+    const enrolmentOptions = [];
+    for (const enrolment of enrolments) {
+      const enrolmentRecords = records.filter((record) => record.enrolmentId === enrolment._id);
+      const unpaid = enrolmentRecords.filter((record) => record.status === "unpaid");
+      if (enrolment.status !== "active" && unpaid.length === 0) continue;
+      const [course, batch] = await Promise.all([ctx.db.get("courses", enrolment.courseId), ctx.db.get("batches", enrolment.batchId)]);
+      if (!course || !batch) continue;
+      const byPeriod = new Map(enrolmentRecords.map((record) => [record.periodKey, record]));
+      const months: Array<{ periodKey: string; amountMinor: number; status: "due" | "future" | "paid" }> = unpaid.filter((record) => record.dueDate <= today).map((record) => ({ periodKey: record.periodKey, amountMinor: record.amountMinor, status: "due" }));
+      if (enrolment.status === "active") for (let month = Number(currentPeriod.slice(5, 7)) + 1; month <= 12; month += 1) {
+        const periodKey = `${currentYear}-${String(month).padStart(2, "0")}`; const record = byPeriod.get(periodKey);
+        months.push({ periodKey, amountMinor: record?.amountMinor ?? enrolment.agreedMonthlyAmountMinor ?? 0, status: record?.status === "paid" ? "paid" : "future" });
+      }
+      enrolmentOptions.push({ enrolmentId: enrolment._id, courseNameBn: course.nameBn, courseNameEn: course.nameEn, batchNameBn: batch.nameBn, batchNameEn: batch.nameEn, enrolmentStatus: enrolment.status, monthlyFeeMinor: enrolment.agreedMonthlyAmountMinor ?? 0, months });
     }
     return {
       studentId: student._id,
@@ -285,8 +252,7 @@ export const studentCollectionOptions = query({
       photoUrl: student.photoStorageId
         ? await ctx.storage.getUrl(student.photoStorageId)
         : null,
-      monthlyFeeMinor,
-      months,
+      enrolments: enrolmentOptions,
     };
   },
 });
@@ -306,18 +272,17 @@ export const collectDue = mutation({
       .take(240);
     const due = records.filter((record) => record.dueDate <= today);
     if (!due.length) throw new Error("This student has no monthly fees due");
+    const items = await Promise.all(due.map(async (record) => {
+      const enrolment = record.enrolmentId ? await ctx.db.get("enrolments", record.enrolmentId) : null;
+      const course = enrolment ? await ctx.db.get("courses", enrolment.courseId) : null;
+      return { itemType: "monthly" as const, description: `${course ? `${course.nameEn} - ` : ""}${monthLabel(record.periodKey)} Monthly Fee`, amountMinor: record.amountMinor, periodKey: record.periodKey, monthlyFeeRecordId: record._id };
+    }));
     const result = await postCollection(ctx, {
       studentId: args.studentId,
       collectionType: "monthly",
       collectedOn: args.collectedOn,
       collectedByAccountId: account._id,
-      items: due.map((record) => ({
-        itemType: "monthly",
-        description: `${monthLabel(record.periodKey)} Monthly Fee`,
-        amountMinor: record.amountMinor,
-        periodKey: record.periodKey,
-        monthlyFeeRecordId: record._id,
-      })),
+      items,
     });
     for (const record of due)
       await ctx.db.patch(record._id, {
@@ -474,6 +439,49 @@ export const collectOther = mutation({
       summary: `Collected ${feeName}`,
       metadata: { amountMinor: result.amountMinor },
     });
+    return result;
+  },
+});
+
+export const collectManual = mutation({
+  args: {
+    studentId: v.id("students"),
+    selections: v.array(v.object({ enrolmentId: v.id("enrolments"), periodKey: v.string() })),
+    otherFee: v.optional(v.object({ feeName: v.string(), amountMinor: v.number() })),
+    collectedOn: v.string(), note: v.optional(v.string()),
+  },
+  returns: collectionResultValidator,
+  handler: async (ctx, args) => {
+    const { account } = await requireOwner(ctx); validateCollectionDate(args.collectedOn);
+    const unique = new Map(args.selections.map((selection) => [`${selection.enrolmentId}:${assertPeriodKey(selection.periodKey)}`, selection]));
+    if (unique.size > 100) throw new Error("A collection is limited to 100 monthly fee items");
+    let otherFee: { feeName: string; amountMinor: number } | undefined;
+    if (args.otherFee) { assertMinorUnits(args.otherFee.amountMinor); if (args.otherFee.amountMinor <= 0) throw new Error("Other fee amount must be greater than zero"); otherFee = { feeName: requiredText(args.otherFee.feeName, "Fee name", 120), amountMinor: args.otherFee.amountMinor }; }
+    if (unique.size === 0 && !otherFee) throw new Error("Select monthly fees or enter an other fee");
+    const today = dhakaDate(); const currentPeriod = periodFromDate(today); const currentYear = currentPeriod.slice(0, 4);
+    const records = await ctx.db.query("monthlyFeeRecords").withIndex("by_studentId_and_dueDate", q => q.eq("studentId", args.studentId)).take(500);
+    const selected = [];
+    for (const selection of unique.values()) {
+      const enrolment = await ctx.db.get("enrolments", selection.enrolmentId);
+      if (!enrolment || enrolment.studentId !== args.studentId) throw new Error("Enrolment does not belong to this student");
+      if (selection.periodKey > currentPeriod && (enrolment.status !== "active" || selection.periodKey.slice(0, 4) !== currentYear)) throw new Error("Future fees are only available for active enrolments in the current year");
+      let record = records.find(row => row.enrolmentId === enrolment._id && row.periodKey === selection.periodKey);
+      if (!record) {
+        const firstBillingMonth = enrolment.firstBillingMonth ?? periodFromDate(enrolment.enrolledOn); const amountMinor = enrolment.agreedMonthlyAmountMinor ?? 0;
+        if (amountMinor <= 0) throw new Error("Monthly fee is not configured"); if (selection.periodKey < firstBillingMonth) throw new Error("Month is before the first billing month");
+        const id = await ctx.db.insert("monthlyFeeRecords", { studentId: args.studentId, enrolmentId: enrolment._id, courseId: enrolment.courseId, batchId: enrolment.batchId, periodKey: selection.periodKey, dueDate: dueDateForPeriod(selection.periodKey), amountMinor, status: "unpaid", createdAt: Date.now() });
+        record = (await ctx.db.get("monthlyFeeRecords", id)) ?? undefined;
+      }
+      if (!record || record.status !== "unpaid") throw new Error(`${monthLabel(selection.periodKey)} is already paid`);
+      const course = await ctx.db.get("courses", enrolment.courseId); if (!course) throw new Error("Course not found");
+      selected.push({ record, courseName: course.nameEn });
+    }
+    const result = await postCollection(ctx, { studentId: args.studentId, collectionType: selected.length ? "monthly" : "other", collectedOn: args.collectedOn, note: optionalText(args.note, "Note", 500), collectedByAccountId: account._id, items: [
+      ...selected.map(({ record, courseName }) => ({ itemType: "monthly" as const, description: `${courseName} - ${monthLabel(record.periodKey)} Monthly Fee`, amountMinor: record.amountMinor, periodKey: record.periodKey, monthlyFeeRecordId: record._id })),
+      ...(otherFee ? [{ itemType: "other" as const, description: otherFee.feeName, amountMinor: otherFee.amountMinor }] : []),
+    ] });
+    for (const { record } of selected) await ctx.db.patch(record._id, { status: "paid", collectionId: result.collectionId, paidAt: Date.now() });
+    await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: "fee.collection_posted", entityType: "feeCollection", entityId: result.collectionId, summary: "Collected manual student fees", metadata: { amountMinor: result.amountMinor } });
     return result;
   },
 });

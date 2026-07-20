@@ -446,7 +446,7 @@ export const publish = mutation({
         passed: result.passed!,
         meritPosition,
       });
-      await enqueueSms(ctx, {
+      const messageIds = await enqueueSms(ctx, {
         idempotencyKey: `exam:${exam._id}:v${publicationVersion}:${student._id}`,
         eventType: isCorrection ? "result_corrected" : "result_published",
         relatedEntityType: "exam",
@@ -456,7 +456,7 @@ export const publish = mutation({
         locale: student.preferredSmsLocale,
         body,
       });
-      recipientCount += 1;
+      recipientCount += messageIds.length;
     }
     await ctx.db.patch("exams", exam._id, {
       status: "published",

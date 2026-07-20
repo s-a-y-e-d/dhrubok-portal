@@ -7,8 +7,7 @@ import { writeAudit } from "../model/audit";
 import { scheduleCourseSnapshot } from "../academics/snapshotHooks";
 import { assertLocalDate, dhakaDate } from "../model/dates";
 import { assertMinorUnits } from "../model/money";
-import { enqueueSms } from "../messaging/model";
-import { renderSmsTemplate } from "../messaging/templates";
+import { enqueueSms, renderEnabledSmsTemplate } from "../messaging/model";
 import {
   normalizeSubmission,
   optionalText,
@@ -656,19 +655,14 @@ export const acceptApplication = mutation({
       reviewedAt: now,
       updatedAt: now,
     });
-    const template = await ctx.db
-      .query("smsTemplates")
-      .withIndex("by_key", (q) => q.eq("key", "admission_accepted"))
-      .unique();
-    if (template?.enabled) {
-      const rendered = renderSmsTemplate(
-        application.preferredSmsLocale === "bn"
-          ? template.bodyBn
-          : template.bodyEn,
-        { studentName: application.studentDisplayName, studentNumber },
-      );
-      if (rendered.missingVariables.length === 0)
-        await enqueueSms(ctx, {
+    const settings = (await ctx.db.query("coachingSettings").take(1))[0];
+    const body = await renderEnabledSmsTemplate(ctx, "admission_accepted", application.preferredSmsLocale, {
+      brand: application.preferredSmsLocale === "bn" ? settings?.shortNameBn ?? "ধ্রুবক" : settings?.shortNameEn ?? "Dhrubok",
+      studentName: application.studentDisplayName,
+      studentNumber,
+    });
+    if (body) {
+      await enqueueSms(ctx, {
           idempotencyKey: `admission:${application._id}:accepted`,
           eventType: "admission_accepted",
           relatedEntityType: "admissionApplication",
@@ -676,8 +670,8 @@ export const acceptApplication = mutation({
           studentId,
           guardianPhone: application.guardianPhone,
           locale: application.preferredSmsLocale,
-          body: rendered.body,
-        });
+          body,
+      });
     }
     await writeAudit(ctx, {
       actorAccountId: account._id,

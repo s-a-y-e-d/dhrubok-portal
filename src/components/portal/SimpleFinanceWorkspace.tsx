@@ -58,7 +58,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useMutation, useQuery } from "convex/react";
 import {
   AlertCircle,
@@ -357,9 +356,6 @@ function MonthlyFees({ locale }: { locale: "bn" | "en" }) {
                   <TableHeader>
                     <TableRow>
                       <TableHead>{bn ? "শিক্ষার্থী" : "Student"}</TableHead>
-                      <TableHead>
-                        {bn ? "কোর্স ও ব্যাচ" : "Course & batch"}
-                      </TableHead>
                       <TableHead className="pr-6 text-right">
                         {bn ? "মাসিক ফি" : "Monthly fee"}
                       </TableHead>
@@ -418,27 +414,12 @@ function MonthlyFees({ locale }: { locale: "bn" | "en" }) {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          {bn ? student.courseNameBn : student.courseNameEn}
-                          <div className="text-sm text-muted-foreground">
-                            {bn ? student.batchNameBn : student.batchNameEn}
-                          </div>
-                        </TableCell>
                         <TableCell className="pr-6 text-right font-mono">
                           {money(student.monthlyFeeMinor, locale)}
                         </TableCell>
                         <TableCell>
-                          {student.dueMonths.length ? (
-                            <div className="flex flex-col gap-1">
-                              <span className="text-destructive">
-                                {student.dueMonths
-                                  .map((key) => monthName(key, locale))
-                                  .join(", ")}
-                              </span>
-                              <strong className="font-mono text-destructive">
-                                {money(student.dueMinor, locale)}
-                              </strong>
-                            </div>
+                          {student.dueMinor > 0 ? (
+                            <strong className="font-mono text-destructive">{money(student.dueMinor, locale)}</strong>
                           ) : (
                             <Badge variant="neutral">
                               {bn ? "পরিশোধিত" : "Clear"}
@@ -446,11 +427,7 @@ function MonthlyFees({ locale }: { locale: "bn" | "en" }) {
                           )}
                         </TableCell>
                         <TableCell>
-                          {student.futurePaidMonths.length
-                            ? student.futurePaidMonths
-                                .map((key) => monthName(key, locale))
-                                .join(", ")
-                            : "—"}
+                          {student.futurePaidItems ? (bn ? `${student.futurePaidItems}টি ফি আইটেম` : `${student.futurePaidItems} fee item${student.futurePaidItems === 1 ? "" : "s"}`) : "—"}
                         </TableCell>
                         <TableCell>
                           <DueDialog
@@ -504,8 +481,7 @@ function MonthlyFees({ locale }: { locale: "bn" | "en" }) {
                           {student.displayName}
                         </CardTitle>
                         <CardDescription>
-                          {student.studentNumber} ·{" "}
-                          {bn ? student.batchNameBn : student.batchNameEn}
+                          {student.studentNumber}
                         </CardDescription>
                       </div>
                     </CardHeader>
@@ -532,9 +508,7 @@ function MonthlyFees({ locale }: { locale: "bn" | "en" }) {
                             {bn ? "ভবিষ্যৎ পরিশোধিত" : "Future paid"}
                           </dt>
                           <dd>
-                            {student.futurePaidMonths
-                              .map((key) => monthName(key, locale))
-                              .join(", ") || "—"}
+                            {student.futurePaidItems ? (bn ? `${student.futurePaidItems}টি ফি আইটেম` : `${student.futurePaidItems} fee item${student.futurePaidItems === 1 ? "" : "s"}`) : "—"}
                           </dd>
                         </div>
                       </dl>
@@ -561,7 +535,7 @@ type WorklistStudent = {
   displayName: string;
   monthlyFeeMinor: number;
   dueMinor: number;
-  dueMonths: string[];
+  dueItems: Array<{ enrolmentId: Id<"enrolments">; periodKey: string; amountMinor: number; courseNameBn: string; courseNameEn: string; batchNameBn: string; batchNameEn: string }>;
 };
 function DueDialog({
   locale,
@@ -575,7 +549,7 @@ function DueDialog({
   const bn = locale === "bn";
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
-  const hasDue = student.dueMinor > 0 && student.dueMonths.length > 0;
+  const hasDue = student.dueMinor > 0 && student.dueItems.length > 0;
   return (
     <AlertDialog
       open={open}
@@ -607,11 +581,11 @@ function DueDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="flex flex-col gap-2">
-          {student.dueMonths.map((key) => (
-            <div key={key} className="flex justify-between gap-4">
-              <span>{monthName(key, locale)}</span>
+          {student.dueItems.map((item) => (
+            <div key={`${item.enrolmentId}:${item.periodKey}`} className="flex justify-between gap-4">
+              <span>{bn ? item.courseNameBn : item.courseNameEn} · {monthName(item.periodKey, locale)}</span>
               <span className="font-mono">
-                {money(student.monthlyFeeMinor, locale)}
+                {money(item.amountMinor, locale)}
               </span>
             </div>
           ))}
@@ -654,12 +628,10 @@ function StudentFinanceCollection({
   studentId: Id<"students">;
 }) {
   const bn = locale === "bn";
-  const collectMonths = useMutation(api.fees.functions.collectMonths);
-  const collectOther = useMutation(api.fees.functions.collectOther);
+  const collectManual = useMutation(api.fees.functions.collectManual);
   const options = useQuery(api.fees.functions.studentCollectionOptions, {
     studentId,
   });
-  const [mode, setMode] = useState<"monthly" | "other">("monthly");
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<{
@@ -670,44 +642,31 @@ function StudentFinanceCollection({
   } | null>(null);
   const selectedTotal = useMemo(
     () =>
-      options?.months
-        .filter((row) => selected.includes(row.periodKey))
+      options?.enrolments.flatMap((enrolment) => enrolment.months.map((month) => ({ ...month, enrolmentId: enrolment.enrolmentId })))
+        .filter((row) => selected.includes(`${row.enrolmentId}:${row.periodKey}`))
         .reduce((sum, row) => sum + row.amountMinor, 0) ?? 0,
     [options, selected],
   );
+  const selectedDetails = useMemo(() => options?.enrolments.flatMap((enrolment) => enrolment.months.map((month) => ({ ...month, enrolmentId: enrolment.enrolmentId, courseNameBn: enrolment.courseNameBn, courseNameEn: enrolment.courseNameEn, selectionKey: `${enrolment.enrolmentId}:${month.periodKey}` }))).filter((row) => selected.includes(row.selectionKey)) ?? [], [options, selected]);
   if (!options) return <Spinner />;
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    const feeName = String(form.get("feeName") || "").trim(); const amountValue = String(form.get("amount") || "").trim();
+    if ((feeName && !amountValue) || (!feeName && amountValue)) { toast.error(bn ? "অন্যান্য ফির নাম ও পরিমাণ দুটোই দিন।" : "Enter both the other fee name and amount."); return; }
+    if (!selected.length && !feeName) { toast.error(bn ? "মাসিক ফি নির্বাচন করুন অথবা অন্যান্য ফি দিন।" : "Select monthly fees or enter an other fee."); return; }
     setPending({
       collectedOn: String(form.get("collectedOn")),
       note: String(form.get("note") || "") || undefined,
-      feeName: mode === "other" ? String(form.get("feeName")) : undefined,
-      amountMinor:
-        mode === "other"
-          ? Math.round(Number(form.get("amount")) * 100)
-          : undefined,
+      feeName: feeName || undefined,
+      amountMinor: form.get("amount") ? Math.round(Number(form.get("amount")) * 100) : undefined,
     });
   }
   async function confirmCollection() {
     if (!pending) return;
     setBusy(true);
     try {
-      const result =
-        mode === "monthly"
-          ? await collectMonths({
-              studentId,
-              periodKeys: selected,
-              collectedOn: pending.collectedOn,
-              note: pending.note,
-            })
-          : await collectOther({
-              studentId,
-              feeName: pending.feeName ?? "",
-              amountMinor: pending.amountMinor ?? 0,
-              collectedOn: pending.collectedOn,
-              note: pending.note,
-            });
+      const result = await collectManual({ studentId, selections: selected.map((key) => { const separator = key.indexOf(":"); return { enrolmentId: key.slice(0, separator) as Id<"enrolments">, periodKey: key.slice(separator + 1) }; }), ...(pending.feeName || pending.amountMinor ? { otherFee: { feeName: pending.feeName ?? "", amountMinor: pending.amountMinor ?? 0 } } : {}), collectedOn: pending.collectedOn, note: pending.note });
       toast.success(
         bn
           ? `রশিদ ${result.receiptNumber} তৈরি হয়েছে`
@@ -731,10 +690,9 @@ function StudentFinanceCollection({
       setBusy(false);
     }
   }
-  const dueMonths = options.months.filter((month) => month.status === "due");
-  const futurePaidMonths = options.months.filter(
-    (month) => month.status === "paid",
-  );
+  const allMonths = options.enrolments.flatMap((enrolment) => enrolment.months.map((month) => ({ ...month, enrolmentId: enrolment.enrolmentId })));
+  const dueMonths = allMonths.filter((month) => month.status === "due");
+  const futurePaidMonths = allMonths.filter((month) => month.status === "paid");
   const dueMinor = dueMonths.reduce(
     (total, month) => total + month.amountMinor,
     0,
@@ -808,7 +766,7 @@ function StudentFinanceCollection({
                 {bn ? "সম্মত মাসিক ফি" : "Agreed monthly fee"}
               </span>
               <span className="font-mono text-2xl font-bold text-foreground">
-                {money(options.monthlyFeeMinor, locale)}
+                {money(options.enrolments.reduce((sum, enrolment) => sum + (enrolment.enrolmentStatus === "active" ? enrolment.monthlyFeeMinor : 0), 0), locale)}
               </span>
               <span className="text-xs text-muted-foreground">
                 {bn ? "প্রতি মাসের নির্ধারিত ফি" : "Standard monthly rate"}
@@ -853,7 +811,7 @@ function StudentFinanceCollection({
                 {futurePaidMonths.length > 0 ? (
                   futurePaidMonths.map((month) => (
                     <Badge
-                      key={month.periodKey}
+                      key={`${month.enrolmentId}:${month.periodKey}`}
                       variant="success"
                       className="font-mono text-xs px-2 py-0.5"
                     >
@@ -886,35 +844,16 @@ function StudentFinanceCollection({
                   : "Collect one or more full monthly fees, or a named other fee."}
               </CardDescription>
             </div>
-            {/* Fee mode toggle */}
-            <div className="self-start sm:self-center">
-              <ToggleGroup
-                type="single"
-                value={mode}
-                onValueChange={(value) =>
-                  value && setMode(value as "monthly" | "other")
-                }
-                className="bg-muted/60 p-1 rounded-lg border border-border/60"
-              >
-                <ToggleGroupItem
-                  value="monthly"
-                  className="text-xs font-medium px-3 py-1.5 rounded-md data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:shadow-xs transition-all"
-                >
-                  {bn ? "মাসিক ফি" : "Monthly fee"}
-                </ToggleGroupItem>
-                <ToggleGroupItem
-                  value="other"
-                  className="text-xs font-medium px-3 py-1.5 rounded-md data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:shadow-xs transition-all"
-                >
-                  {bn ? "অন্যান্য ফি" : "Other fee"}
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
           </div>
         </CardHeader>
         <CardContent className="pt-6">
           <form className="flex flex-col gap-6" onSubmit={submit}>
-            {mode === "monthly" ? (
+            <FieldGroup className="grid gap-4 rounded-[var(--radius-md)] border border-[var(--border)] p-4 sm:grid-cols-2">
+              <div className="sm:col-span-2"><strong>{bn ? "অন্যান্য ফি" : "Other fee"}</strong><FieldDescription>{bn ? "শিক্ষার্থী-স্তরের ঐচ্ছিক ফি; কোনো কোর্সের অধীনে নয়।" : "Optional student-level fee; it is not assigned to a course."}</FieldDescription></div>
+              <Field><FieldLabel htmlFor="fee-name">{bn ? "ফির নাম" : "Fee name"}</FieldLabel><Input id="fee-name" name="feeName" placeholder={bn ? "যেমন: জরিমানা, ড্রেস" : "e.g. Fine, Uniform"} maxLength={120} /></Field>
+              <Field><FieldLabel htmlFor="fee-amount">{bn ? "পরিমাণ (টাকা)" : "Amount (BDT)"}</FieldLabel><Input id="fee-amount" name="amount" type="number" min="0.01" step="0.01" placeholder="0.00" className="font-mono" /></Field>
+            </FieldGroup>
+            {(
               <div className="flex flex-col gap-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                   <FieldLabel className="text-sm font-semibold text-foreground">
@@ -927,11 +866,13 @@ function StudentFinanceCollection({
                   </FieldDescription>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {options?.months.map((row) => {
+                <div className="flex flex-col gap-4">
+                  {options.enrolments.map((enrolment) => <section key={enrolment.enrolmentId} className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-[var(--border)] p-4"><div className="flex flex-wrap items-center justify-between gap-2"><div><strong>{bn ? enrolment.courseNameBn : enrolment.courseNameEn}</strong><p className="text-sm text-muted-foreground">{bn ? enrolment.batchNameBn : enrolment.batchNameEn}</p></div><div className="flex items-center gap-2"><Badge variant={enrolment.enrolmentStatus === "active" ? "success" : "neutral"}>{enrolment.enrolmentStatus}</Badge><span className="font-mono">{money(enrolment.monthlyFeeMinor, locale)}</span></div></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {enrolment.months.map((row) => {
+                    const selectionKey = `${enrolment.enrolmentId}:${row.periodKey}`;
                     const isPaid = row.status === "paid";
                     const isDue = row.status === "due";
-                    const isSelected = selected.includes(row.periodKey);
+                    const isSelected = selected.includes(selectionKey);
 
                     let cardStyle =
                       "border-[var(--border)] bg-[var(--canvas)] hover:border-[var(--border-strong)] hover:bg-[var(--canvas-soft)]";
@@ -948,30 +889,30 @@ function StudentFinanceCollection({
 
                     return (
                       <div
-                        key={row.periodKey}
+                        key={selectionKey}
                         className={`relative flex min-h-[52px] items-center justify-between gap-3 rounded-lg border p-3.5 transition-all select-none ${
                           isPaid ? "cursor-not-allowed" : "cursor-pointer"
                         } ${cardStyle}`}
                       >
                         <Checkbox
-                          id={`month-${row.periodKey}`}
+                          id={`month-${selectionKey}`}
                           disabled={isPaid}
                           checked={isPaid || isSelected}
                           onCheckedChange={(checked) => {
                             if (isPaid) return;
                             setSelected((current) =>
                               checked === true
-                                ? current.includes(row.periodKey)
+                                ? current.includes(selectionKey)
                                   ? current
-                                  : [...current, row.periodKey]
+                                  : [...current, selectionKey]
                                 : current.filter(
-                                    (key) => key !== row.periodKey,
+                                    (key) => key !== selectionKey,
                                   ),
                             );
                           }}
                         />
                         <label
-                          htmlFor={`month-${row.periodKey}`}
+                          htmlFor={`month-${selectionKey}`}
                           className={`flex min-w-0 flex-1 items-center justify-between gap-3 ${
                             isPaid ? "cursor-not-allowed" : "cursor-pointer"
                           }`}
@@ -1003,15 +944,15 @@ function StudentFinanceCollection({
                         </label>
                       </div>
                     );
-                  }) ?? null}
+                  })}</div></section>)}
                 </div>
 
                 {/* Selection summary bar */}
                 <div className="flex items-center justify-between rounded-lg bg-muted/40 border border-border/70 p-3.5 mt-1">
                   <span className="text-xs font-medium text-muted-foreground">
                     {bn
-                      ? `নির্বাচিত: ${selected.length} মাস`
-                      : `Selected: ${selected.length} month${
+                      ? `নির্বাচিত: ${selected.length}টি ফি আইটেম`
+                      : `Selected: ${selected.length} fee item${
                           selected.length === 1 ? "" : "s"
                         }`}
                   </span>
@@ -1025,42 +966,7 @@ function StudentFinanceCollection({
                   </div>
                 </div>
               </div>
-            ) : (
-              <FieldGroup className="grid gap-4 sm:grid-cols-2">
-                <Field>
-                  <FieldLabel htmlFor="fee-name">
-                    {bn ? "ফির নাম" : "Fee name"}
-                  </FieldLabel>
-                  <Input
-                    id="fee-name"
-                    name="feeName"
-                    placeholder={
-                      bn
-                        ? "যেমন: ভর্তি ফি, জরিমানা, ড্রেস"
-                        : "e.g. Admission fee, Fine, Uniform"
-                    }
-                    required
-                    maxLength={120}
-                  />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="fee-amount">
-                    {bn ? "পরিমাণ (টাকা)" : "Amount (BDT)"}
-                  </FieldLabel>
-                  <Input
-                    id="fee-amount"
-                    name="amount"
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    placeholder="0.00"
-                    className="font-mono"
-                    required
-                  />
-                </Field>
-              </FieldGroup>
             )}
-
             <Separator className="my-1" />
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -1099,7 +1005,7 @@ function StudentFinanceCollection({
               <Button
                 type="submit"
                 size="default"
-                disabled={busy || (mode === "monthly" && !selected.length)}
+                disabled={busy}
                 className="w-full sm:w-auto min-h-[44px] px-6 font-semibold"
               >
                 {busy ? (
@@ -1107,17 +1013,7 @@ function StudentFinanceCollection({
                 ) : (
                   <ReceiptText data-icon="inline-start" className="size-4" />
                 )}
-                {mode === "monthly"
-                  ? selected.length > 0
-                    ? bn
-                      ? `${money(selectedTotal, locale)} সংগ্রহ ও রশিদ তৈরি`
-                      : `Collect ${money(selectedTotal, locale)} & create receipt`
-                    : bn
-                      ? "সংগ্রহের জন্য মাস নির্বাচন করুন"
-                      : "Select months to collect"
-                  : bn
-                    ? "ফি সংগ্রহ ও রশিদ তৈরি"
-                    : "Collect fee & create receipt"}
+                {bn ? "ফি সংগ্রহ ও রশিদ তৈরি" : "Collect fees & create receipt"}
               </Button>
             </div>
           </form>
@@ -1152,26 +1048,23 @@ function StudentFinanceCollection({
                     {options?.displayName}
                   </strong>
                 </div>
-                {mode === "monthly" ? (
-                  selected.map((periodKey) => (
+                {selectedDetails.map((item) => (
                     <div
-                      key={periodKey}
+                      key={item.selectionKey}
                       className="flex justify-between items-center"
                     >
                       <span className="text-muted-foreground">
-                        {monthName(periodKey, locale)}
+                        {bn ? item.courseNameBn : item.courseNameEn} · {monthName(item.periodKey, locale)}
                       </span>
                       <span className="font-mono font-medium">
                         {money(
-                          options?.months.find(
-                            (month) => month.periodKey === periodKey,
-                          )?.amountMinor ?? 0,
+                          item.amountMinor,
                           locale,
                         )}
                       </span>
                     </div>
-                  ))
-                ) : (
+                  ))}
+                {pending?.feeName ? (
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">
                       {pending?.feeName}
@@ -1180,15 +1073,13 @@ function StudentFinanceCollection({
                       {money(pending?.amountMinor ?? 0, locale)}
                     </span>
                   </div>
-                )}
+                ) : null}
                 <Separator className="my-1" />
                 <div className="flex justify-between items-center font-bold text-base pt-1">
                   <span>{bn ? "মোট সংগ্রহ" : "Total collection"}</span>
                   <span className="font-mono text-lg text-brand">
                     {money(
-                      mode === "monthly"
-                        ? selectedTotal
-                        : (pending?.amountMinor ?? 0),
+                      selectedTotal + (pending?.amountMinor ?? 0),
                       locale,
                     )}
                   </span>

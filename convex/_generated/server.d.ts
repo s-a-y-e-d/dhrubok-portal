@@ -27,10 +27,10 @@ import type { DataModel } from "./dataModel.js";
 type Env = {
   readonly APP_BASE_URL: string | undefined;
   readonly BOOTSTRAP_OWNER_SECRET: string | undefined;
+  readonly BULKSMSBD_KEY: string | undefined;
+  readonly BULKSMSBD_SENDER_ID: string | undefined;
   readonly CLERK_JWT_ISSUER_DOMAIN: string;
   readonly DEV_IMPERSONATION_ENABLED: string | undefined;
-  readonly SMS_BD_API_KEY: string | undefined;
-  readonly SMS_BD_SENDER_ID: string | undefined;
   readonly SMS_LOW_BALANCE_MINOR: string | undefined;
   readonly TURNSTILE_SECRET_KEY: string | undefined;
 };

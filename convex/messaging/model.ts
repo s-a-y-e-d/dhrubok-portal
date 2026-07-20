@@ -3,6 +3,22 @@ import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { estimateSmsSegments } from "./templates";
 import { normalizeBangladeshPhone } from "../model/normalization";
+import { renderSmsTemplate } from "./templates";
+import { ENABLED_SMS_EVENT_TYPES, SMS_TEMPLATE_DEFAULTS, type SmsTemplateKey } from "./templateCatalog";
+
+export async function renderEnabledSmsTemplate(
+  ctx: MutationCtx,
+  key: SmsTemplateKey,
+  locale: "bn" | "en",
+  variables: Record<string, string | number>,
+) {
+  if (!ENABLED_SMS_EVENT_TYPES.has(key)) return null;
+  const template = await ctx.db.query("smsTemplates").withIndex("by_key", (q) => q.eq("key", key)).unique();
+  if (template && !template.enabled) return null;
+  const source = template ?? SMS_TEMPLATE_DEFAULTS[key];
+  const rendered = renderSmsTemplate(locale === "bn" ? source.bodyBn : source.bodyEn, variables);
+  return rendered.missingVariables.length === 0 ? rendered.body : null;
+}
 
 export async function enqueueSms(
   ctx: MutationCtx,
@@ -26,6 +42,7 @@ export async function enqueueSms(
     body: string;
   },
 ) {
+  if (!ENABLED_SMS_EVENT_TYPES.has(input.eventType)) return [];
   const student = input.studentId
     ? await ctx.db.get("students", input.studentId)
     : null;
@@ -71,7 +88,7 @@ export async function enqueueSms(
       normalizedRecipient,
       segmentEstimate: segmentCount,
       status: enabled ? "queued" : "cancelled",
-      provider: "sms_bd",
+      provider: "bulksmsbd",
       attemptCount: 0,
       nextAttemptAt: enabled ? now : undefined,
       createdAt: now,

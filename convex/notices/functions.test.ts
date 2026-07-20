@@ -63,7 +63,7 @@ describe("notice audience and read state", () => {
     expect(publicRows[0].title.value).toBe("Public");
   });
 
-  it("requires a current explicit SMS preview confirmation", async () => {
+  it("requires confirmation but suppresses notice SMS while that event is disabled", async () => {
     const t = convexTest(schema, modules);
     const data = await seed(t);
     const owner = t.withIdentity({ tokenIdentifier: "owner" });
@@ -74,7 +74,6 @@ describe("notice audience and read state", () => {
     await expect(owner.mutation(publishNotice, { noticeId, confirmSms: true, expectedSmsRecipientCount: 0 })).rejects.toThrow("stale or missing");
     await owner.mutation(publishNotice, { noticeId, confirmSms: true, expectedSmsRecipientCount: 1 });
     const messages = await t.run((ctx) => ctx.db.query("smsMessages").take(10));
-    expect(messages).toHaveLength(1);
-    expect(messages[0]).toMatchObject({ eventType: "custom_notice", studentId: data.studentId, status: "queued" });
+    expect(messages).toHaveLength(0);
   });
 });

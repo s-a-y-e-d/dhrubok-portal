@@ -36,8 +36,8 @@ export const getOwner = query({
       receiptFooterBn: current.receiptFooterBn,
       receiptFooterEn: current.receiptFooterEn,
       updatedAt: current.updatedAt,
-      smsConfigured: Boolean(env.SMS_BD_API_KEY?.trim()),
-      smsSenderIdConfigured: Boolean(env.SMS_BD_SENDER_ID?.trim()),
+      smsConfigured: Boolean(env.BULKSMSBD_KEY?.trim()),
+      smsSenderIdConfigured: Boolean(env.BULKSMSBD_SENDER_ID?.trim()),
     } : null;
   },
 });
@@ -114,6 +114,22 @@ export const updateOperations = mutation({
     };
     await ctx.db.patch("coachingSettings", settings._id, { ...updateData, updatedAt: Date.now(), updatedByAccountId: account._id });
     await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: "settings.operations_updated", entityType: "coachingSettings", entityId: settings._id, summary: "Operational settings updated" });
+    return null;
+  },
+});
+
+export const setSmsEnabled = mutation({
+  args: { enabled: v.boolean(), expectedUpdatedAt: v.number() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { account } = await requireOwner(ctx);
+    const settings = (await ctx.db.query("coachingSettings").take(1))[0];
+    if (!settings) throw new Error("Coaching settings are not initialized");
+    if (settings.updatedAt !== args.expectedUpdatedAt)
+      throw new Error("Settings have been modified by another owner. Please reload and try again.");
+    const updatedAt = Date.now();
+    await ctx.db.patch("coachingSettings", settings._id, { smsEnabled: args.enabled, updatedAt, updatedByAccountId: account._id });
+    await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: "settings.sms_delivery_updated", entityType: "coachingSettings", entityId: settings._id, summary: args.enabled ? "Enabled SMS delivery" : "Disabled SMS delivery" });
     return null;
   },
 });

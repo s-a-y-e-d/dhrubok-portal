@@ -3,13 +3,18 @@ import { mutation, query } from "../_generated/server";
 import { requireOwner } from "../model/auth";
 import { writeAudit } from "../model/audit";
 import { estimateSmsSegments, renderSmsTemplate } from "./templates";
+import { SMS_TEMPLATE_DEFAULTS, type SmsTemplateKey } from "./templateCatalog";
 
 const templateKey = v.union(
   v.literal("admission_received"), v.literal("admission_accepted"), v.literal("payment_posted"),
   v.literal("attendance_late"), v.literal("attendance_absent"), v.literal("result_published"),
   v.literal("result_corrected"), v.literal("due_reminder"), v.literal("custom_notice"),
 );
-
+const editableKey = v.union(
+  v.literal("payment_posted"),
+  v.literal("attendance_late"),
+  v.literal("attendance_absent"),
+);
 const item = v.object({
   templateId: v.id("smsTemplates"), key: v.string(), name: v.string(), bodyBn: v.string(), bodyEn: v.string(),
   enabled: v.boolean(), variables: v.array(v.string()), updatedAt: v.number(),
@@ -17,6 +22,14 @@ const item = v.object({
 
 function extractVariables(body: string) {
   return [...new Set([...body.matchAll(/\{([a-zA-Z][a-zA-Z0-9_]*)\}/g)].map((match) => match[1]))].sort();
+}
+
+function validateTemplate(key: SmsTemplateKey, bodyBn: string, bodyEn: string) {
+  const variables = [...new Set([...extractVariables(bodyBn), ...extractVariables(bodyEn)])];
+  const allowed = new Set<string>(SMS_TEMPLATE_DEFAULTS[key].allowedVariables);
+  const unsupported = variables.filter((variable) => !allowed.has(variable));
+  if (unsupported.length) throw new Error(`Unsupported template variables: ${unsupported.join(", ")}`);
+  return variables;
 }
 
 export const list = query({
@@ -32,24 +45,36 @@ export const save = mutation({
   returns: v.id("smsTemplates"),
   handler: async (ctx, args) => {
     const { account } = await requireOwner(ctx);
+    const key = args.key as SmsTemplateKey;
     const name = args.name.trim();
     const bodyBn = args.bodyBn.trim();
     const bodyEn = args.bodyEn.trim();
     if (!name || name.length > 100) throw new Error("Template name is required and must be at most 100 characters");
     if (!bodyBn || !bodyEn || bodyBn.length > 2_000 || bodyEn.length > 2_000) throw new Error("Both template languages are required and must be at most 2000 characters");
-    const variables = [...new Set([...extractVariables(bodyBn), ...extractVariables(bodyEn)])];
-    if (variables.length > 24) throw new Error("Template has too many variables");
-    const existing = await ctx.db.query("smsTemplates").withIndex("by_key", (q) => q.eq("key", args.key)).unique();
+    const variables = validateTemplate(key, bodyBn, bodyEn);
+    const existing = await ctx.db.query("smsTemplates").withIndex("by_key", (q) => q.eq("key", key)).unique();
     const updatedAt = Date.now();
     let id;
     if (existing) {
       id = existing._id;
       await ctx.db.patch("smsTemplates", id, { name, bodyBn, bodyEn, enabled: args.enabled, variables, updatedAt, updatedByAccountId: account._id });
     } else {
-      id = await ctx.db.insert("smsTemplates", { key: args.key, name, bodyBn, bodyEn, enabled: args.enabled, variables, updatedAt, updatedByAccountId: account._id });
+      id = await ctx.db.insert("smsTemplates", { key, name, bodyBn, bodyEn, enabled: args.enabled, variables, updatedAt, updatedByAccountId: account._id });
     }
-    await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: "sms.template_saved", entityType: "smsTemplate", entityId: id, summary: "SMS template configuration saved", metadata: { key: args.key, enabled: args.enabled } });
+    await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: "sms.template_saved", entityType: "smsTemplate", entityId: id, summary: "SMS template configuration saved", metadata: { key, enabled: args.enabled } });
     return id;
+  },
+});
+
+export const restoreDefault = mutation({
+  args: { key: editableKey }, returns: v.id("smsTemplates"),
+  handler: async (ctx, args) => {
+    const { account } = await requireOwner(ctx);
+    const defaults = SMS_TEMPLATE_DEFAULTS[args.key];
+    const existing = await ctx.db.query("smsTemplates").withIndex("by_key", (q) => q.eq("key", args.key)).unique();
+    const values = { name: defaults.name, bodyBn: defaults.bodyBn, bodyEn: defaults.bodyEn, enabled: true, variables: [...defaults.allowedVariables], updatedAt: Date.now(), updatedByAccountId: account._id };
+    if (existing) { await ctx.db.patch("smsTemplates", existing._id, values); return existing._id; }
+    return await ctx.db.insert("smsTemplates", { key: args.key, ...values });
   },
 });
 
@@ -76,27 +101,15 @@ export const latestBalance = query({
   },
 });
 
-const defaults = [
-  ["admission_received", "Admission received", "ধ্রুবক: {studentName}-এর ভর্তি আবেদন গ্রহণ করা হয়েছে। রেফারেন্স: {applicationNumber}", "Dhrubok: Admission application received for {studentName}. Reference: {applicationNumber}"],
-  ["admission_accepted", "Admission accepted", "ধ্রুবক: {studentName}-এর ভর্তি নিশ্চিত হয়েছে। শিক্ষার্থী আইডি: {studentNumber}", "Dhrubok: Admission confirmed for {studentName}. Student ID: {studentNumber}"],
-  ["payment_posted", "Payment confirmation", "ধ্রুবক: {studentName}-এর ৳ {amount} পেমেন্ট গ্রহণ করা হয়েছে। রশিদ: {receiptNumber}", "Dhrubok: Payment of BDT {amount} received for {studentName}. Receipt: {receiptNumber}"],
-  ["attendance_late", "Attendance late", "ধ্রুবক: {studentName} আজ ক্লাসে দেরিতে উপস্থিত হয়েছে।", "Dhrubok: {studentName} was late to class today."],
-  ["attendance_absent", "Attendance absent", "ধ্রুবক: {studentName} আজ ক্লাসে অনুপস্থিত ছিল।", "Dhrubok: {studentName} was absent from class today."],
-  ["result_published", "Result published", "ধ্রুবক: {studentName}-এর {examName} ফল প্রকাশিত। ফল: {outcome}, মেধাস্থান: {meritPosition}", "Dhrubok: {examName} result for {studentName}: {outcome}, merit position {meritPosition}."],
-  ["result_corrected", "Result corrected", "ধ্রুবক: {studentName}-এর {examName} সংশোধিত ফল প্রকাশিত। ফল: {outcome}, মেধাস্থান: {meritPosition}", "Dhrubok: Corrected {examName} result for {studentName}: {outcome}, merit position {meritPosition}."],
-  ["due_reminder", "Due reminder", "ধ্রুবক: {studentName}-এর বকেয়া ৳ {amount}। অনুগ্রহ করে অফিসে যোগাযোগ করুন।", "Dhrubok: {studentName} has overdue fees of BDT {amount}. Please contact the office."],
-  ["custom_notice", "Custom notice", "ধ্রুবক: {notice}", "Dhrubok: {notice}"],
-] as const;
-
 export const seedDefaults = mutation({
   args: {}, returns: v.number(),
   handler: async (ctx) => {
     const { account } = await requireOwner(ctx);
     let created = 0;
-    for (const [key, name, bodyBn, bodyEn] of defaults) {
+    for (const key of Object.keys(SMS_TEMPLATE_DEFAULTS) as SmsTemplateKey[]) {
       if (await ctx.db.query("smsTemplates").withIndex("by_key", (q) => q.eq("key", key)).unique()) continue;
-      const variables = [...new Set([...extractVariables(bodyBn), ...extractVariables(bodyEn)])];
-      await ctx.db.insert("smsTemplates", { key, name, bodyBn, bodyEn, enabled: true, variables, updatedAt: Date.now(), updatedByAccountId: account._id });
+      const defaults = SMS_TEMPLATE_DEFAULTS[key];
+      await ctx.db.insert("smsTemplates", { key, name: defaults.name, bodyBn: defaults.bodyBn, bodyEn: defaults.bodyEn, enabled: true, variables: validateTemplate(key, defaults.bodyBn, defaults.bodyEn), updatedAt: Date.now(), updatedByAccountId: account._id });
       created += 1;
     }
     await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: "sms.templates_seeded", entityType: "smsTemplate", entityId: "defaults", summary: "Default SMS templates initialized", metadata: { created } });

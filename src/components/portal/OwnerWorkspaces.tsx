@@ -6,18 +6,21 @@ import { api } from "@convex/_generated/api";
 import { PortalPageState } from "./PortalPageState";
 import { OwnerSettingsEditor as SettingsEditor } from "./OwnerEditors";
 import { CoachingSettingsInitializer, OwnerAccountAdministration } from "./OwnerAdministration";
+import { SmsTemplateEditor } from "./SmsTemplateEditor";
+
+type SettingsTab = "operations" | "sms" | "access";
 
 export function OwnerSettingsEditor({ locale }: { locale: "bn" | "en" }) {
   const bn = locale === "bn";
   const settings = useQuery(api.settings.getOwner, {});
-  const [tab, setTab] = useState<"operations" | "access">("operations");
+  const [tab, setTab] = useState<SettingsTab>("operations");
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   useEffect(() => {
     const handleUrlSync = () => {
       const params = new URLSearchParams(window.location.search);
       const urlTab = params.get("tab");
-      if (urlTab === "operations" || urlTab === "access") {
+      if (urlTab === "operations" || urlTab === "sms" || urlTab === "access") {
         setTab(urlTab);
       } else {
         setTab("operations");
@@ -28,7 +31,7 @@ export function OwnerSettingsEditor({ locale }: { locale: "bn" | "en" }) {
     return () => window.removeEventListener("popstate", handleUrlSync);
   }, []);
 
-  const handleTabChange = (newTab: "operations" | "access", useReplace = false) => {
+  const handleTabChange = (newTab: SettingsTab, useReplace = false) => {
     setTab(newTab);
     const url = new URL(window.location.href);
     url.searchParams.set("tab", newTab);
@@ -40,7 +43,7 @@ export function OwnerSettingsEditor({ locale }: { locale: "bn" | "en" }) {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
-    const tabsList: ("operations" | "access")[] = ["operations", "access"];
+    const tabsList: SettingsTab[] = ["operations", "sms", "access"];
     let newIndex = index;
 
     if (e.key === "ArrowRight") {
@@ -91,9 +94,24 @@ export function OwnerSettingsEditor({ locale }: { locale: "bn" | "en" }) {
           {bn ? "অপারেশন সেটিংস" : "Operations Settings"}
         </button>
         <button
-          id="tab-access"
+          id="tab-sms"
           ref={(el) => {
             tabRefs.current[1] = el;
+          }}
+          type="button"
+          role="tab"
+          aria-selected={tab === "sms"}
+          aria-controls="panel-sms"
+          tabIndex={tab === "sms" ? 0 : -1}
+          onClick={() => handleTabChange("sms")}
+          onKeyDown={(e) => handleKeyDown(e, 1)}
+        >
+          {bn ? "SMS টেমপ্লেট" : "SMS Templates"}
+        </button>
+        <button
+          id="tab-access"
+          ref={(el) => {
+            tabRefs.current[2] = el;
           }}
           type="button"
           role="tab"
@@ -101,7 +119,7 @@ export function OwnerSettingsEditor({ locale }: { locale: "bn" | "en" }) {
           aria-controls="panel-access"
           tabIndex={tab === "access" ? 0 : -1}
           onClick={() => handleTabChange("access")}
-          onKeyDown={(e) => handleKeyDown(e, 1)}
+          onKeyDown={(e) => handleKeyDown(e, 2)}
         >
           {bn ? "অ্যাক্সেস নিয়ন্ত্রণ" : "Access Control"}
         </button>
@@ -133,6 +151,17 @@ export function OwnerSettingsEditor({ locale }: { locale: "bn" | "en" }) {
             <OwnerAccountAdministration locale={locale} hideHeader={true} />
           </div>
         )}
+        {tab === "sms" && settings !== null && (
+          <div
+            id="panel-sms"
+            role="tabpanel"
+            aria-labelledby="tab-sms"
+            tabIndex={0}
+          >
+            <SmsTemplateEditor locale={locale} settings={settings} />
+          </div>
+        )}
+        {tab === "sms" && settings === null && <CoachingSettingsInitializer locale={locale} />}
       </div>
     </>
   );

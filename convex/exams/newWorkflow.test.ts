@@ -471,7 +471,7 @@ it("runs the frozen subject-level workflow through immutable publication", async
   });
   expect(
     await owner.mutation(publish, { examId, acknowledged: true }),
-  ).toMatchObject({ publicationVersion: 1, resultCount: 2, recipientCount: 3 });
+  ).toMatchObject({ publicationVersion: 1, resultCount: 2, recipientCount: 0 });
   const mine = await t
     .withIdentity({ tokenIdentifier: "student-v2-0" })
     .query(detailMine, { examId });
@@ -482,8 +482,7 @@ it("runs the frozen subject-level workflow through immutable publication", async
   });
   expect(mine.subjects).toHaveLength(1);
   const messages = await t.run((ctx) => ctx.db.query("smsMessages").take(10));
-  expect(messages).toHaveLength(3);
-  expect(new Set(messages.map((row) => row.normalizedRecipient)).size).toBe(2);
+  expect(messages).toHaveLength(0);
 
   await expect(owner.mutation(reopen, { examId, reason: "" })).rejects.toThrow(
     "reason",
@@ -507,7 +506,7 @@ it("runs the frozen subject-level workflow through immutable publication", async
   await owner.mutation(markReady, { examId });
   expect(
     await owner.mutation(publish, { examId, acknowledged: true }),
-  ).toMatchObject({ publicationVersion: 2, resultCount: 2, recipientCount: 3 });
+  ).toMatchObject({ publicationVersion: 2, resultCount: 2, recipientCount: 0 });
   const corrected = await t
     .withIdentity({ tokenIdentifier: "student-v2-0" })
     .query(detailMine, { examId });
@@ -528,13 +527,7 @@ it("runs the frozen subject-level workflow through immutable publication", async
   const correctedMessages = await t.run((ctx) =>
     ctx.db.query("smsMessages").take(20),
   );
-  expect(correctedMessages).toHaveLength(6);
-  expect(
-    correctedMessages.filter((row) => row.eventType === "result_corrected"),
-  ).toHaveLength(3);
-  expect(new Set(correctedMessages.map((row) => row.idempotencyKey)).size).toBe(
-    6,
-  );
+  expect(correctedMessages).toHaveLength(0);
 });
 
 it("freezes selected batches and publishes overall plus per-batch merit", async () => {
@@ -620,7 +613,7 @@ it("freezes selected batches and publishes overall plus per-batch merit", async 
   });
   expect(
     await owner.mutation(publish, { examId, acknowledged: true }),
-  ).toMatchObject({ recipientCount: 3 });
+  ).toMatchObject({ recipientCount: 0 });
   const results = await t.run((ctx) =>
     ctx.db
       .query("examPublishedResults")

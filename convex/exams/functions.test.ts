@@ -216,7 +216,7 @@ async function makeExam(t: ReturnType<typeof convexTest>) {
 }
 
 describe("exam publication workflow", () => {
-  it("computes totals, ranks across selected batches, hides drafts, and queues merit SMS", async () => {
+  it("computes totals, ranks across selected batches, hides drafts, and suppresses exam SMS", async () => {
     const t = convexTest(schema, modules);
     const data = await makeExam(t);
     const before = await t
@@ -254,7 +254,7 @@ describe("exam publication workflow", () => {
     ).rejects.toThrow("Unauthorized");
     await expect(
       data.owner.mutation(publish, { examId: data.examId }),
-    ).resolves.toEqual({ publicationVersion: 1, recipientCount: 4 });
+    ).resolves.toEqual({ publicationVersion: 1, recipientCount: 0 });
     const rows = await t.run((ctx) =>
       ctx.db
         .query("examResults")
@@ -268,14 +268,7 @@ describe("exam publication workflow", () => {
       .map((row) => row.meritPosition);
     expect(ranks).toEqual([1, 2, 2, 4]);
     const messages = await t.run((ctx) => ctx.db.query("smsMessages").take(10));
-    expect(messages).toHaveLength(4);
-    expect(
-      messages.every(
-        (message) =>
-          message.eventType === "result_published" &&
-          message.body.includes("Merit position"),
-      ),
-    ).toBe(true);
+    expect(messages).toHaveLength(0);
     const after = await t
       .withIdentity({ tokenIdentifier: "student-1" })
       .query(myPublishedResults, {
@@ -306,7 +299,7 @@ describe("exam publication workflow", () => {
     ).rejects.toThrow("Every roster result must be complete and ready");
   });
 
-  it("increments publication version and sends correction messages on republish", async () => {
+  it("increments publication version without sending correction SMS", async () => {
     const t = convexTest(schema, modules);
     const data = await makeExam(t);
     for (const studentId of data.students) {
@@ -354,16 +347,8 @@ describe("exam publication workflow", () => {
     await data.owner.mutation(submitForOwnerReview, { examId: data.examId });
     await expect(
       data.owner.mutation(publish, { examId: data.examId }),
-    ).resolves.toEqual({ publicationVersion: 2, recipientCount: 4 });
+    ).resolves.toEqual({ publicationVersion: 2, recipientCount: 0 });
     const messages = await t.run((ctx) => ctx.db.query("smsMessages").take(20));
-    expect(
-      messages.filter((message) => message.eventType === "result_published"),
-    ).toHaveLength(4);
-    expect(
-      messages.filter((message) => message.eventType === "result_corrected"),
-    ).toHaveLength(4);
-    expect(
-      new Set(messages.map((message) => message.idempotencyKey)).size,
-    ).toBe(8);
+    expect(messages).toHaveLength(0);
   });
 });

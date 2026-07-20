@@ -18,7 +18,7 @@ import {
 } from "../model/auth";
 import { assertLocalDate, dhakaDate } from "../model/dates";
 import { writeAudit } from "../model/audit";
-import { enqueueSms } from "../messaging/model";
+import { enqueueSms, renderEnabledSmsTemplate } from "../messaging/model";
 
 const sessionSummary = v.object({
   sessionId: v.id("classSessions"),
@@ -332,7 +332,10 @@ export const submit = mutation({
       lateCount = 0,
       absentCount = 0,
       smsQueued = 0;
-    const settings = (await ctx.db.query("coachingSettings").take(1))[0];
+    const [settings, batch] = await Promise.all([
+      ctx.db.query("coachingSettings").take(1).then((rows) => rows[0]),
+      ctx.db.get("batches", session.batchId),
+    ]);
     const brandBn = settings?.shortNameBn || "ধ্রুবক";
     const brandEn = settings?.shortNameEn || "Dhrubok";
     for (const record of args.records) {
@@ -361,15 +364,18 @@ export const submit = mutation({
               : isBn
                 ? "অনুপস্থিত"
                 : "absent";
-          const body = isBn
-            ? `${brandBn}: ${student.displayName} ${session.sessionDate} তারিখের ক্লাসে ${state} ছিল।`
-            : `${brandEn}: ${student.displayName} was ${state} for class on ${session.sessionDate}.`;
-          await enqueueSms(ctx, {
+          const eventType = record.status === "late" ? "attendance_late" : "attendance_absent";
+          const body = await renderEnabledSmsTemplate(ctx, eventType, student.preferredSmsLocale, {
+            brand: isBn ? brandBn : brandEn,
+            studentName: student.displayName,
+            classDate: session.sessionDate,
+            attendanceStatus: state,
+            batchName: isBn ? batch?.nameBn ?? "—" : batch?.nameEn ?? "—",
+          });
+          if (!body) continue;
+          const messageIds = await enqueueSms(ctx, {
             idempotencyKey: `attendance:${session._id}:${student._id}:${record.status}`,
-            eventType:
-              record.status === "late"
-                ? "attendance_late"
-                : "attendance_absent",
+            eventType,
             relatedEntityType: "classSession",
             relatedEntityId: session._id,
             studentId: student._id,
@@ -377,7 +383,7 @@ export const submit = mutation({
             locale: student.preferredSmsLocale,
             body,
           });
-          smsQueued += 1;
+          smsQueued += messageIds.length;
         }
       }
     }

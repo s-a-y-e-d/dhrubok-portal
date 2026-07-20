@@ -78,6 +78,16 @@ describe("Owner Settings Workspace & Access Controls", () => {
     expect(tabAccess).toHaveAttribute("aria-selected", "true");
   });
 
+  it("exposes SMS Templates as a dedicated settings tab", () => {
+    vi.mocked(useQuery).mockReturnValue(null);
+    render(<OwnerSettingsEditor locale="en" />);
+    const smsTab = screen.getByRole("tab", { name: "SMS Templates" });
+    expect(smsTab).toBeInTheDocument();
+    fireEvent.click(smsTab);
+    expect(smsTab).toHaveAttribute("aria-selected", "true");
+    expect(window.history.pushState).toHaveBeenCalledWith(null, "", "/en/owner/settings?tab=sms");
+  });
+
   it("manages form concurrency warning: clean form updates reactively, dirty form triggers warning banner", () => {
     const settings = {
       settingsId: "123" as Id<"coachingSettings">,

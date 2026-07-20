@@ -734,4 +734,18 @@ describe("finance invariants", () => {
       overdueMinorSnapshot: 20_000,
     });
   });
+
+  it("groups a multi-course student once and collects course fees on one receipt", async () => {
+    const t = convexTest(schema, modules); const data = await fixture(t);
+    const second = await t.run(async (ctx) => { const now = Date.now(); const courseId = await ctx.db.insert("courses", { code: "C2", slug: "course-2", nameBn: "Course 2", nameEn: "Course 2", shortDescriptionBn: "", shortDescriptionEn: "", descriptionBn: "", descriptionEn: "", status: "active", isPublic: true, publicSortOrder: 2, createdAt: now, updatedAt: now, createdByAccountId: data.ownerAccountId, updatedByAccountId: data.ownerAccountId }); const batchId = await ctx.db.insert("batches", { courseId, code: "B2", slug: "course-2-batch", nameBn: "Batch 2", nameEn: "Batch 2", startDate: "2026-01-01", status: "active", admissionOpen: true, isPublic: true, publicSortOrder: 2, createdAt: now, updatedAt: now }); const enrolmentId = await ctx.db.insert("enrolments", { studentId: data.studentId, courseId, batchId, enrolledOn: "2026-01-01", status: "active", agreedMonthlyAmountMinor: 80_000, firstBillingMonth: "2026-01", createdAt: now, updatedAt: now, createdByAccountId: data.ownerAccountId }); return { courseId, batchId, enrolmentId }; });
+    await t.run(async (ctx) => { const now = Date.now(); await ctx.db.patch("enrolments", data.enrolmentId, { agreedMonthlyAmountMinor: 100_000, firstBillingMonth: "2026-01" }); await ctx.db.insert("monthlyFeeRecords", { studentId: data.studentId, enrolmentId: data.enrolmentId, courseId: data.courseId, batchId: data.batchId, periodKey: "2026-01", dueDate: "2026-01-15", amountMinor: 100_000, status: "unpaid", createdAt: now }); await ctx.db.insert("monthlyFeeRecords", { studentId: data.studentId, enrolmentId: second.enrolmentId, courseId: second.courseId, batchId: second.batchId, periodKey: "2026-01", dueDate: "2026-01-15", amountMinor: 80_000, status: "unpaid", createdAt: now }); });
+    const owner = t.withIdentity({ tokenIdentifier: "clerk|owner", email: "owner@example.com", emailVerified: true });
+    const worklist = await owner.query(api.fees.functions.ownerWorklist, { limit: 20 });
+    expect(worklist.students).toHaveLength(1); expect(worklist.studentsWithDue).toBe(1); expect(worklist.students[0]).toMatchObject({ studentId: data.studentId, dueMinor: 180_000 }); expect(worklist.students[0].dueItems).toHaveLength(2);
+    const result = await owner.mutation(api.fees.functions.collectManual, { studentId: data.studentId, selections: [{ enrolmentId: data.enrolmentId, periodKey: "2026-01" }, { enrolmentId: second.enrolmentId, periodKey: "2026-01" }], otherFee: { feeName: "ID card", amountMinor: 5_000 }, collectedOn: "2026-07-13" });
+    expect(result.amountMinor).toBe(185_000); const items = await t.run(async (ctx) => ctx.db.query("feeCollectionItems").withIndex("by_collectionId", q => q.eq("collectionId", result.collectionId)).take(10)); expect(items).toHaveLength(3);
+    const messages = await t.run(async (ctx) => ctx.db.query("smsMessages").withIndex("by_relatedEntityType_and_relatedEntityId", q => q.eq("relatedEntityType", "feeCollection").eq("relatedEntityId", result.collectionId)).take(10));
+    expect(messages).toHaveLength(2);
+    expect(messages.every((message) => message.eventType === "payment_posted" && message.body.includes("1850.00") && message.body.includes(result.receiptNumber) && !message.body.includes("ID card"))).toBe(true);
+  });
 });

@@ -2,6 +2,7 @@ import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
 import { nextIdentifier } from "../model/identifiers";
 import { assertMinorUnits } from "../model/money";
+import { enqueueSms, renderEnabledSmsTemplate } from "../messaging/model";
 
 const PERIOD_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -170,6 +171,29 @@ export async function postCollection(
       courseNameSnapshot: course?.nameEn ?? "—",
       batchNameSnapshot: batch?.nameEn ?? "—",
       createdAt,
+    });
+  }
+  const locale = student.preferredSmsLocale;
+  const brand = locale === "bn"
+    ? settings?.shortNameBn || settings?.nameBn || "ধ্রুবক"
+    : settings?.shortNameEn || settings?.nameEn || "Dhrubok";
+  const body = await renderEnabledSmsTemplate(ctx, "payment_posted", locale, {
+    brand,
+    studentName: student.displayName,
+    amount: (amountMinor / 100).toFixed(2),
+    receiptNumber,
+    collectionDate: args.collectedOn,
+  });
+  if (body) {
+    await enqueueSms(ctx, {
+      idempotencyKey: `feeCollection:${collectionId}:confirmation`,
+      eventType: "payment_posted",
+      relatedEntityType: "feeCollection",
+      relatedEntityId: collectionId,
+      studentId: student._id,
+      guardianPhone: student.guardianPhone,
+      locale,
+      body,
     });
   }
   return { collectionId, receiptNumber, amountMinor };
