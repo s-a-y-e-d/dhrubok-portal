@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -77,6 +78,10 @@ const initial = {
   joinedAt: "",
 };
 
+function initials(name: string) {
+  return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+}
+
 function CreateTeacherDialog({
   open,
   onOpenChange,
@@ -90,14 +95,31 @@ function CreateTeacherDialog({
 }) {
   const bn = locale === "bn";
   const create = useMutation(api.academics.teachers.createWithReservedAccount);
+  const generatePhotoUploadUrl = useMutation(api.academics.teachers.generatePhotoUploadUrl);
   const [values, setValues] = useState(initial);
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const selectPhoto = (file: File | null) => {
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhoto(file);
+    setPhotoPreview(file ? URL.createObjectURL(file) : null);
+  };
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setBusy(true);
     setError(null);
     try {
+      let photoStorageId: Id<"_storage"> | undefined;
+      if (photo) {
+        if (!["image/jpeg", "image/png", "image/webp"].includes(photo.type)) throw new Error(bn ? "JPEG, PNG অথবা WebP ছবি নির্বাচন করুন।" : "Choose a JPEG, PNG, or WebP image.");
+        if (photo.size > 8 * 1024 * 1024) throw new Error(bn ? "ছবিটি ৮ MB বা তার কম হতে হবে।" : "Image must be 8 MB or smaller.");
+        const uploadUrl = await generatePhotoUploadUrl({});
+        const response = await fetch(uploadUrl, { method: "POST", headers: { "Content-Type": photo.type }, body: photo });
+        if (!response.ok) throw new Error("Could not upload the teacher image.");
+        photoStorageId = ((await response.json()) as { storageId: Id<"_storage"> }).storageId;
+      }
       const result = await create({
         employeeCode: values.employeeCode,
         displayName: values.displayName,
@@ -115,9 +137,13 @@ function CreateTeacherDialog({
         status: "active",
         isPublic: false,
         publicSortOrder: 0,
+        photoStorageId,
         locale,
       });
       setValues(initial);
+      setPhoto(null);
+      if (photoPreview) URL.revokeObjectURL(photoPreview);
+      setPhotoPreview(null);
       onOpenChange(false);
       onCreated(result.teacherId);
     } catch (cause) {
@@ -143,6 +169,17 @@ function CreateTeacherDialog({
           </p>
         )}
         <form className="grid gap-5" onSubmit={submit}>
+          <label className="flex items-center gap-4">
+            <Avatar className="size-16">
+              <AvatarImage src={photoPreview ?? undefined} alt={values.displayName || (bn ? "শিক্ষকের ছবির প্রিভিউ" : "Teacher image preview")} />
+              <AvatarFallback>{initials(values.displayName) || "T"}</AvatarFallback>
+            </Avatar>
+            <span className="grid flex-1 gap-1.5">
+              <Label htmlFor="teacher-photo">{bn ? "শিক্ষকের ছবি" : "Teacher image"}</Label>
+              <Input id="teacher-photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => selectPhoto(event.target.files?.[0] ?? null)} />
+              <small className="text-[var(--ink-mute)]">{bn ? "JPEG, PNG অথবা WebP; সর্বোচ্চ ৮ MB" : "JPEG, PNG, or WebP; 8 MB maximum"}</small>
+            </span>
+          </label>
           <div className="grid gap-3 sm:grid-cols-2">
             {(
               [
@@ -412,14 +449,20 @@ export function TeachersWorkspace({ locale }: { locale: Locale }) {
                   <TableCell>
                     <button
                       type="button"
-                      className="text-start hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                      className="flex items-center gap-3 text-start hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
                       onClick={(event) => {
                         event.stopPropagation();
                         setSelectedId(teacher.teacherId);
                       }}
                     >
-                      <strong className="block">{teacher.displayName}</strong>
-                      <small>{teacher.employeeCode}</small>
+                      <Avatar className="size-10">
+                        <AvatarImage src={teacher.photoUrl ?? undefined} alt={teacher.displayName} />
+                        <AvatarFallback>{initials(teacher.displayName)}</AvatarFallback>
+                      </Avatar>
+                      <span>
+                        <strong className="block">{teacher.displayName}</strong>
+                        <small>{teacher.employeeCode}</small>
+                      </span>
                     </button>
                   </TableCell>
                   <TableCell>
@@ -465,7 +508,7 @@ export function TeachersWorkspace({ locale }: { locale: Locale }) {
                 </TableRow>
               ))}
             </TableBody>
-          </Table></div><div className="grid gap-3 md:hidden">{teachers.results.map((teacher) => <button key={teacher.teacherId} type="button" onClick={() => setSelectedId(teacher.teacherId)} className="flex min-h-44 w-full flex-col gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--canvas)] p-4 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"><span className="flex w-full items-start justify-between gap-3"><span className="min-w-0"><strong className="block truncate">{teacher.displayName}</strong><span className="font-mono text-xs text-[var(--ink-mute)]">{teacher.employeeCode}</span></span><Badge variant={teacher.status === "active" ? "success" : "neutral"}>{teacherStatusLabel(teacher.status, bn)}</Badge></span><span className="min-w-0 text-sm"><span className="block truncate">{teacher.loginEmail}</span><span className="text-xs text-[var(--ink-mute)]">{teacher.phone}</span></span><span className="grid w-full grid-cols-3 gap-3 text-sm"><span><span className="block text-xs text-[var(--ink-mute)]">{bn ? "বিষয়" : "Subjects"}</span>{teacher.courseSubjectCount}</span><span><span className="block text-xs text-[var(--ink-mute)]">{bn ? "ব্যাচ" : "Batches"}</span>{teacher.activeBatchCount}</span><span><span className="block text-xs text-[var(--ink-mute)]">{bn ? "ক্লাস" : "Classes"}</span>{teacher.weeklyClassCount}</span></span></button>)}</div></>
+          </Table></div><div className="grid gap-3 md:hidden">{teachers.results.map((teacher) => <button key={teacher.teacherId} type="button" onClick={() => setSelectedId(teacher.teacherId)} className="flex min-h-44 w-full flex-col gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--canvas)] p-4 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"><span className="flex w-full items-start justify-between gap-3"><span className="flex min-w-0 items-center gap-3"><Avatar className="size-11"><AvatarImage src={teacher.photoUrl ?? undefined} alt={teacher.displayName} /><AvatarFallback>{initials(teacher.displayName)}</AvatarFallback></Avatar><span className="min-w-0"><strong className="block truncate">{teacher.displayName}</strong><span className="font-mono text-xs text-[var(--ink-mute)]">{teacher.employeeCode}</span></span></span><Badge variant={teacher.status === "active" ? "success" : "neutral"}>{teacherStatusLabel(teacher.status, bn)}</Badge></span><span className="min-w-0 text-sm"><span className="block truncate">{teacher.loginEmail}</span><span className="text-xs text-[var(--ink-mute)]">{teacher.phone}</span></span><span className="grid w-full grid-cols-3 gap-3 text-sm"><span><span className="block text-xs text-[var(--ink-mute)]">{bn ? "বিষয়" : "Subjects"}</span>{teacher.courseSubjectCount}</span><span><span className="block text-xs text-[var(--ink-mute)]">{bn ? "ব্যাচ" : "Batches"}</span>{teacher.activeBatchCount}</span><span><span className="block text-xs text-[var(--ink-mute)]">{bn ? "ক্লাস" : "Classes"}</span>{teacher.weeklyClassCount}</span></span></button>)}</div></>
         ) : (
           <EmptyState
             title={bn ? "কোনো শিক্ষক নেই" : "No teachers found"}
@@ -512,6 +555,10 @@ export function TeachersWorkspace({ locale }: { locale: Locale }) {
           </SheetHeader>
           {details && (
             <div className="grid gap-5">
+              <Avatar className="size-20">
+                <AvatarImage src={details.teacher.photoUrl ?? undefined} alt={details.teacher.displayName} />
+                <AvatarFallback>{initials(details.teacher.displayName)}</AvatarFallback>
+              </Avatar>
               <div className="flex flex-wrap gap-2">
                 <Badge
                   variant={

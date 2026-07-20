@@ -24,6 +24,7 @@ const listItem = v.object({
   displayName: v.string(),
   loginEmail: v.string(),
   phone: v.string(),
+  photoUrl: v.union(v.string(), v.null()),
   status: teacherStatus,
   accountStatus,
   isPublic: v.boolean(),
@@ -83,6 +84,9 @@ export const listTeachers = query({
         displayName: teacher.displayName,
         loginEmail: teacher.loginEmail,
         phone: teacher.phone,
+        photoUrl: teacher.photoStorageId
+          ? await ctx.storage.getUrl(teacher.photoStorageId)
+          : null,
         status: teacher.status,
         accountStatus: account.status,
         isPublic: teacher.isPublic,
@@ -116,6 +120,7 @@ export const getTeacherDetails = query({
         accountStatus,
         isPublic: v.boolean(),
         joinedAt: v.optional(v.number()),
+        photoUrl: v.union(v.string(), v.null()),
       }),
       defaults: v.array(
         v.object({
@@ -220,6 +225,9 @@ export const getTeacherDetails = query({
         accountStatus: account.status,
         isPublic: teacher.isPublic,
         joinedAt: teacher.joinedAt,
+        photoUrl: teacher.photoStorageId
+          ? await ctx.storage.getUrl(teacher.photoStorageId)
+          : null,
       },
       defaults: defaultRows,
       assignments: assignmentRows,
