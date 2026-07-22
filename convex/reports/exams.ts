@@ -369,6 +369,157 @@ export const studentResultHistory = query({
   },
 });
 
+const ownerStudentResultRow = v.object({
+  examId: v.id("exams"),
+  examNumber: v.string(),
+  examNameBn: v.string(),
+  examNameEn: v.string(),
+  examDate: v.string(),
+  totalScoreScaled: v.number(),
+  totalFullMarksScaled: v.number(),
+  percentage: v.number(),
+  passed: v.boolean(),
+});
+
+export const ownerStudentResults = query({
+  args: { studentId: v.id("students") },
+  returns: v.union(
+    v.object({
+      student: v.object({
+        studentId: v.id("students"),
+        studentNumber: v.string(),
+        displayName: v.string(),
+      }),
+      summary: v.object({
+        totalPublishedExams: v.number(),
+        passCount: v.number(),
+        failCount: v.number(),
+        averagePercentage: v.union(v.number(), v.null()),
+        highestPercentage: v.union(v.number(), v.null()),
+        passRate: v.union(v.number(), v.null()),
+      }),
+      results: v.array(ownerStudentResultRow),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    await requireOwner(ctx);
+    const student = await ctx.db.get("students", args.studentId);
+    if (!student) return null;
+
+    const [modernRows, legacyRows] = await Promise.all([
+      ctx.db
+        .query("examPublishedResults")
+        .withIndex("by_studentId_and_publishedAt", (q) =>
+          q.eq("studentId", args.studentId),
+        )
+        .order("desc")
+        .take(500),
+      ctx.db
+        .query("examResults")
+        .withIndex("by_studentId_and_publishedAt", (q) =>
+          q.eq("studentId", args.studentId),
+        )
+        .order("desc")
+        .take(500),
+    ]);
+
+    const rowsByExam = new Map<string, {
+      examId: Id<"exams">;
+      version: number;
+      publishedAt: number;
+      totalScoreScaled: number;
+      totalFullMarksScaled: number;
+      passed: boolean;
+    }>();
+    const publishedModernRows = (
+      await Promise.all(
+        modernRows.map(async (result) => ({
+          result,
+          publication: await ctx.db.get(
+            "examPublications",
+            result.publicationId,
+          ),
+        })),
+      )
+    ).filter(({ publication }) => publication?.status === "published");
+    for (const { result } of publishedModernRows) {
+      const current = rowsByExam.get(result.examId);
+      if (!current || current.version < result.version)
+        rowsByExam.set(result.examId, {
+          examId: result.examId,
+          version: result.version,
+          publishedAt: result.publishedAt,
+          totalScoreScaled: result.grandTotalScaled,
+          totalFullMarksScaled: result.grandFullMarksScaled,
+          passed: result.passed,
+        });
+    }
+    for (const result of legacyRows) {
+      if (
+        result.publishedAt === undefined ||
+        result.publicationVersion === undefined ||
+        result.publishedTotalScoreScaled === undefined ||
+        result.publishedPassed === undefined
+      )
+        continue;
+      const current = rowsByExam.get(result.examId);
+      if (!current || current.publishedAt < result.publishedAt)
+        rowsByExam.set(result.examId, {
+          examId: result.examId,
+          version: result.publicationVersion,
+          publishedAt: result.publishedAt,
+          totalScoreScaled: result.publishedTotalScoreScaled,
+          totalFullMarksScaled: 0,
+          passed: result.publishedPassed,
+        });
+    }
+
+    const results = [];
+    for (const row of rowsByExam.values()) {
+      const exam = await ctx.db.get("exams", row.examId);
+      if (!exam || exam.status === "archived") continue;
+      const totalFullMarksScaled = row.totalFullMarksScaled || exam.totalFullMarksScaled;
+      results.push({
+        examId: row.examId,
+        examNumber: exam.examNumber,
+        examNameBn: exam.nameBn,
+        examNameEn: exam.nameEn,
+        examDate: exam.examDate,
+        totalScoreScaled: row.totalScoreScaled,
+        totalFullMarksScaled,
+        percentage: Math.round((row.totalScoreScaled * 10000) / totalFullMarksScaled) / 100,
+        passed: row.passed,
+      });
+    }
+    results.sort((a, b) => b.examDate.localeCompare(a.examDate));
+    const passCount = results.filter((result) => result.passed).length;
+    const totalPublishedExams = results.length;
+    return {
+      student: {
+        studentId: student._id,
+        studentNumber: student.studentNumber,
+        displayName: student.displayName,
+      },
+      summary: {
+        totalPublishedExams,
+        passCount,
+        failCount: totalPublishedExams - passCount,
+        averagePercentage: totalPublishedExams
+          ? Math.round(results.reduce((sum, result) => sum + result.percentage, 0) / totalPublishedExams * 100) / 100
+          : null,
+        highestPercentage: totalPublishedExams
+          ? Math.max(...results.map((result) => result.percentage))
+          : null,
+        passRate: totalPublishedExams
+          ? Math.round((passCount * 10000) / totalPublishedExams) / 100
+          : null,
+      },
+      results,
+    };
+  },
+});
+
 export const publishedResultV2 = query({
   args: { examId: v.id("exams"), studentId: v.optional(v.id("students")) },
   returns: v.any(),
@@ -384,7 +535,11 @@ export const publishedResultV2 = query({
     } else throw new Error("Unauthorized");
     if (!studentId) throw new Error("Student is required");
     const exam = await ctx.db.get("exams", args.examId);
-    if (!exam || exam.modelVersion !== 2 || !exam.publicationVersion)
+    if (
+      !exam ||
+      (exam.modelVersion !== 2 && exam.modelVersion !== 3) ||
+      !exam.publicationVersion
+    )
       return null;
     const publication = await ctx.db
       .query("examPublications")
@@ -421,7 +576,11 @@ export const tabulationV2 = query({
   handler: async (ctx, args) => {
     const access = await requireExamReportAccess(ctx, args.examId);
     const exam = await ctx.db.get("exams", args.examId);
-    if (!exam || exam.modelVersion !== 2 || !exam.publicationVersion)
+    if (
+      !exam ||
+      (exam.modelVersion !== 2 && exam.modelVersion !== 3) ||
+      !exam.publicationVersion
+    )
       return null;
     const publication = await ctx.db
       .query("examPublications")
@@ -429,7 +588,7 @@ export const tabulationV2 = query({
         q.eq("examId", exam._id).eq("version", exam.publicationVersion),
       )
       .unique();
-    if (!publication) return null;
+    if (!publication || publication.status !== "published") return null;
     const all = await ctx.db
       .query("examPublishedResults")
       .withIndex("by_examId_and_version", (q) =>
@@ -465,8 +624,19 @@ export const subjectAnalysisV2 = query({
   handler: async (ctx, args) => {
     const access = await requireExamReportAccess(ctx, args.examId);
     const exam = await ctx.db.get("exams", args.examId);
-    if (!exam || exam.modelVersion !== 2 || !exam.publicationVersion)
+    if (
+      !exam ||
+      (exam.modelVersion !== 2 && exam.modelVersion !== 3) ||
+      !exam.publicationVersion
+    )
       return null;
+    const publication = await ctx.db
+      .query("examPublications")
+      .withIndex("by_examId_and_version", (q) =>
+        q.eq("examId", exam._id).eq("version", exam.publicationVersion),
+      )
+      .unique();
+    if (!publication || publication.status !== "published") return null;
     let rows = await ctx.db
       .query("examPublishedSubjectResults")
       .withIndex("by_examId_and_version_and_studentId", (q) =>

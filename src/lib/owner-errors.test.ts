@@ -8,6 +8,9 @@ describe("owner error contract", () => {
   it("accepts nested field paths and uses the Bangla catalogue", () => {
     expect(ownerErrorResult({ data: { code: "REQUIRED_FIELD", field: "enrolments.0.firstBillingMonth" } }, "bn").fieldErrors["enrolments.0.firstBillingMonth"]).toBe("এই তথ্যটি প্রয়োজন।");
   });
+  it("maps a same-batch validation error to actionable copy", () => {
+    expect(ownerErrorResult({ data: { code: "SAME_BATCH" } }, "en").summary).toBe("Choose a batch different from the current one.");
+  });
   it("rejects malformed or unknown payloads without exposing their message", () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
     expect(parseOwnerUserError(new Error('{"code":3}'))).toBeNull();

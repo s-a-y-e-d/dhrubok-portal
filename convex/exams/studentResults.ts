@@ -15,8 +15,15 @@ export const listMine = query({
       )
       .order("desc")
       .paginate(args.paginationOpts);
+    const publicationRows = await Promise.all(
+      page.page.map(async (row) => ({
+        row,
+        publication: await ctx.db.get("examPublications", row.publicationId),
+      })),
+    );
     const latestByExam = new Map();
-    for (const row of page.page) {
+    for (const { row, publication } of publicationRows) {
+      if (publication?.status !== "published") continue;
       const current = latestByExam.get(row.examId);
       if (!current || current.version < row.version)
         latestByExam.set(row.examId, row);

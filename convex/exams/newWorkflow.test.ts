@@ -45,6 +45,9 @@ const publicationHistory = makeFunctionReference<"query">(
 const publicationPreview = makeFunctionReference<"query">(
   "exams/publication:preview",
 );
+const saveSmsTemplate = makeFunctionReference<"mutation">(
+  "messaging/templateFunctions:save",
+);
 const detailMine = makeFunctionReference<"query">(
   "exams/studentResults:detailMine",
 );
@@ -464,10 +467,29 @@ it("runs the frozen subject-level workflow through immutable publication", async
     candidateCount: 2,
     recipientCount: 3,
     officialPopulation: 2,
+    willQueueSms: true,
+  });
+  await owner.mutation(saveSmsTemplate, {
+    key: "result_published",
+    name: "Result published",
+    bodyBn: "{brand}: ফল প্রকাশিত হয়েছে।",
+    bodyEn: "{brand}: Exam result published.",
+    enabled: false,
+  });
+  expect(await owner.query(publicationPreview, { examId })).toMatchObject({
+    recipientCount: 0,
+    willQueueSms: false,
+  });
+  await owner.mutation(saveSmsTemplate, {
+    key: "result_published",
+    name: "Result published",
+    bodyBn: "{brand}: {examName} পরীক্ষায় {studentName}-এর প্রাপ্ত নম্বর {totalScore}/{fullMarks}। {resultStatus}। {meritPosition}।",
+    bodyEn: "{brand}: {studentName} scored {totalScore}/{fullMarks} in {examName}. {resultStatus}. {meritPosition}.",
+    enabled: true,
   });
   expect(
     await owner.mutation(publish, { examId, acknowledged: true }),
-  ).toMatchObject({ publicationVersion: 1, resultCount: 2, recipientCount: 0 });
+  ).toMatchObject({ publicationVersion: 1, resultCount: 2, recipientCount: 3 });
   const mine = await t
     .withIdentity({ tokenIdentifier: "student-v2-0" })
     .query(detailMine, { examId });
@@ -478,7 +500,8 @@ it("runs the frozen subject-level workflow through immutable publication", async
   });
   expect(mine.subjects).toHaveLength(1);
   const messages = await t.run((ctx) => ctx.db.query("smsMessages").take(10));
-  expect(messages).toHaveLength(0);
+  expect(messages).toHaveLength(3);
+  expect(messages.every((row) => row.eventType === "result_published")).toBe(true);
 
   await expect(owner.mutation(reopen, { examId, reason: "" })).rejects.toThrow(
     "reason",
@@ -523,7 +546,7 @@ it("runs the frozen subject-level workflow through immutable publication", async
   const correctedMessages = await t.run((ctx) =>
     ctx.db.query("smsMessages").take(20),
   );
-  expect(correctedMessages).toHaveLength(0);
+  expect(correctedMessages).toHaveLength(3);
 });
 
 it("freezes selected batches and publishes overall plus per-batch merit", async () => {
@@ -609,7 +632,7 @@ it("freezes selected batches and publishes overall plus per-batch merit", async 
   });
   expect(
     await owner.mutation(publish, { examId, acknowledged: true }),
-  ).toMatchObject({ recipientCount: 0 });
+  ).toMatchObject({ recipientCount: 3 });
   const results = await t.run((ctx) =>
     ctx.db
       .query("examPublishedResults")

@@ -20,6 +20,9 @@ const collectionsCsv = makeFunctionReference<"query">("reports/exports:collectio
 const studentStatement = makeFunctionReference<"query">("reports/finance:studentStatement");
 const resultSheet = makeFunctionReference<"query">("reports/exams:resultSheet");
 const publishedResult = makeFunctionReference<"query">("reports/exams:publishedResult");
+const ownerStudentResults = makeFunctionReference<"query">("reports/exams:ownerStudentResults");
+const tabulationV2 = makeFunctionReference<"query">("reports/exams:tabulationV2");
+const subjectAnalysisV2 = makeFunctionReference<"query">("reports/exams:subjectAnalysisV2");
 
 type Fixture = {
   ownerToken: string;
@@ -147,6 +150,44 @@ describe("reporting summaries and authorization", () => {
     const reopenedSheet = await t.withIdentity({ tokenIdentifier: data.teacherToken }).query(resultSheet, { examId, entryStatus: "published", paginationOpts: { numItems: 10, cursor: null } });
     expect(reopenedSheet.page[0]).toMatchObject({ totalScoreScaled: 9000, passed: true, meritPosition: 1 });
     await expect(t.withIdentity({ tokenIdentifier: data.studentTwoToken }).query(publishedResult, { examId, studentId: data.studentOneId })).rejects.toThrow("Unauthorized");
+  });
+
+  it("hides processing modern publications from result reports", async () => {
+    const t = convexTest(schema, modules);
+    const data = await seed(t);
+    const examId = await t.run(async (ctx) => {
+      const now = Date.now();
+      const examId = await ctx.db.insert("exams", {
+        examNumber: "PROCESSING-1", courseId: data.courseId,
+        nameBn: "পরীক্ষা", nameEn: "Processing exam", examDate: "2026-07-12",
+        mode: "written", writtenFullMarksScaled: 10000, totalFullMarksScaled: 10000,
+        passMarksScaled: 3300, status: "publication_processing", publicationVersion: 1,
+        modelVersion: 2, createdAt: now, updatedAt: now, createdByAccountId: data.ownerAccountId,
+      });
+      const candidateId = await ctx.db.insert("examCandidates", {
+        examId, studentId: data.studentOneId, enrolmentId: data.enrolmentOneId,
+        batchId: data.batchOneId, courseId: data.courseId, includedAt: now,
+        source: "single_batch", status: "included",
+      });
+      const publicationId = await ctx.db.insert("examPublications", {
+        examId, version: 1, status: "processing", candidateCount: 1,
+        passCount: 1, failCount: 0, absentCount: 0, recipientCount: 0,
+        officialMeritScope: "batch", meritMode: "official_only", officialPopulation: 1,
+        rankFailedStudents: false, publishedAt: now, publishedByAccountId: data.ownerAccountId,
+      });
+      await ctx.db.insert("examPublishedResults", {
+        publicationId, examId, version: 1, candidateId, studentId: data.studentOneId,
+        batchId: data.batchOneId, grandTotalScaled: 9000, grandFullMarksScaled: 10000,
+        writtenTotalScaled: 9000, mcqTotalScaled: 0, passed: true, absent: false,
+        officialMeritPosition: 1, officialMeritPopulation: 1, publishedAt: now,
+      });
+      return examId;
+    });
+    const owner = t.withIdentity({ tokenIdentifier: data.ownerToken });
+    const individual = await owner.query(ownerStudentResults, { studentId: data.studentOneId });
+    expect(individual?.results).toEqual([]);
+    await expect(owner.query(tabulationV2, { examId })).resolves.toBeNull();
+    await expect(owner.query(subjectAnalysisV2, { examId })).resolves.toBeNull();
   });
 });
 

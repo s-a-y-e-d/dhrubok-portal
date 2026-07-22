@@ -83,6 +83,10 @@ const academicStatusLabel = (status: string, bn: boolean) => {
   return labels[status]?.[bn ? 0 : 1] ?? status;
 };
 type TeacherSelection = { teacherId: string; subjectIds: string[] };
+type CourseDefaultSelection = {
+  subjectId: Id<"subjects"> | "";
+  teacherId: Id<"teachers"> | "";
+};
 type RoutineRow = {
   id: string;
   weekday: string;
@@ -938,6 +942,134 @@ function CourseCreateDialog({
   );
 }
 
+function CourseEditDialog({
+  open,
+  onOpenChange,
+  locale,
+  details,
+  onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  locale: Locale;
+  details: NonNullable<ReturnType<typeof useQuery<typeof api.academics.courseWorkspace.getCourseDetails>>>;
+  onSaved: () => void;
+}) {
+  const bn = locale === "bn";
+  const options = useQuery(api.academics.options.ownerWorkspace, {});
+  const update = useMutation(api.academics.courses.updateEditableDetails);
+  const uploadUrl = useMutation(api.academics.courses.generateCoverUploadUrl);
+  const [nameBn, setNameBn] = useState(details.course.nameBn);
+  const [nameEn, setNameEn] = useState(details.course.nameEn);
+  const [shortDescriptionBn, setShortDescriptionBn] = useState(details.course.shortDescriptionBn);
+  const [shortDescriptionEn, setShortDescriptionEn] = useState(details.course.shortDescriptionEn);
+  const [descriptionBn, setDescriptionBn] = useState(details.course.descriptionBn);
+  const [descriptionEn, setDescriptionEn] = useState(details.course.descriptionEn);
+  const [defaults, setDefaults] = useState<CourseDefaultSelection[]>(
+    details.defaults.map((item) => ({ subjectId: item.subjectId, teacherId: item.teacherId })),
+  );
+  const [cover, setCover] = useState<File | null>(null);
+  const [removeCover, setRemoveCover] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const requestClose = () => {
+    if (dirty) setConfirmClose(true);
+    else onOpenChange(false);
+  };
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (defaults.some((item) => !item.subjectId || !item.teacherId)) {
+      setError(bn ? "প্রতিটি বিষয়ের জন্য একজন ডিফল্ট শিক্ষক নির্বাচন করুন।" : "Select a default teacher for every subject.");
+      return;
+    }
+    const subjectIds = defaults.map((item) => item.subjectId);
+    if (new Set(subjectIds).size !== subjectIds.length) {
+      setError(bn ? "একটি বিষয় একবারই যোগ করা যাবে।" : "A subject can only be added once.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      let coverStorageId = removeCover ? undefined : details.course.coverStorageId;
+      if (cover) {
+        const url = await uploadUrl({});
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": cover.type },
+          body: cover,
+        });
+        if (!response.ok) throw new Error("Cover upload failed");
+        coverStorageId = (await response.json()).storageId as Id<"_storage">;
+      }
+      await update({
+        courseId: details.course.courseId,
+        nameBn,
+        nameEn,
+        shortDescriptionBn,
+        shortDescriptionEn,
+        descriptionBn,
+        descriptionEn,
+        coverStorageId,
+        defaults: defaults.map((item) => ({
+          subjectId: item.subjectId as Id<"subjects">,
+          teacherId: item.teacherId as Id<"teachers">,
+        })),
+      });
+      setDirty(false);
+      onOpenChange(false);
+      onSaved();
+    } catch (caught) {
+      setError(friendlyError(caught, bn));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={(value) => value ? onOpenChange(true) : requestClose()}>
+        <DialogContent className="w-[min(800px,calc(100%-32px))] max-sm:h-[calc(100dvh-16px)] max-sm:w-[calc(100%-16px)]">
+          <DialogHeader>
+            <DialogTitle>{bn ? "কোর্স সম্পাদনা" : "Edit course"}</DialogTitle>
+            <DialogDescription>
+              {bn ? "কোর্সের বিবরণ এবং ভবিষ্যৎ ব্যাচের জন্য বিষয় ও ডিফল্ট শিক্ষক হালনাগাদ করুন। বর্তমান ব্যাচের রুটিন বা শিক্ষক নিয়োগ পরিবর্তন হবে না।" : "Update course details and the subjects and default teachers used for future batches. Existing batch routines and teacher assignments will not change."}
+            </DialogDescription>
+          </DialogHeader>
+          <form className="grid max-h-[calc(100dvh-180px)] gap-5 overflow-y-auto pe-1" onChange={() => setDirty(true)} onSubmit={submit}>
+            <FieldGroup>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field><FieldLabel htmlFor="edit-course-name-bn">{bn ? "বাংলা নাম" : "Bangla name"}</FieldLabel><Input id="edit-course-name-bn" value={nameBn} onChange={(event) => setNameBn(event.target.value)} required /></Field>
+                <Field><FieldLabel htmlFor="edit-course-name-en">{bn ? "ইংরেজি নাম" : "English name"}</FieldLabel><Input id="edit-course-name-en" value={nameEn} onChange={(event) => setNameEn(event.target.value)} required /></Field>
+              </div>
+              <Field><FieldLabel htmlFor="edit-course-code">{bn ? "কোর্স কোড" : "Course code"}</FieldLabel><Input id="edit-course-code" value={details.course.code} disabled /><p className="text-xs text-[var(--ink-mute)]">{bn ? "কোর্স কোড পরিবর্তন করা যাবে না।" : "Course codes cannot be changed."}</p></Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field><FieldLabel htmlFor="edit-course-short-bn">{bn ? "বাংলা সংক্ষিপ্ত বিবরণ" : "Bangla short description"}</FieldLabel><Input id="edit-course-short-bn" value={shortDescriptionBn} onChange={(event) => setShortDescriptionBn(event.target.value)} required /></Field>
+                <Field><FieldLabel htmlFor="edit-course-short-en">{bn ? "ইংরেজি সংক্ষিপ্ত বিবরণ" : "English short description"}</FieldLabel><Input id="edit-course-short-en" value={shortDescriptionEn} onChange={(event) => setShortDescriptionEn(event.target.value)} required /></Field>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field><FieldLabel htmlFor="edit-course-description-bn">{bn ? "বাংলা বিস্তারিত বিবরণ" : "Bangla detailed description"}</FieldLabel><Textarea id="edit-course-description-bn" value={descriptionBn} onChange={(event) => setDescriptionBn(event.target.value)} required /></Field>
+                <Field><FieldLabel htmlFor="edit-course-description-en">{bn ? "ইংরেজি বিস্তারিত বিবরণ" : "English detailed description"}</FieldLabel><Textarea id="edit-course-description-en" value={descriptionEn} onChange={(event) => setDescriptionEn(event.target.value)} required /></Field>
+              </div>
+              <Field><FieldLabel htmlFor="edit-course-cover">{bn ? "কভার ছবি" : "Cover image"}</FieldLabel><Input id="edit-course-cover" type="file" accept="image/*" onChange={(event) => { setCover(event.target.files?.[0] ?? null); if (event.target.files?.[0]) setRemoveCover(false); }} />{details.course.coverStorageId ? <label className="flex min-h-11 items-center gap-2 text-sm"><Checkbox checked={removeCover} onCheckedChange={(checked) => setRemoveCover(checked === true)} />{bn ? "বর্তমান কভার ছবি সরান" : "Remove the current cover image"}</label> : null}</Field>
+            </FieldGroup>
+            <section className="grid gap-3 border-t border-[var(--border)] pt-5">
+              <div><h3 className="font-semibold">{bn ? "বিষয় ও ডিফল্ট শিক্ষক" : "Subjects and default teachers"}</h3><p className="text-sm text-[var(--ink-mute)]">{bn ? "এই পরিবর্তন কেবল নতুন ব্যাচে প্রযোজ্য হবে।" : "These defaults apply only to future batches."}</p></div>
+              {defaults.map((item, index) => <div key={`${item.subjectId}-${index}`} className="grid gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"><Field><FieldLabel>{bn ? "বিষয়" : "Subject"}</FieldLabel><Select value={item.subjectId} onValueChange={(value) => setDefaults((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, subjectId: value as Id<"subjects"> } : row))}><SelectTrigger><SelectValue placeholder={bn ? "বিষয় নির্বাচন" : "Select subject"} /></SelectTrigger><SelectContent>{options?.subjects.map((subject) => <SelectItem key={subject.subjectId} value={subject.subjectId}>{subject.code} · {bn ? subject.nameBn : subject.nameEn}</SelectItem>)}</SelectContent></Select></Field><Field><FieldLabel>{bn ? "ডিফল্ট শিক্ষক" : "Default teacher"}</FieldLabel><Select value={item.teacherId} onValueChange={(value) => setDefaults((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, teacherId: value as Id<"teachers"> } : row))}><SelectTrigger><SelectValue placeholder={bn ? "শিক্ষক নির্বাচন" : "Select teacher"} /></SelectTrigger><SelectContent>{options?.teachers.map((teacher) => <SelectItem key={teacher.teacherId} value={teacher.teacherId}>{teacher.displayName}</SelectItem>)}</SelectContent></Select></Field><Button type="button" variant="ghost" size="icon" disabled={defaults.length === 1} aria-label={bn ? "বিষয় সরান" : "Remove subject"} onClick={() => setDefaults((rows) => rows.filter((_, rowIndex) => rowIndex !== index))}><Trash2 /></Button></div>)}
+              <div><Button type="button" variant="secondary" onClick={() => setDefaults((rows) => [...rows, { subjectId: "", teacherId: "" }])}><Plus />{bn ? "বিষয় যোগ করুন" : "Add subject"}</Button></div>
+            </section>
+            {error ? <FieldError>{error}</FieldError> : null}
+            <div className="sticky bottom-0 flex justify-end gap-2 border-t border-[var(--border)] bg-[var(--canvas)] py-4"><Button type="button" variant="secondary" onClick={requestClose}>{bn ? "বাতিল" : "Cancel"}</Button><Button type="submit" loading={busy}>{bn ? "পরিবর্তন সংরক্ষণ" : "Save changes"}</Button></div>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <AlertDialog open={confirmClose} onOpenChange={setConfirmClose}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{bn ? "অসংরক্ষিত পরিবর্তন বাতিল করবেন?" : "Discard unsaved changes?"}</AlertDialogTitle><AlertDialogDescription>{bn ? "আপনার পরিবর্তনগুলো সংরক্ষণ করা হয়নি।" : "Your changes have not been saved."}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>{bn ? "সম্পাদনা চালিয়ে যান" : "Keep editing"}</AlertDialogCancel><AlertDialogAction onClick={() => { setConfirmClose(false); onOpenChange(false); }}>{bn ? "বাতিল করুন" : "Discard"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+    </>
+  );
+}
+
 function SubjectCatalog({
   locale,
   onFeedback,
@@ -1141,6 +1273,7 @@ export function CoursesWorkspace({ locale }: { locale: Locale }) {
   const [status, setStatus] = useState<"active" | "archived">("active");
   const [query, setQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<Id<"courses"> | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const courses = usePaginatedQuery(
@@ -1341,6 +1474,12 @@ export function CoursesWorkspace({ locale }: { locale: Locale }) {
               </Badge>
             </div>
             <section>
+              {details.course.status === "active" && (
+                <Button className="mb-4 w-full" onClick={() => setEditOpen(true)}>
+                  <Pencil />
+                  {bn ? "কোর্স সম্পাদনা" : "Edit course"}
+                </Button>
+              )}
               <h3 className="mb-2 font-semibold">
                 {bn ? "বিষয় ও ডিফল্ট শিক্ষক" : "Subjects and default teachers"}
               </h3>
@@ -1411,6 +1550,18 @@ export function CoursesWorkspace({ locale }: { locale: Locale }) {
           </div>
         )}
       </ResponsiveDetailDrawer>
+      {details ? (
+        <CourseEditDialog
+          key={details.course.courseId}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          locale={locale}
+          details={details}
+          onSaved={() => {
+            setFeedback(bn ? "কোর্সের পরিবর্তন সংরক্ষিত হয়েছে।" : "Course changes saved.");
+          }}
+        />
+      ) : null}
     </div>
   );
 }

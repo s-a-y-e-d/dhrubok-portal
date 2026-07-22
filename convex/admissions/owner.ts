@@ -717,6 +717,9 @@ export const createDirectAdmission = mutation({
     alternateGuardianPhone: v.optional(v.string()),
     motherName: v.optional(v.string()),
     motherPhone: v.optional(v.string()),
+    smsRecipient: v.optional(
+      v.union(v.literal("father"), v.literal("mother"), v.literal("both")),
+    ),
     preferredSmsLocale: v.union(v.literal("bn"), v.literal("en")),
     enrolments: v.array(enrolmentInputValidator),
     internalNote: v.optional(v.string()),
@@ -865,6 +868,7 @@ export const createDirectAdmission = mutation({
       alternateGuardianPhone: profile.alternateGuardianPhone,
       motherName: profile.motherName,
       motherPhone: profile.motherPhone,
+      smsRecipient: args.smsRecipient ?? "father",
       preferredSmsLocale: args.preferredSmsLocale,
       admissionDate: args.admissionDate,
       status: "active",

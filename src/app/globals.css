@@ -1234,6 +1234,98 @@ a {
 .publication-panel h3 {
   margin: 0;
 }
+.exam-publication-panel {
+  margin: 0;
+  gap: 16px;
+}
+.exam-publication-panel .detail-list {
+  margin: 0;
+  background: var(--canvas);
+}
+.exam-publication-panel .sms-preview {
+  margin: 0 !important;
+}
+.exam-publication-panel .check-row {
+  margin: 0 !important;
+}
+.exam-publication-panel .form-actions {
+  margin-top: 8px;
+}
+.exam-review-workspace {
+  display: grid;
+  gap: 24px;
+  align-items: start;
+}
+.exam-review-workspace > .metric-grid,
+.exam-review-workspace > .editor-disclosure,
+.exam-review-workspace > .exam-actions {
+  margin: 0;
+}
+.exam-review-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 0;
+}
+.review-progress-table {
+  margin: 0;
+}
+.review-section {
+  background: var(--canvas);
+  padding: 16px;
+}
+.review-section > h3 {
+  margin: 0 0 12px;
+}
+.review-section > .status-filter {
+  margin-bottom: 12px;
+}
+.review-section > .form-hint {
+  margin: -4px 0 16px;
+}
+.review-actions {
+  margin-top: 0;
+  padding-top: 4px;
+}
+@media (max-width: 640px) {
+  .exam-review-workspace {
+    gap: 16px;
+  }
+  .exam-review-workspace .exam-review-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .exam-review-metrics .metric-card {
+    padding: 12px 12px 12px 16px;
+  }
+  .exam-review-metrics .metric-card strong {
+    font-size: 24px;
+  }
+  .review-progress-table th,
+  .review-progress-table td {
+    min-width: 104px;
+    padding: 10px 12px;
+  }
+  .review-section {
+    padding: 12px;
+  }
+  .review-section > h3,
+  .review-section > .status-filter {
+    margin-bottom: 8px;
+  }
+  .review-section > .form-hint {
+    margin: 0 0 12px;
+  }
+  .review-actions {
+    padding-top: 0;
+  }
+  .review-actions .compact-inline {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .review-actions .compact-inline input,
+  .review-actions .compact-inline .button {
+    width: 100%;
+  }
+}
 .sms-preview {
   margin: 0;
   border: 1px solid var(--border);

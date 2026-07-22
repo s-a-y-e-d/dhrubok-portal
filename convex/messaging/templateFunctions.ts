@@ -14,6 +14,7 @@ const editableKey = v.union(
   v.literal("payment_posted"),
   v.literal("attendance_late"),
   v.literal("attendance_absent"),
+  v.literal("result_published"),
   v.literal("due_reminder"),
 );
 const item = v.object({

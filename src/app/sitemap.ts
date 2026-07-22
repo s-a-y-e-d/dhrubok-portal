@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@convex/_generated/api";
 import { getBaseUrl } from "@/app/[locale]/(public)/_metadata";
+import { defaultLocale } from "@/lib/i18n/config";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     url: new URL(`/${locale}${path}`, base).toString(),
     alternates: { languages: {
       bn: new URL(`/bn${path}`, base).toString(), en: new URL(`/en${path}`, base).toString(),
-      "x-default": new URL(`/bn${path}`, base).toString(),
+      "x-default": new URL(`/${defaultLocale}${path}`, base).toString(),
     } },
     ...options,
   });

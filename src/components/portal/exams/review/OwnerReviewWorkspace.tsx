@@ -5,7 +5,6 @@ import { useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { PortalPageState } from "../../PortalPageState";
-import { MarksWorkspace } from "../marks/MarksWorkspace";
 import { DialogModal } from "../../DialogModal";
 
 export function OwnerReviewWorkspace({
@@ -23,6 +22,10 @@ export function OwnerReviewWorkspace({
     api.exams.publication.preview,
     summary?.exam.status === "ready_for_review" ? { examId } : "skip",
   );
+  const meritList = useQuery(
+    api.exams.publication.prePublicationMeritList,
+    summary?.exam.status === "ready_for_review" ? { examId } : "skip",
+  );
   const ready = useMutation(api.exams.review.markReadyForPublication);
   const publish = useMutation(api.exams.publication.publish);
   const reopen = useMutation(api.exams.publication.reopen);
@@ -32,12 +35,10 @@ export function OwnerReviewWorkspace({
   const [ack, setAck] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [openAssignmentId, setOpenAssignmentId] =
-    useState<Id<"examTeacherAssignments"> | null>(null);
   const [returnAssignmentId, setReturnAssignmentId] =
     useState<Id<"examTeacherAssignments"> | null>(null);
   const [exceptionFilter, setExceptionFilter] = useState<
-    "failures" | "absences" | "ties" | "high_low" | "changed" | "contacts"
+    "failures" | "absences" | "changed"
   >("failures");
   const [previewStudentId, setPreviewStudentId] =
     useState<Id<"students"> | null>(null);
@@ -64,13 +65,13 @@ export function OwnerReviewWorkspace({
     }
   }
   return (
-    <section>
+    <section className="exam-review-workspace">
       {message && (
         <p className="form-message" role="status">
           {message}
         </p>
       )}
-      <div className="metric-grid">
+      <div className="metric-grid exam-review-metrics">
         <article className="metric-card">
           <p>{bn ? "প্রার্থী" : "Candidates"}</p>
           <strong>{summary.candidateCount}</strong>
@@ -98,7 +99,7 @@ export function OwnerReviewWorkspace({
           </strong>
         </article>
       </div>
-      <div className="table-wrap">
+      <div className="table-wrap review-progress-table">
         <table>
           <thead>
             <tr>
@@ -132,13 +133,6 @@ export function OwnerReviewWorkspace({
                 <td>{row.missing}</td>
                 <td>
                   {row.assignment.status}
-                  <button
-                    className="button button-ghost"
-                    type="button"
-                    onClick={() => setOpenAssignmentId(row.assignment._id)}
-                  >
-                    {bn ? "নম্বর দেখুন" : "Open marks"}
-                  </button>
                   {row.assignment.status === "submitted" && (
                     <button
                       className="button button-ghost"
@@ -154,7 +148,7 @@ export function OwnerReviewWorkspace({
           </tbody>
         </table>
       </div>
-      <section className="editor-disclosure">
+      <section className="editor-disclosure review-section">
         <h3>{bn ? "পর্যালোচনার ব্যতিক্রম" : "Review exceptions"}</h3>
         <div
           className="status-filter"
@@ -165,10 +159,7 @@ export function OwnerReviewWorkspace({
             [
               "failures",
               "absences",
-              "ties",
-              "high_low",
               "changed",
-              "contacts",
             ] as const
           ).map((filter) => (
             <button
@@ -209,6 +200,59 @@ export function OwnerReviewWorkspace({
           </p>
         )}
       </section>
+      {summary.exam.status === "ready_for_review" && (
+        <section className="editor-disclosure review-section">
+          <h3>{bn ? "সরকারি মেধাতালিকা" : "Official merit list"}</h3>
+          <p className="form-hint">
+            {bn
+              ? "প্রকাশের সময় SMS-এ যে সরকারি মেধাস্থান পাঠানো হবে।"
+              : "The official merit position that will be sent in each result SMS when published."}
+          </p>
+          {!meritList ? (
+            <PortalPageState state="loading" locale={locale} />
+          ) : !meritList.meritEnabled ? (
+            <p className="empty-panel">
+              {bn
+                ? "এই পরীক্ষার জন্য মেধাস্থান চালু নেই।"
+                : "Merit positions are not enabled for this exam."}
+            </p>
+          ) : !meritList.rows.length ? (
+            <p className="empty-panel">
+              {bn
+                ? "মেধাতালিকার জন্য কোনো যোগ্য শিক্ষার্থী নেই।"
+                : "No students are eligible for the merit list."}
+            </p>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{bn ? "মেধাস্থান" : "Position"}</th>
+                    <th>{bn ? "শিক্ষার্থী" : "Student"}</th>
+                    <th>{bn ? "নম্বর" : "Score"}</th>
+                    <th>{bn ? "ফল" : "Result"}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {meritList.rows.map((row) => (
+                    <tr key={row.studentId}>
+                      <td>{row.position}</td>
+                      <td>
+                        {row.studentName}
+                        {row.studentNumber && ` · ${row.studentNumber}`}
+                      </td>
+                      <td>
+                        {row.totalScoreScaled / 100} / {row.fullMarksScaled / 100}
+                      </td>
+                      <td>{row.passed ? (bn ? "পাস" : "Pass") : bn ? "ফেল" : "Fail"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
       <DialogModal
         isOpen={previewStudentId !== null && studentPreview !== undefined}
         onClose={() => setPreviewStudentId(null)}
@@ -286,19 +330,7 @@ export function OwnerReviewWorkspace({
           </>
         )}
       </DialogModal>
-      {openAssignmentId && (
-        <details className="editor-disclosure" open>
-          <summary>
-            {bn ? "মালিকের নম্বর পর্যালোচনা" : "Owner marks review"}
-          </summary>
-          <MarksWorkspace
-            locale={locale}
-            assignmentId={openAssignmentId}
-            allowSubmit={false}
-          />
-        </details>
-      )}
-      <div className="form-actions exam-actions">
+      <div className="form-actions exam-actions review-actions">
         {summary.exam.status === "draft" && (
           <button
             className="button button-danger"
@@ -356,7 +388,7 @@ export function OwnerReviewWorkspace({
         )}
       </div>
       {history.publications.length > 0 && (
-        <details className="editor-disclosure">
+        <details className="editor-disclosure review-section">
           <summary>
             {bn
               ? "প্রকাশনা ও সংশোধন ইতিহাস"
@@ -413,7 +445,7 @@ export function OwnerReviewWorkspace({
         size="complex"
       >
         {preview && (
-          <>
+          <div className="publication-panel exam-publication-panel">
             <dl className="detail-list">
               <div>
                 <dt>{bn ? "সংস্করণ" : "Version"}</dt>
@@ -453,12 +485,14 @@ export function OwnerReviewWorkspace({
                 <dd>{preview.officialPopulation}</dd>
               </div>
             </dl>
+            {preview.willQueueSms && <>
             <p className="sms-preview" lang="bn" style={{ marginBottom: "8px" }}>
               {preview.sampleBn}
             </p>
             <p className="sms-preview" lang="en" style={{ marginBottom: "16px" }}>
               {preview.sampleEn}
             </p>
+            </>}
             <label className="check-row" style={{ marginBottom: "16px" }}>
               <input
                 type="checkbox"
@@ -466,9 +500,13 @@ export function OwnerReviewWorkspace({
                 onChange={(event) => setAck(event.target.checked)}
               />
               <span>
-                {bn
-                  ? "আমি বুঝেছি শিক্ষার্থীরা ফল দেখবে এবং অভিভাবক SMS কিউ হবে।"
-                  : "I understand students will see these results and guardian SMS will be queued."}
+                {preview.willQueueSms
+                  ? bn
+                    ? "আমি বুঝেছি শিক্ষার্থীরা ফল দেখবে এবং অভিভাবক SMS কিউ হবে।"
+                    : "I understand students will see these results and guardian SMS will be queued."
+                  : bn
+                    ? "আমি বুঝেছি শিক্ষার্থীরা ফল দেখবে, কিন্তু SMS সেটিং বন্ধ থাকায় কোনো অভিভাবক SMS পাঠানো হবে না।"
+                    : "I understand students will see these results, but no guardian SMS will be sent while result SMS is disabled."}
               </span>
             </label>
             <div className="form-actions" style={{ justifyContent: "flex-end" }}>
@@ -489,10 +527,12 @@ export function OwnerReviewWorkspace({
               >
                 {bn
                   ? `${preview.candidateCount} ফল প্রকাশ ও ${preview.recipientCount} SMS কিউ`
-                  : `Publish ${preview.candidateCount} results and queue ${preview.recipientCount} SMS`}
+                  : preview.willQueueSms
+                    ? `Publish ${preview.candidateCount} results and queue ${preview.recipientCount} SMS`
+                    : `Publish ${preview.candidateCount} results`}
               </button>
             </div>
-          </>
+          </div>
         )}
       </DialogModal>
 

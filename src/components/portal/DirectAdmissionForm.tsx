@@ -439,6 +439,12 @@ export function DirectAdmissionForm({
         alternateGuardianPhone: opt("alternateGuardianPhone"),
         motherName: String(data.get("motherName")),
         motherPhone: String(data.get("motherPhone")),
+        smsRecipient:
+          data.get("smsRecipient") === "mother"
+            ? "mother"
+            : data.get("smsRecipient") === "both"
+              ? "both"
+              : "father",
         preferredSmsLocale: "bn",
         enrolments: [
           { courseId: courseId as Id<"courses">, batchId: batchId as Id<"batches">, agreedMonthlyAmountMinor: minor("agreedMonthly") ?? 0, admissionFeeMinor: minor("initialAdmissionFee") ?? 0, firstBillingMonth },
@@ -715,6 +721,28 @@ export function DirectAdmissionForm({
             error={fieldErrors.motherPhone}
             onValueChange={() => clearFieldError("motherPhone")}
           />
+          <Field>
+            <FieldLabel htmlFor="direct-sms-recipient">
+              {bn ? "SMS প্রাপক" : "SMS recipient"}
+            </FieldLabel>
+            <Select name="smsRecipient" defaultValue="father">
+              <SelectTrigger id="direct-sms-recipient">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="father">{bn ? "বাবা" : "Father"}</SelectItem>
+                  <SelectItem value="mother">{bn ? "মা" : "Mother"}</SelectItem>
+                  <SelectItem value="both">{bn ? "দুজনই" : "Both"}</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <FieldDescription>
+              {bn
+                ? "উপস্থিতি, পেমেন্ট, ফলাফল ও বকেয়া SMS এই প্রাপককে পাঠানো হবে।"
+                : "Attendance, payment, result, and due SMS will be sent to this recipient."}
+            </FieldDescription>
+          </Field>
         </FieldGroup>
       </FormSection>
 

@@ -149,36 +149,6 @@ function OwnerDashboard({ locale }: { locale: "bn" | "en" }) {
     year: "numeric",
   }).format(new Date(`${todayStr}T00:00:00+06:00`));
 
-  // Dynamic audit log formatting
-  const formatActivityLog = (action: string) => {
-    switch (action) {
-      case "admission.accepted":
-        return bn
-          ? "ভর্তি আবেদন গ্রহণ করা হয়েছে"
-          : "Admission application accepted";
-      case "student.directly_admitted":
-        return bn
-          ? "সরাসরি শিক্ষার্থী ভর্তি করা হয়েছে"
-          : "Student directly admitted";
-      case "payment.posted":
-        return bn ? "পেমেন্ট গ্রহণ করা হয়েছে" : "Payment posted";
-      case "payment.voided":
-        return bn ? "পেমেন্ট বাতিল করা হয়েছে" : "Payment voided";
-      case "attendance.submitted":
-        return bn
-          ? "উপস্থিতি তালিকা জমা দেওয়া হয়েছে"
-          : "Attendance roster submitted";
-      case "exam.created":
-        return bn ? "পরীক্ষা তৈরি করা হয়েছে" : "Exam created";
-      case "exam.results_published":
-        return bn
-          ? "পরীক্ষার ফলাফল প্রকাশ করা হয়েছে"
-          : "Exam results published";
-      default:
-        return action;
-    }
-  };
-
   // Determine highest priority alert slot
   let priorityAlert = null;
   if (d.smsFailures.value > 0) {
@@ -817,112 +787,8 @@ function OwnerDashboard({ locale }: { locale: "bn" | "en" }) {
               </article>
             </div>
 
-            {/* Recent Payments list */}
-            <h3>{bn ? "সাম্প্রতিক পেমেন্ট" : "Recent payments"}</h3>
-            {d.recentPayments.length === 0 ? (
-              <p
-                className="empty-panel"
-                style={{ padding: "12px", fontSize: "12px" }}
-              >
-                {bn ? "কোনো পেমেন্ট সংগ্রহ করা হয়নি।" : "No recent payments."}
-              </p>
-            ) : (
-              <div className="table-wrap">
-                <table style={{ fontSize: "12.5px" }}>
-                  <thead>
-                    <tr>
-                      <th>{bn ? "রশিদ" : "Receipt"}</th>
-                      <th>{bn ? "শিক্ষার্থী" : "Student"}</th>
-                      <th>{bn ? "পরিমাণ" : "Amount"}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {d.recentPayments.map((p) => (
-                      <tr key={p.paymentId}>
-                        <td>
-                          <Link
-                            href={`/${locale}/owner/receipt/${p.paymentId}`}
-                            style={{ fontWeight: 600 }}
-                          >
-                            {p.paymentNumber}
-                          </Link>
-                        </td>
-                        <td>
-                          <div>{p.studentName}</div>
-                          <div
-                            style={{
-                              fontSize: "10px",
-                              color: "var(--ink-mute)",
-                            }}
-                          >
-                            {p.studentNumber}
-                          </div>
-                        </td>
-                        <td>{bdt(p.amountMinor, locale)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
           </section>
 
-          {/* Activity Feed panel */}
-          <section className="section">
-            <h2>{bn ? "সাম্প্রতিক কর্মকাণ্ড অডিট" : "Recent Activity Feed"}</h2>
-            {d.recentActivities.length === 0 ? (
-              <p className="empty-panel">
-                {bn ? "কোনো কর্মকাণ্ড রেকর্ড নেই।" : "No recent logs recorded."}
-              </p>
-            ) : (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "12px",
-                  borderLeft: "2px solid var(--border)",
-                  paddingLeft: "14px",
-                  marginLeft: "6px",
-                }}
-              >
-                {d.recentActivities.map((log) => (
-                  <div key={log.logId} style={{ position: "relative" }}>
-                    <div
-                      style={{
-                        position: "absolute",
-                        left: "-21px",
-                        top: "5px",
-                        width: "12px",
-                        height: "12px",
-                        borderRadius: "50%",
-                        backgroundColor: "var(--brand)",
-                        border: "2px solid var(--canvas)",
-                      }}
-                    />
-                    <div style={{ fontSize: "12px", color: "var(--ink-mute)" }}>
-                      {new Date(log.occurredAt).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}{" "}
-                      · {log.actorName} ({log.actorRole})
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "13.5px",
-                        fontWeight: 500,
-                        margin: "2px 0",
-                      }}
-                    >
-                      {formatActivityLog(log.action)}
-                    </div>
-                    <div style={{ fontSize: "12px", color: "var(--ink-mute)" }}>
-                      {log.summary}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
         </div>
       </div>
     </>

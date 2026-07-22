@@ -29,7 +29,12 @@ export const SMS_TEMPLATE_DEFAULTS = {
     bodyEn: "{brand}: {studentName} was absent from {batchName} class on {classDate}.",
     allowedVariables: ["brand", "studentName", "classDate", "attendanceStatus", "batchName"],
   },
-  result_published: { name: "Result published", bodyBn: "{brand}: পরীক্ষার ফল প্রকাশিত হয়েছে।", bodyEn: "{brand}: Exam result published.", allowedVariables: ["brand"] },
+  result_published: {
+    name: "Result published",
+    bodyBn: "{brand}: {examName} পরীক্ষায় {studentName}-এর প্রাপ্ত নম্বর {totalScore}/{fullMarks}। {resultStatus}। {meritPosition}।",
+    bodyEn: "{brand}: {studentName} scored {totalScore}/{fullMarks} in {examName}. {resultStatus}. {meritPosition}.",
+    allowedVariables: ["brand", "examName", "studentName", "totalScore", "fullMarks", "resultStatus", "meritPosition"],
+  },
   result_corrected: { name: "Result corrected", bodyBn: "{brand}: সংশোধিত পরীক্ষার ফল প্রকাশিত হয়েছে।", bodyEn: "{brand}: Corrected exam result published.", allowedVariables: ["brand"] },
   due_reminder: { name: "Due reminder", bodyBn: "{brand}: {studentName}-এর বকেয়া ৳ {amount}। অনুগ্রহ করে অফিসে যোগাযোগ করুন।", bodyEn: "{brand}: {studentName} has overdue fees of BDT {amount}. Please contact the office.", allowedVariables: ["brand", "studentName", "amount"] },
   custom_notice: { name: "Custom notice", bodyBn: "{brand}: {notice}", bodyEn: "{brand}: {notice}", allowedVariables: ["brand", "notice"] },
@@ -39,5 +44,5 @@ export type SmsTemplateKey = keyof typeof SMS_TEMPLATE_DEFAULTS;
 
 export const ENABLED_SMS_EVENT_TYPES = new Set<SmsTemplateKey>([
   "admission_received", "admission_accepted", "attendance_late",
-  "attendance_absent", "payment_posted", "due_reminder",
+  "attendance_absent", "payment_posted", "result_published", "due_reminder",
 ]);

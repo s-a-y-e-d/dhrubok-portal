@@ -317,7 +317,7 @@ export const transferEnrolment = mutation({
     if (!student) throw new Error("Student not found");
     if (!course || course.status !== "active") throw new Error("Choose an active course");
     if (!batch || batch.status !== "active" || batch.courseId !== course._id) throw new Error("Choose an active batch from the enrolment course");
-    if (current.batchId === batch._id) throw new Error("Choose a different batch");
+    if (current.batchId === batch._id) throw new Error(JSON.stringify({ code: "SAME_BATCH" }));
     const finalPeriod = args.effectiveDate.slice(0, 7);
     const laterFees = await ctx.db.query("monthlyFeeRecords")
       .withIndex("by_enrolmentId_and_periodKey", (q) => q.eq("enrolmentId", current._id).gt("periodKey", finalPeriod))

@@ -17,6 +17,9 @@ const modules = Object.fromEntries(
 const createWithFirstBatch = makeFunctionReference<"mutation">(
   "academics/courses:createWithFirstBatch",
 );
+const updateEditableDetails = makeFunctionReference<"mutation">(
+  "academics/courses:updateEditableDetails",
+);
 
 async function setup() {
   const t = convexTest(schema, modules);
@@ -137,5 +140,59 @@ describe("atomic course creation", () => {
       "overlap",
     );
     expect(await t.run((ctx) => ctx.db.query("courses").collect())).toHaveLength(0);
+  });
+
+  it("updates course defaults without changing existing batch assignments or routines", async () => {
+    const { t, owner, teacherId, subjectId } = await setup();
+    const created = await owner.mutation(createWithFirstBatch, input(teacherId, subjectId));
+    const { replacementTeacherId, replacementSubjectId } = await t.run(async (ctx) => {
+      const now = Date.now();
+      const replacementTeacherId = await ctx.db.insert("teachers", {
+        employeeCode: "T-REPLACEMENT",
+        displayName: "Replacement Teacher",
+        loginEmail: "replacement@example.com",
+        normalizedLoginEmail: "replacement@example.com",
+        phone: "01800000000",
+        bioBn: "",
+        bioEn: "",
+        qualificationsBn: "",
+        qualificationsEn: "",
+        status: "active",
+        isPublic: false,
+        publicSortOrder: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+      const replacementSubjectId = await ctx.db.insert("subjects", {
+        code: "SCIENCE",
+        nameEn: "Science",
+        createdAt: now,
+        updatedAt: now,
+      });
+      return { replacementTeacherId, replacementSubjectId };
+    });
+
+    await owner.mutation(updateEditableDetails, {
+      courseId: created.courseId,
+      nameBn: "হালনাগাদ গণিত",
+      nameEn: "Updated Mathematics",
+      shortDescriptionBn: "হালনাগাদ সংক্ষিপ্ত বিবরণ",
+      shortDescriptionEn: "Updated short description",
+      descriptionBn: "হালনাগাদ বিস্তারিত বিবরণ",
+      descriptionEn: "Updated detailed description",
+      defaults: [{ subjectId: replacementSubjectId, teacherId: replacementTeacherId }],
+    });
+
+    const graph = await t.run(async (ctx) => ({
+      course: await ctx.db.get("courses", created.courseId),
+      activeDefaults: await ctx.db.query("courseTeacherDefaults").withIndex("by_courseId_and_status", (q) => q.eq("courseId", created.courseId).eq("status", "active")).collect(),
+      assignments: await ctx.db.query("teacherBatchAssignments").collect(),
+      schedules: await ctx.db.query("batchSchedules").collect(),
+    }));
+    expect(graph.course).toMatchObject({ code: "SSC_MATH", nameEn: "Updated Mathematics" });
+    expect(graph.course?.coverStorageId).toBeUndefined();
+    expect(graph.activeDefaults).toMatchObject([{ subjectId: replacementSubjectId, teacherId: replacementTeacherId }]);
+    expect(graph.assignments).toMatchObject([{ teacherId, subjectId }]);
+    expect(graph.schedules).toMatchObject([{ teacherId, subjectId }]);
   });
 });

@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MessageSquareText, RotateCcw, Save } from "lucide-react";
 import { toast } from "sonner";
 
-type EditableKey = "attendance_late" | "attendance_absent" | "payment_posted" | "due_reminder";
+type EditableKey = "attendance_late" | "attendance_absent" | "payment_posted" | "result_published" | "due_reminder";
 type TemplateRow = {
   templateId: string; key: string; name: string; bodyBn: string; bodyEn: string;
   enabled: boolean; variables: string[]; updatedAt: number;
@@ -26,11 +26,13 @@ const META: Record<EditableKey, { titleEn: string; titleBn: string; variables: s
   attendance_absent: { titleEn: "Attendance — Absent", titleBn: "উপস্থিতি — অনুপস্থিত", variables: ["brand", "studentName", "classDate", "attendanceStatus", "batchName"] },
   payment_posted: { titleEn: "Payment — Received", titleBn: "পেমেন্ট — গ্রহণ করা হয়েছে", variables: ["brand", "studentName", "amount", "receiptNumber", "collectionDate"] },
   due_reminder: { titleEn: "Finance — Due reminder", titleBn: "ফাইন্যান্স — বকেয়া স্মরণ", variables: ["brand", "studentName", "amount"] },
+  result_published: { titleEn: "Exam result — Published", titleBn: "পরীক্ষার ফল — প্রকাশিত", variables: ["brand", "examName", "studentName", "totalScore", "fullMarks", "resultStatus", "meritPosition"] },
 };
 const SAMPLE: Record<string, string> = {
   brand: "Dhrubok", studentName: "Rahim Ahmed", classDate: "2026-07-20",
   attendanceStatus: "absent", batchName: "Class 10 — Evening", amount: "3000.00",
   receiptNumber: "RCPT-2026-001024", collectionDate: "2026-07-20",
+  examName: "Monthly Assessment", totalScore: "75", fullMarks: "100", resultStatus: "Passed", meritPosition: "Course merit: 3/42",
 };
 
 function segmentInfo(body: string) {
@@ -202,7 +204,7 @@ export function SmsTemplateEditor({ locale, settings }: {
   const seed = useMutation(api.messaging.templateFunctions.seedDefaults);
   if (!Array.isArray(templates)) return null;
   const byKey = new Map(templates.map((row) => [row.key, row]));
-  const missing = (["attendance_late", "attendance_absent", "payment_posted", "due_reminder"] as EditableKey[]).some((key) => !byKey.has(key));
+  const missing = (["attendance_late", "attendance_absent", "payment_posted", "result_published", "due_reminder"] as EditableKey[]).some((key) => !byKey.has(key));
   if (missing) return <div className="flex flex-col gap-4">
     <SmsDeliveryControl key={settings.updatedAt} locale={locale} settings={settings} />
     <AutomaticDueReminderControl key={`automatic-${settings.updatedAt}`} locale={locale} settings={settings} />
@@ -217,10 +219,11 @@ export function SmsTemplateEditor({ locale, settings }: {
       <AutomaticDueReminderControl key={`automatic-${settings.updatedAt}`} locale={locale} settings={settings} />
       <div><h2 id="sms-template-heading" className="text-xl font-semibold">{bn ? "SMS টেমপ্লেট" : "SMS templates"}</h2><p className="text-sm text-muted-foreground">{bn ? "উপস্থিতি ও পেমেন্ট বার্তার বাংলা এবং ইংরেজি সংস্করণ পরিচালনা করুন।" : "Manage Bangla and English attendance and payment messages."}</p></div>
       <Tabs defaultValue="attendance">
-        <TabsList><TabsTrigger value="attendance">{bn ? "উপস্থিতি" : "Attendance"}</TabsTrigger><TabsTrigger value="payment">{bn ? "পেমেন্ট" : "Payment"}</TabsTrigger><TabsTrigger value="finance">{bn ? "ফাইন্যান্স" : "Finance"}</TabsTrigger></TabsList>
+        <TabsList><TabsTrigger value="attendance">{bn ? "উপস্থিতি" : "Attendance"}</TabsTrigger><TabsTrigger value="exams">{bn ? "পরীক্ষা" : "Exams"}</TabsTrigger><TabsTrigger value="payment">{bn ? "পেমেন্ট" : "Payment"}</TabsTrigger><TabsTrigger value="finance">{bn ? "ফাইন্যান্স" : "Finance"}</TabsTrigger></TabsList>
         <TabsContent value="attendance" className="grid gap-4 lg:grid-cols-2">
           {(["attendance_late", "attendance_absent"] as EditableKey[]).map((key) => <TemplateCard key={`${key}:${byKey.get(key)!.updatedAt}`} locale={locale} row={byKey.get(key)! as TemplateRow} templateKey={key} />)}
         </TabsContent>
+        <TabsContent value="exams"><TemplateCard key={`result_published:${byKey.get("result_published")!.updatedAt}`} locale={locale} row={byKey.get("result_published")! as TemplateRow} templateKey="result_published" /></TabsContent>
         <TabsContent value="payment"><TemplateCard key={`payment_posted:${byKey.get("payment_posted")!.updatedAt}`} locale={locale} row={byKey.get("payment_posted")! as TemplateRow} templateKey="payment_posted" /></TabsContent>
         <TabsContent value="finance"><TemplateCard key={`due_reminder:${byKey.get("due_reminder")!.updatedAt}`} locale={locale} row={byKey.get("due_reminder")! as TemplateRow} templateKey="due_reminder" /></TabsContent>
       </Tabs>

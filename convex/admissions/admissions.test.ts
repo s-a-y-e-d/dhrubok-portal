@@ -182,6 +182,9 @@ describe("admission application backend", () => {
       guardianName: "Direct Guardian",
       guardianPhone: "01712345678",
       guardianRelationship: "Parent",
+      motherName: "Direct Mother",
+      motherPhone: "01812345678",
+      smsRecipient: "both",
       preferredSmsLocale: "en",
       enrolments: [
         {
@@ -202,6 +205,7 @@ describe("admission application backend", () => {
     expect(student).toMatchObject({
       displayName: "Direct Student",
       normalizedGuardianPhone: "8801712345678",
+      smsRecipient: "both",
     });
   });
 

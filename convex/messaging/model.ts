@@ -1,13 +1,27 @@
-import type { MutationCtx } from "../_generated/server";
+import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { estimateSmsSegments } from "./templates";
 import { normalizeBangladeshPhone } from "../model/normalization";
-import { renderSmsTemplate } from "./templates";
+import { renderSmsTemplate as renderTemplate } from "./templates";
 import { ENABLED_SMS_EVENT_TYPES, SMS_TEMPLATE_DEFAULTS, type SmsTemplateKey } from "./templateCatalog";
 
+type SmsTemplateCtx = Pick<MutationCtx, "db"> | Pick<QueryCtx, "db">;
+
+export async function renderSmsTemplate(
+  ctx: SmsTemplateCtx,
+  key: SmsTemplateKey,
+  locale: "bn" | "en",
+  variables: Record<string, string | number>,
+) {
+  const template = await ctx.db.query("smsTemplates").withIndex("by_key", (q) => q.eq("key", key)).unique();
+  const source = template ?? SMS_TEMPLATE_DEFAULTS[key];
+  const rendered = renderTemplate(locale === "bn" ? source.bodyBn : source.bodyEn, variables);
+  return rendered.missingVariables.length === 0 ? rendered.body : null;
+}
+
 export async function renderEnabledSmsTemplate(
-  ctx: MutationCtx,
+  ctx: SmsTemplateCtx,
   key: SmsTemplateKey,
   locale: "bn" | "en",
   variables: Record<string, string | number>,
@@ -15,9 +29,7 @@ export async function renderEnabledSmsTemplate(
   if (!ENABLED_SMS_EVENT_TYPES.has(key)) return null;
   const template = await ctx.db.query("smsTemplates").withIndex("by_key", (q) => q.eq("key", key)).unique();
   if (template && !template.enabled) return null;
-  const source = template ?? SMS_TEMPLATE_DEFAULTS[key];
-  const rendered = renderSmsTemplate(locale === "bn" ? source.bodyBn : source.bodyEn, variables);
-  return rendered.missingVariables.length === 0 ? rendered.body : null;
+  return await renderSmsTemplate(ctx, key, locale, variables);
 }
 
 export async function enqueueSms(

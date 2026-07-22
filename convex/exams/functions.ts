@@ -6,7 +6,7 @@ import { v } from "convex/values";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
 import { mutation, query } from "../_generated/server";
-import { enqueueSms } from "../messaging/model";
+import { enqueueSms, renderEnabledSmsTemplate } from "../messaging/model";
 import {
   requireAccount,
   requireOwner,
@@ -19,7 +19,6 @@ import { nextIdentifier } from "../model/identifiers";
 import {
   calculateResult,
   competitionRanks,
-  resultSmsBody,
   validateExamMarks,
 } from "./model";
 
@@ -415,6 +414,7 @@ export const publish = mutation({
     const now = Date.now();
     const publicationVersion = exam.publicationVersion + 1;
     const isCorrection = exam.publicationVersion > 0;
+    const settings = (await ctx.db.query("coachingSettings").take(1))[0];
     let recipientCount = 0;
     for (const result of roster) {
       const meritPosition =
@@ -436,19 +436,31 @@ export const publish = mutation({
       });
       const student = await ctx.db.get("students", result.studentId);
       if (!student || student.status === "archived") continue;
-      const body = resultSmsBody({
-        locale: student.preferredSmsLocale,
-        isCorrection,
-        examNameBn: exam.nameBn,
-        examNameEn: exam.nameEn,
-        totalScoreScaled: result.totalScoreScaled!,
-        totalFullMarksScaled: exam.totalFullMarksScaled,
-        passed: result.passed!,
-        meritPosition,
+      if (isCorrection) continue;
+      const locale = student.preferredSmsLocale;
+      const body = await renderEnabledSmsTemplate(ctx, "result_published", locale, {
+        brand: locale === "bn"
+          ? settings?.shortNameBn ?? settings?.nameBn ?? "Dhrubok"
+          : settings?.shortNameEn ?? settings?.nameEn ?? "Dhrubok",
+        examName: locale === "bn" ? exam.nameBn : exam.nameEn,
+        studentName: student.displayName,
+        totalScore: (result.totalScoreScaled! / 100).toFixed(2),
+        fullMarks: (exam.totalFullMarksScaled / 100).toFixed(2),
+        resultStatus: locale === "bn"
+          ? result.passed ? "উত্তীর্ণ" : "অনুত্তীর্ণ"
+          : result.passed ? "Passed" : "Failed",
+        meritPosition: meritPosition
+          ? locale === "bn"
+            ? `ব্যাচ মেধাস্থান: ${meritPosition}`
+            : `Batch merit: ${meritPosition}`
+          : locale === "bn"
+            ? "মেধাস্থান: প্রযোজ্য নয়"
+            : "Merit position: not ranked",
       });
+      if (!body) continue;
       const messageIds = await enqueueSms(ctx, {
         idempotencyKey: `exam:${exam._id}:v${publicationVersion}:${student._id}`,
-        eventType: isCorrection ? "result_corrected" : "result_published",
+        eventType: "result_published",
         relatedEntityType: "exam",
         relatedEntityId: exam._id,
         studentId: student._id,

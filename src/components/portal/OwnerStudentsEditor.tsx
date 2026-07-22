@@ -18,6 +18,7 @@ import { Separator } from "@/components/ui/separator";
 import { SheetFooter } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { ownerErrorResult } from "@/lib/owner-errors";
 import { DatePicker } from "./DatePicker";
 import { PortalPageState } from "./PortalPageState";
 import { ResponsiveDetailDrawer } from "./ResponsiveDetailDrawer";
@@ -74,14 +75,14 @@ export function OwnerStudentsEditor({ locale }: { locale: "bn" | "en" }) {
     });
   }, [query, status, students]);
 
-  const availableBatches = useMemo(() => scopes?.batches.filter((batch) => batch.courseId === courseId) ?? [], [courseId, scopes]);
   const activeEnrolments = selected?.enrolments.filter((enrolment) => enrolment.status === "active") ?? [];
   const editingEnrolment = activeEnrolments.find((row) => row.enrolmentId === selectedEnrolmentId);
+  const availableBatches = useMemo(() => scopes?.batches.filter((batch) => batch.courseId === courseId && (!editingEnrolment || batch.batchId !== editingEnrolment.batchId)) ?? [], [courseId, editingEnrolment, scopes]);
 
   async function run(work: () => Promise<unknown>, success: string) {
     setBusy(true); setMessage(null);
     try { await work(); setMessage({ ok: true, text: success }); return true; }
-    catch (cause) { setMessage({ ok: false, text: cause instanceof Error ? cause.message : String(cause) }); return false; }
+    catch (cause) { setMessage({ ok: false, text: ownerErrorResult(cause, locale).summary }); return false; }
     finally { setBusy(false); }
   }
 
@@ -94,7 +95,7 @@ export function OwnerStudentsEditor({ locale }: { locale: "bn" | "en" }) {
   }
 
   function openTransfer(enrolment: NonNullable<typeof selected>["enrolments"][number]) {
-    setSelectedEnrolmentId(enrolment.enrolmentId); setCourseId(enrolment.courseId); setBatchId(enrolment.batchId);
+    setSelectedEnrolmentId(enrolment.enrolmentId); setCourseId(enrolment.courseId); setBatchId("");
     setMonthlyFee(enrolment.agreedMonthlyAmountMinor ? String(enrolment.agreedMonthlyAmountMinor / 100) : "");
     setEffectiveDate(dhakaToday()); setMessage(null); setTransferOpen(true);
   }

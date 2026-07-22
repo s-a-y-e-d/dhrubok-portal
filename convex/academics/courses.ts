@@ -293,6 +293,100 @@ export const update = mutation({
   },
 });
 
+export const updateEditableDetails = mutation({
+  args: {
+    courseId: v.id("courses"),
+    nameBn: v.string(),
+    nameEn: v.string(),
+    shortDescriptionBn: v.string(),
+    shortDescriptionEn: v.string(),
+    descriptionBn: v.string(),
+    descriptionEn: v.string(),
+    coverStorageId: v.optional(v.id("_storage")),
+    defaults: v.array(v.object({ subjectId: v.id("subjects"), teacherId: v.id("teachers") })),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { account } = await requireOwner(ctx);
+    const course = await mustGet(ctx, "courses", args.courseId, "Course");
+    if (course.status === "archived") throw new Error("Archived courses cannot be edited");
+    if (!args.defaults.length) throw new Error("Every course needs at least one subject and teacher");
+
+    const subjectIds = new Set<string>();
+    for (const item of args.defaults) {
+      if (subjectIds.has(item.subjectId)) throw new Error("A subject may only have one default teacher");
+      subjectIds.add(item.subjectId);
+      const [subject, teacher] = await Promise.all([
+        ctx.db.get("subjects", item.subjectId),
+        ctx.db.get("teachers", item.teacherId),
+      ]);
+      if (!subject || !teacher || teacher.status !== "active") {
+        throw new Error("Defaults require existing subjects and active teachers");
+      }
+    }
+
+    const now = Date.now();
+    await ctx.db.patch("courses", args.courseId, {
+      nameBn: cleanRequired(args.nameBn, "Bangla name"),
+      nameEn: cleanRequired(args.nameEn, "English name"),
+      searchText: searchTextFor(course.code, args.nameBn, args.nameEn),
+      shortDescriptionBn: cleanRequired(args.shortDescriptionBn, "Bangla short description"),
+      shortDescriptionEn: cleanRequired(args.shortDescriptionEn, "English short description"),
+      descriptionBn: cleanRequired(args.descriptionBn, "Bangla description"),
+      descriptionEn: cleanRequired(args.descriptionEn, "English description"),
+      coverStorageId: args.coverStorageId,
+      updatedAt: now,
+      updatedByAccountId: account._id,
+    });
+
+    const activeDefaults = await ctx.db
+      .query("courseTeacherDefaults")
+      .withIndex("by_courseId_and_status", (q) => q.eq("courseId", args.courseId).eq("status", "active"))
+      .take(200);
+    for (const row of activeDefaults) {
+      await ctx.db.patch("courseTeacherDefaults", row._id, {
+        status: "ended",
+        updatedAt: now,
+        updatedByAccountId: account._id,
+      });
+    }
+    const links = await ctx.db
+      .query("courseSubjects")
+      .withIndex("by_courseId_and_sortOrder", (q) => q.eq("courseId", args.courseId))
+      .take(200);
+    for (const link of links) await ctx.db.delete("courseSubjects", link._id);
+    for (let index = 0; index < args.defaults.length; index += 1) {
+      const item = args.defaults[index];
+      await ctx.db.insert("courseSubjects", {
+        courseId: args.courseId,
+        subjectId: item.subjectId,
+        sortOrder: index,
+        createdAt: now,
+      });
+      await ctx.db.insert("courseTeacherDefaults", {
+        courseId: args.courseId,
+        subjectId: item.subjectId,
+        teacherId: item.teacherId,
+        status: "active",
+        createdAt: now,
+        updatedAt: now,
+        createdByAccountId: account._id,
+        updatedByAccountId: account._id,
+      });
+    }
+    await writeAudit(ctx, {
+      actorAccountId: account._id,
+      actorRole: "owner",
+      action: "course.editable_details_updated",
+      entityType: "course",
+      entityId: args.courseId,
+      summary: "Course details and future-batch defaults updated",
+    });
+    await refreshSnapshot(ctx, args.courseId);
+    return null;
+  },
+});
+
 export const archive = mutation({
   args: { courseId: v.id("courses") },
   returns: v.null(),

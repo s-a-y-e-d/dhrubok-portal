@@ -2,7 +2,11 @@ import { v } from "convex/values";
 import type { Id } from "../_generated/dataModel";
 import { internalMutation, mutation, query } from "../_generated/server";
 import { internal } from "../_generated/api";
-import { enqueueSms } from "../messaging/model";
+import {
+  enqueueSms,
+  renderEnabledSmsTemplate,
+  renderSmsTemplate,
+} from "../messaging/model";
 import { estimateSmsSegments } from "../messaging/templates";
 import { requireOwner } from "../model/auth";
 import { normalizeBangladeshPhone } from "../model/normalization";
@@ -32,7 +36,7 @@ function meritLabel(
         ? "Course merit"
         : "";
 }
-function message(input: {
+export function message(input: {
   locale: "bn" | "en";
   correction: boolean;
   examName: string;
@@ -56,6 +60,40 @@ function message(input: {
   return input.locale === "bn"
     ? `${input.correction ? "সংশোধিত ফলাফল" : "ফলাফল"}: ${input.examName} পরীক্ষায় ${input.studentName}-এর নম্বর ${score}। ${input.passed ? "উত্তীর্ণ" : "অনুত্তীর্ণ"}। ${[official, batch].filter(Boolean).join("। ")}`.trim()
     : `${input.correction ? "Corrected result" : "Result"}: ${input.studentName} scored ${score} in ${input.examName}. ${input.passed ? "Passed" : "Failed"}. ${[official, batch].filter(Boolean).join(". ")}`.trim();
+}
+
+function resultSmsVariables(input: {
+  locale: "bn" | "en";
+  brand: string;
+  examName: string;
+  studentName: string;
+  total: number;
+  full: number;
+  passed: boolean;
+  scope: "batch" | "selected_batches" | "course" | "none";
+  position?: number;
+  population: number;
+}) {
+  return {
+    brand: input.brand,
+    examName: input.examName,
+    studentName: input.studentName,
+    totalScore: formatScaledMark(input.total),
+    fullMarks: formatScaledMark(input.full),
+    resultStatus:
+      input.locale === "bn"
+        ? input.passed
+          ? "উত্তীর্ণ"
+          : "অনুত্তীর্ণ"
+        : input.passed
+          ? "Passed"
+          : "Failed",
+    meritPosition: input.position
+      ? `${meritLabel(input.scope, input.locale)}: ${input.position}/${input.population}`
+      : input.locale === "bn"
+        ? "মেধাস্থান: প্রযোজ্য নয়"
+        : "Merit position: not ranked",
+  };
 }
 
 async function build(
@@ -190,15 +228,26 @@ export const preview = query({
         }
       }
     }
+    const resultTemplate = await ctx.db
+      .query("smsTemplates")
+      .withIndex("by_key", (q) => q.eq("key", "result_published"))
+      .unique();
+    const resultSmsEnabled =
+      (data.settings?.smsEnabled ?? true) &&
+      (resultTemplate?.enabled ?? true);
     const sample = data.aggregates[0];
     const sampleStudent = sample
       ? await ctx.db.get("students", sample.candidate.studentId)
       : null;
-    const sampleBn = sample
-      ? `${data.settings?.shortNameBn ?? data.settings?.nameBn ?? "Dhrubok"}: ${message(
-          {
+    const willQueueSms = data.exam.publicationVersion === 0 && resultSmsEnabled;
+    const sampleBn = sample && willQueueSms
+      ? (await renderSmsTemplate(
+          ctx,
+          "result_published",
+          "bn",
+          resultSmsVariables({
             locale: "bn",
-            correction: data.exam.publicationVersion > 0,
+            brand: data.settings?.shortNameBn ?? data.settings?.nameBn ?? "Dhrubok",
             examName: data.exam.nameBn,
             studentName: sampleStudent?.displayName ?? "",
             total: sample.grandTotalScaled,
@@ -207,14 +256,17 @@ export const preview = query({
             scope: data.exam.officialMeritScope ?? "none",
             position: data.officialRanks.get(sample.candidate._id),
             population: data.eligible.length,
-          },
-        )}`
+          }),
+        )) ?? ""
       : "";
-    const sampleEn = sample
-      ? `${data.settings?.shortNameEn ?? data.settings?.nameEn ?? "Dhrubok"}: ${message(
-          {
+    const sampleEn = sample && willQueueSms
+      ? (await renderSmsTemplate(
+          ctx,
+          "result_published",
+          "en",
+          resultSmsVariables({
             locale: "en",
-            correction: data.exam.publicationVersion > 0,
+            brand: data.settings?.shortNameEn ?? data.settings?.nameEn ?? "Dhrubok",
             examName: data.exam.nameEn,
             studentName: sampleStudent?.displayName ?? "",
             total: sample.grandTotalScaled,
@@ -223,8 +275,8 @@ export const preview = query({
             scope: data.exam.officialMeritScope ?? "none",
             position: data.officialRanks.get(sample.candidate._id),
             population: data.eligible.length,
-          },
-        )}`
+          }),
+        )) ?? ""
       : "";
     return {
       publicationVersion: data.exam.publicationVersion + 1,
@@ -234,12 +286,52 @@ export const preview = query({
       absentCount: data.aggregates.filter((row) => row.absent).length,
       officialMeritScope: data.exam.officialMeritScope,
       officialPopulation: data.eligible.length,
-      recipientCount: recipients.size,
+      recipientCount: willQueueSms ? recipients.size : 0,
+      willQueueSms,
+      resultSmsEnabled,
       skippedContacts: invalid,
       sampleBn,
       sampleEn,
-      estimatedSegmentsBn: estimateSmsSegments(sampleBn).segmentCount,
-      estimatedSegmentsEn: estimateSmsSegments(sampleEn).segmentCount,
+      estimatedSegmentsBn: sampleBn ? estimateSmsSegments(sampleBn).segmentCount : 0,
+      estimatedSegmentsEn: sampleEn ? estimateSmsSegments(sampleEn).segmentCount : 0,
+    };
+  },
+});
+
+export const prePublicationMeritList = query({
+  args: { examId: v.id("exams") },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    await requireOwner(ctx);
+    const data = await build(ctx, args.examId);
+    const rankedRows = await Promise.all(
+      data.eligible.map(async (aggregate) => {
+        const student = await ctx.db.get(
+          "students",
+          aggregate.candidate.studentId,
+        );
+        return {
+          studentId: aggregate.candidate.studentId,
+          studentName: student?.displayName ?? "",
+          studentNumber: student?.studentNumber ?? "",
+          position: data.officialRanks.get(aggregate.candidate._id),
+          totalScoreScaled: aggregate.grandTotalScaled,
+          fullMarksScaled: aggregate.grandFullMarksScaled,
+          passed: aggregate.passed,
+        };
+      }),
+    );
+    return {
+      meritEnabled: data.exam.meritMode !== "none",
+      population: data.eligible.length,
+      rows: rankedRows
+        .filter((row) => row.position !== undefined)
+        .sort(
+          (a, b) =>
+            a.position! - b.position! ||
+            b.totalScoreScaled - a.totalScoreScaled ||
+            a.studentName.localeCompare(b.studentName),
+        ),
     };
   },
 });
@@ -323,7 +415,7 @@ export const publish = mutation({
       return {
         publicationVersion: version,
         resultCount: data.aggregates.length,
-        recipientCount: recipients.size,
+        recipientCount: version === 1 ? recipients.size : 0,
         processing: true,
       };
     }
@@ -388,10 +480,17 @@ export const publish = mutation({
         aggregate.candidate.studentId,
       );
       if (!student) continue;
-      const body = `${student.preferredSmsLocale === "bn" ? (data.settings?.shortNameBn ?? data.settings?.nameBn ?? "Dhrubok") : (data.settings?.shortNameEn ?? data.settings?.nameEn ?? "Dhrubok")}: ${message(
-        {
+      if (version > 1) continue;
+      const body = await renderEnabledSmsTemplate(
+        ctx,
+        "result_published",
+        student.preferredSmsLocale,
+        resultSmsVariables({
           locale: student.preferredSmsLocale,
-          correction: version > 1,
+          brand:
+            student.preferredSmsLocale === "bn"
+              ? data.settings?.shortNameBn ?? data.settings?.nameBn ?? "Dhrubok"
+              : data.settings?.shortNameEn ?? data.settings?.nameEn ?? "Dhrubok",
           examName:
             student.preferredSmsLocale === "bn"
               ? data.exam.nameBn
@@ -403,13 +502,12 @@ export const publish = mutation({
           scope: data.exam.officialMeritScope ?? "none",
           position,
           population: data.eligible.length,
-          batchPosition,
-          batchPopulation: batchGroup.length,
-        },
-      )}`;
+        }),
+      );
+      if (!body) continue;
       const ids = await enqueueSms(ctx, {
         idempotencyKey: `exam:${data.exam._id}:v${version}:${student._id}`,
-        eventType: version > 1 ? "result_corrected" : "result_published",
+        eventType: "result_published",
         relatedEntityType: "exam",
         relatedEntityId: data.exam._id,
         studentId: student._id,
@@ -527,10 +625,17 @@ export const publishBatch = internalMutation({
         aggregate.candidate.studentId,
       );
       if (!student) continue;
-      const body = `${student.preferredSmsLocale === "bn" ? (data.settings?.shortNameBn ?? data.settings?.nameBn ?? "Dhrubok") : (data.settings?.shortNameEn ?? data.settings?.nameEn ?? "Dhrubok")}: ${message(
-        {
+      if (publication.version > 1) continue;
+      const body = await renderEnabledSmsTemplate(
+        ctx,
+        "result_published",
+        student.preferredSmsLocale,
+        resultSmsVariables({
           locale: student.preferredSmsLocale,
-          correction: publication.version > 1,
+          brand:
+            student.preferredSmsLocale === "bn"
+              ? data.settings?.shortNameBn ?? data.settings?.nameBn ?? "Dhrubok"
+              : data.settings?.shortNameEn ?? data.settings?.nameEn ?? "Dhrubok",
           examName:
             student.preferredSmsLocale === "bn"
               ? data.exam.nameBn
@@ -542,14 +647,12 @@ export const publishBatch = internalMutation({
           scope: data.exam.officialMeritScope ?? "none",
           position,
           population: data.eligible.length,
-          batchPosition,
-          batchPopulation: batchGroup.length,
-        },
-      )}`;
+        }),
+      );
+      if (!body) continue;
       const ids = await enqueueSms(ctx, {
         idempotencyKey: `exam:${data.exam._id}:v${publication.version}:${student._id}`,
-        eventType:
-          publication.version > 1 ? "result_corrected" : "result_published",
+        eventType: "result_published",
         relatedEntityType: "exam",
         relatedEntityId: data.exam._id,
         studentId: student._id,

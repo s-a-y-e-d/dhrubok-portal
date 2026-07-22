@@ -4,6 +4,7 @@ export type ParsedOwnerError = { summary: string; fieldErrors: Record<string, st
 
 type Message = { bn: string; en: string };
 const messages: Record<string, Message> = {
+  SAME_BATCH: { bn: "বর্তমান ব্যাচের পরিবর্তে অন্য একটি ব্যাচ বেছে নিন।", en: "Choose a batch different from the current one." },
   DUPLICATE_EMAIL: { bn: "এই ইমেইলটি ইতিমধ্যে অন্য একটি অ্যাকাউন্টে ব্যবহৃত হচ্ছে।", en: "This email is already used by another account." },
   INVALID_EMAIL: { bn: "একটি বৈধ ইমেইল ঠিকানা দিন।", en: "Enter a valid email address." },
   REQUIRED_FIELD: { bn: "এই তথ্যটি প্রয়োজন।", en: "This field is required." },
