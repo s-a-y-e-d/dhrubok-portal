@@ -131,7 +131,12 @@ export default defineSchema({
 
   subjects: defineTable({
     code: v.string(),
+    // Legacy subject records retain these fields while the catalog uses nameEn.
+    // Keep them optional so the schema accepts both pre- and post-simplification
+    // records until the legacy fields are explicitly migrated away.
+    nameBn: v.optional(v.string()),
     nameEn: v.string(),
+    status: v.optional(v.literal("active")),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_code", ["code"]),
