@@ -254,40 +254,6 @@ const studentNavGroups: NavGroupDef[] = [
   },
 ];
 
-// Owner Quick Actions Definition
-const ownerQuickActions = [
-  {
-    labelEn: "Add student",
-    labelBn: "শিক্ষার্থী যোগ করুন",
-    path: "/admissions?add=true",
-    icon: UserPlus,
-  },
-  {
-    labelEn: "Collect payment",
-    labelBn: "ফি সংগ্রহ করুন",
-    path: "/finance",
-    icon: DollarSign,
-  },
-  {
-    labelEn: "Take attendance",
-    labelBn: "উপস্থিতি নিন",
-    path: "/attendance",
-    icon: CalendarCheck,
-  },
-  {
-    labelEn: "Create exam",
-    labelBn: "পরীক্ষা তৈরি করুন",
-    path: "/exams/create",
-    icon: FileSpreadsheet,
-  },
-  {
-    labelEn: "Send reminders",
-    labelBn: "বকেয়া তাগিদ পাঠান",
-    path: "/finance?view=dues",
-    icon: Bell,
-  },
-];
-
 // Route Auto-resolved Metadata
 const navMetadata: Record<
   string,
@@ -676,36 +642,6 @@ export function PortalShell({
             </div>
           ))}
 
-          {/* Owner Quick Actions Section */}
-          {role === "owner" && (
-            <>
-              <div className={styles.sidebarSectionHeader}>
-                {isBn ? "ত্বরিত কাজ (Actions)" : "Quick Actions"}
-              </div>
-              {ownerQuickActions.map((action) => {
-                const Icon = action.icon;
-                return (
-                  <Link
-                    key={action.labelEn}
-                    href={`/${locale}/owner${action.path}`}
-                    className={styles.navItem}
-                  >
-                    <span
-                      className={styles.navIcon}
-                      style={{ color: "var(--brand)" }}
-                    >
-                      <Icon className="w-5 h-5" aria-hidden="true" />
-                    </span>
-                    <div className={styles.navLabelContainer}>
-                      <span className={styles.navLabelPrimary}>
-                        {isBn ? action.labelBn : action.labelEn}
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </>
-          )}
         </nav>
 
         <div className={styles.sidebarFooter}>
@@ -963,37 +899,6 @@ export function PortalShell({
             </div>
           ))}
 
-          {/* Mobile Drawer Owner Quick Actions */}
-          {role === "owner" && (
-            <>
-              <div className={styles.sidebarSectionHeader}>
-                {isBn ? "ত্বরিত কাজ (Actions)" : "Quick Actions"}
-              </div>
-              {ownerQuickActions.map((action) => {
-                const Icon = action.icon;
-                return (
-                  <Link
-                    key={action.labelEn}
-                    href={`/${locale}/owner${action.path}`}
-                    className={styles.navItem}
-                    onClick={() => setDrawerOpen(false)}
-                  >
-                    <span
-                      className={styles.navIcon}
-                      style={{ color: "var(--brand)" }}
-                    >
-                      <Icon className="w-5 h-5" aria-hidden="true" />
-                    </span>
-                    <div className={styles.navLabelContainer}>
-                      <span className={styles.navLabelPrimary}>
-                        {isBn ? action.labelBn : action.labelEn}
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </>
-          )}
         </nav>
 
         <div className={styles.drawerFooter}>

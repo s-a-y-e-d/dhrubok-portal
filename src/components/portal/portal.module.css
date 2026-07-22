@@ -693,6 +693,7 @@
 .devSwitcherTitle svg { width: 16px; height: 16px; color: var(--warning); }
 .devSelect, .devSeedButton { width: 100%; min-height: 40px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--canvas); color: var(--ink); padding: 8px; font: inherit; font-size: 12px; }
 .devSeedButton { cursor: pointer; font-weight: 500; }
+.devResetButton { width: 100%; min-height: 40px; }
 .devSelect:focus-visible, .devSeedButton:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .devMessage { margin: 0; color: var(--ink-mute); font-size: 12px; line-height: 1.5; }
 

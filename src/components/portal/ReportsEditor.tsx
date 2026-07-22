@@ -1,443 +1,50 @@
 "use client";
 
-import type { FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useQuery } from "convex/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { CalendarRange, ChevronRight, Download, FileSpreadsheet, GraduationCap, Printer, ReceiptText } from "lucide-react";
 import { api } from "@convex/_generated/api";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PortalPageState } from "./PortalPageState";
 
 const pagination = { numItems: 100, cursor: null } as const;
-const startOfDay = (value: string) => Date.parse(`${value}T00:00:00+06:00`);
-const today = () =>
-  new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Dhaka",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(Date.now());
-const monthStart = () => `${today().slice(0, 7)}-01`;
-
-function downloadCsv(payload: {
-  filename: string;
-  contentType: string;
-  content: string;
-}) {
-  const url = URL.createObjectURL(
-    new Blob([payload.content], { type: payload.contentType }),
-  );
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = payload.filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
-}
-
-function value(form: HTMLFormElement, key: string) {
-  return String(new FormData(form).get(key) ?? "");
-}
+const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka", year: "numeric", month: "2-digit", day: "2-digit" }).format(Date.now());
+const money = (value: number) => new Intl.NumberFormat("en-BD", { style: "currency", currency: "BDT", minimumFractionDigits: 2 }).format(value / 100);
+const downloadCsv = (payload: { filename: string; contentType: string; content: string }) => { const url = URL.createObjectURL(new Blob([payload.content], { type: payload.contentType })); const link = document.createElement("a"); link.href = url; link.download = payload.filename; link.click(); URL.revokeObjectURL(url); };
 
 export function ReportsEditor({ locale }: { locale: "bn" | "en" }) {
   const bn = locale === "bn";
-  const params = useSearchParams();
-  const pathname = usePathname();
-  const router = useRouter();
-  const from = params.get("from") || monthStart();
-  const to = params.get("to") || today();
-  const fromAt = startOfDay(from);
-  const toAt = startOfDay(to) + 86_400_000;
-  const collections = useQuery(api.reports.finance.collections, {
-    fromAt,
-    toAt,
-    paginationOpts: pagination,
-  });
-  const dues = useQuery(api.reports.finance.dues, {
-    paginationOpts: pagination,
-  });
-  const methods = useQuery(api.reports.finance.paymentMethodBreakdown, {
-    fromAt,
-    toAt,
-  });
-  const funnel = useQuery(api.reports.operations.admissionsFunnel, {
-    fromAt,
-    toAt,
-  });
-  const collectionsCsv = useQuery(api.reports.exports.collectionsCsv, {
-    fromAt,
-    toAt,
-    locale,
-  });
-  const duesCsv = useQuery(api.reports.exports.duesCsv, { locale });
-  const ageingCsv = useQuery(api.reports.exports.receivableAgeingCsv, {
-    locale,
-  });
-  const adjustmentsCsv = useQuery(api.reports.exports.adjustmentsCsv, {
-    fromAt,
-    toAt,
-    locale,
-  });
-  const cashClosingsCsv = useQuery(api.reports.exports.cashClosingsCsv, {
-    locale,
-  });
-  const workspace = useQuery(api.academics.options.ownerWorkspace, {});
-  const students = useQuery(api.students.owner.listStudents, {
-    status: "active",
-    paginationOpts: pagination,
-  });
-  const exams = useQuery(api.exams.functions.listManaged, {});
-  if (
-    !collections ||
-    !dues ||
-    !methods ||
-    !funnel ||
-    !collectionsCsv ||
-    !duesCsv ||
-    !ageingCsv ||
-    !adjustmentsCsv ||
-    !cashClosingsCsv ||
-    !workspace ||
-    !students ||
-    !exams
-  )
-    return <PortalPageState state="loading" locale={locale} />;
-  const total = collections.page.reduce(
-    (sum, payment) => sum + payment.amountMinor,
-    0,
-  );
-
-  function openAttendance(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const batchId = value(event.currentTarget, "batchId");
-    if (batchId)
-      router.push(
-        `/${locale}/owner/reports/attendance/${batchId}?from=${from}&to=${to}`,
-      );
-  }
-
-  function openExam(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const examId = value(event.currentTarget, "examId");
-    const report = value(event.currentTarget, "report");
-    if (examId && report)
-      router.push(`/${locale}/owner/reports/exams/${examId}/${report}`);
-  }
-
-  function openStatement(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const studentId = value(event.currentTarget, "studentId");
-    if (studentId)
-      router.push(`/${locale}/owner/reports/students/${studentId}/statement`);
-  }
-
-  function openIndividualResult(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const examId = value(event.currentTarget, "examId");
-    const studentId = value(event.currentTarget, "studentId");
-    if (examId && studentId)
-      router.push(
-        `/${locale}/owner/reports/exams/${examId}/students/${studentId}`,
-      );
-  }
-
-  return (
-    <>
-      <header className="portal-page-header" data-print-hidden>
-        <p className="eyebrow">
-          {bn ? "অপারেশনাল রিপোর্ট" : "Operational reports"}
-        </p>
-        <h1>{bn ? "রিপোর্ট, CSV ও প্রিন্ট" : "Reports, CSV, and print"}</h1>
-        <p>
-          {bn
-            ? "ফিল্টার URL-এ থাকে, তাই ভিউ বুকমার্ক বা শেয়ার করা যায়।"
-            : "Filters persist in the URL so views can be bookmarked or shared."}
-        </p>
-      </header>
-      <form
-        className="report-filters"
-        data-print-hidden
-        onSubmit={(event) => {
-          event.preventDefault();
-          const data = new FormData(event.currentTarget);
-          const next = new URLSearchParams(params);
-          next.set("from", String(data.get("from")));
-          next.set("to", String(data.get("to")));
-          router.replace(`${pathname}?${next}`);
-        }}
-      >
-        <label>
-          {bn ? "শুরু" : "From"}
-          <input name="from" type="date" defaultValue={from} />
-        </label>
-        <label>
-          {bn ? "শেষ" : "To"}
-          <input name="to" type="date" defaultValue={to} />
-        </label>
-        <button className="button button-secondary">
-          {bn ? "প্রয়োগ" : "Apply"}
-        </button>
-        <button
-          className="button button-ghost"
-          type="button"
-          onClick={() => window.print()}
-        >
-          {bn ? "সারাংশ প্রিন্ট" : "Print summary"}
-        </button>
-      </form>
-      <section className="report-panels" data-print-hidden>
-        <article>
-          <h2>{bn ? "উপস্থিতি রিপোর্ট" : "Attendance report"}</h2>
-          <form className="compact-form" onSubmit={openAttendance}>
-            <label>
-              {bn ? "ব্যাচ" : "Batch"}
-              <select name="batchId" required defaultValue="">
-                <option value="" disabled>
-                  {bn ? "ব্যাচ বাছুন" : "Select batch"}
-                </option>
-                {workspace.batches.map((batch) => (
-                  <option key={batch.batchId} value={batch.batchId}>
-                    {bn ? batch.nameBn : batch.nameEn}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button className="button button-secondary">
-              {bn ? "A4 রিপোর্ট খুলুন" : "Open A4 report"}
-            </button>
-          </form>
-        </article>
-        <article>
-          <h2>{bn ? "পরীক্ষা রিপোর্ট" : "Exam report"}</h2>
-          <form className="compact-form" onSubmit={openExam}>
-            <label>
-              {bn ? "পরীক্ষা" : "Exam"}
-              <select name="examId" required defaultValue="">
-                <option value="" disabled>
-                  {bn ? "পরীক্ষা বাছুন" : "Select exam"}
-                </option>
-                {exams
-                  .filter((exam) => exam.status === "published")
-                  .map((exam) => (
-                    <option key={exam.examId} value={exam.examId}>
-                      {bn ? exam.nameBn : exam.nameEn}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <label>
-              {bn ? "রিপোর্ট" : "Report"}
-              <select name="report" defaultValue="result-sheet">
-                <option value="result-sheet">
-                  {bn ? "ফলাফল শিট" : "Result sheet"}
-                </option>
-                <option value="merit-list">
-                  {bn ? "মেধাতালিকা" : "Merit list"}
-                </option>
-                <option value="subject-analysis">
-                  {bn ? "বিষয় বিশ্লেষণ" : "Subject analysis"}
-                </option>
-              </select>
-            </label>
-            <button className="button button-secondary">
-              {bn ? "A4 রিপোর্ট খুলুন" : "Open A4 report"}
-            </button>
-          </form>
-        </article>
-        <article>
-          <h2>{bn ? "শিক্ষার্থী হিসাব" : "Student statement"}</h2>
-          <form className="compact-form" onSubmit={openStatement}>
-            <label>
-              {bn ? "শিক্ষার্থী" : "Student"}
-              <select name="studentId" required defaultValue="">
-                <option value="" disabled>
-                  {bn ? "শিক্ষার্থী বাছুন" : "Select student"}
-                </option>
-                {students.page.map((student) => (
-                  <option key={student.studentId} value={student.studentId}>
-                    {student.studentNumber} · {student.displayName}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button className="button button-secondary">
-              {bn ? "A4 বিবরণী খুলুন" : "Open A4 statement"}
-            </button>
-          </form>
-        </article>
-        <article>
-          <h2>{bn ? "ব্যক্তিগত ফলাফল" : "Individual result"}</h2>
-          <form className="compact-form" onSubmit={openIndividualResult}>
-            <label>
-              {bn ? "পরীক্ষা" : "Exam"}
-              <select name="examId" required defaultValue="">
-                <option value="" disabled>
-                  {bn ? "পরীক্ষা বাছুন" : "Select exam"}
-                </option>
-                {exams
-                  .filter((exam) => exam.status === "published")
-                  .map((exam) => (
-                    <option key={exam.examId} value={exam.examId}>
-                      {bn ? exam.nameBn : exam.nameEn}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <label>
-              {bn ? "শিক্ষার্থী" : "Student"}
-              <select name="studentId" required defaultValue="">
-                <option value="" disabled>
-                  {bn ? "শিক্ষার্থী বাছুন" : "Select student"}
-                </option>
-                {students.page.map((student) => (
-                  <option key={student.studentId} value={student.studentId}>
-                    {student.studentNumber} · {student.displayName}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button className="button button-secondary">
-              {bn ? "ফলাফল খুলুন" : "Open result"}
-            </button>
-          </form>
-        </article>
-      </section>
-      <section className="report-sheet">
-        <div className="report-title">
-          <p className="eyebrow">
-            {from} — {to}
-          </p>
-          <h2>{bn ? "সংগ্রহ সারাংশ" : "Collections summary"}</h2>
-        </div>
-        <div className="metric-grid">
-          <article className="metric-card">
-            <p>{bn ? "পেমেন্ট" : "Payments"}</p>
-            <strong>{collections.page.length}</strong>
-          </article>
-          <article className="metric-card">
-            <p>{bn ? "সংগৃহীত" : "Collected"}</p>
-            <strong>৳ {(total / 100).toFixed(2)}</strong>
-          </article>
-          <article className="metric-card">
-            <p>{bn ? "বকেয়া শিক্ষার্থী" : "Students with dues"}</p>
-            <strong>{dues.page.length}</strong>
-          </article>
-        </div>
-        <div className="form-actions" data-print-hidden>
-          <button
-            className="button button-secondary"
-            onClick={() => downloadCsv(ageingCsv)}
-          >
-            {bn ? "বকেয়া বয়স CSV" : "Ageing CSV"}
-          </button>
-          <button
-            className="button button-secondary"
-            onClick={() => downloadCsv(adjustmentsCsv)}
-          >
-            {bn ? "সমন্বয় CSV" : "Adjustments CSV"}
-          </button>
-          <button
-            className="button button-secondary"
-            onClick={() => downloadCsv(cashClosingsCsv)}
-          >
-            {bn ? "ক্যাশ ক্লোজিং CSV" : "Cash closings CSV"}
-          </button>
-        </div>
-        <div className="section-heading" data-print-hidden>
-          <h3>{bn ? "পেমেন্ট" : "Payments"}</h3>
-          <button
-            className="button button-secondary"
-            onClick={() => downloadCsv(collectionsCsv)}
-          >
-            {bn ? "সংগ্রহ CSV" : "Collections CSV"}
-          </button>
-        </div>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>{bn ? "রশিদ" : "Receipt"}</th>
-                <th>{bn ? "শিক্ষার্থী" : "Student"}</th>
-                <th>{bn ? "পদ্ধতি" : "Method"}</th>
-                <th>{bn ? "পরিমাণ" : "Amount"}</th>
-                <th>{bn ? "সময়" : "Paid at"}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {collections.page.map((row) => (
-                <tr key={row.paymentId}>
-                  <td>{row.receiptNumber}</td>
-                  <td>
-                    {row.studentNumber}
-                    <small>{row.studentName}</small>
-                  </td>
-                  <td>{row.method}</td>
-                  <td>৳ {(row.amountMinor / 100).toFixed(2)}</td>
-                  <td>{new Date(row.paidAt).toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="section-heading report-gap" data-print-hidden>
-          <h3>{bn ? "বকেয়া" : "Dues"}</h3>
-          <button
-            className="button button-secondary"
-            onClick={() => downloadCsv(duesCsv)}
-          >
-            {bn ? "বকেয়া CSV" : "Dues CSV"}
-          </button>
-        </div>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>{bn ? "শিক্ষার্থী" : "Student"}</th>
-                <th>{bn ? "বকেয়া" : "Outstanding"}</th>
-                <th>{bn ? "সময়োত্তীর্ণ" : "Overdue"}</th>
-                <th>{bn ? "অগ্রিম" : "Advance"}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dues.page.map((row) => (
-                <tr key={row.studentId}>
-                  <td>
-                    {row.studentNumber}
-                    <small>{row.studentName}</small>
-                  </td>
-                  <td>৳ {(row.outstandingMinor / 100).toFixed(2)}</td>
-                  <td>৳ {(row.overdueMinor / 100).toFixed(2)}</td>
-                  <td>৳ {(row.advanceCreditMinor / 100).toFixed(2)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="report-panels">
-          <article>
-            <h3>{bn ? "পেমেন্ট পদ্ধতি" : "Payment methods"}</h3>
-            <ul>
-              {methods.rows.map((row) => (
-                <li key={row.method}>
-                  <span>{row.method}</span>
-                  <strong>
-                    {row.paymentCount} · ৳{" "}
-                    {(row.collectedMinor / 100).toFixed(2)}
-                  </strong>
-                </li>
-              ))}
-            </ul>
-          </article>
-          <article>
-            <h3>{bn ? "ভর্তি ফানেল" : "Admissions funnel"}</h3>
-            <ul>
-              {funnel.stages.map((row) => (
-                <li key={row.status}>
-                  <span>{row.status}</span>
-                  <strong>{row.count}</strong>
-                </li>
-              ))}
-            </ul>
-          </article>
-        </div>
-      </section>
-    </>
-  );
+  const t = (bangla: string, english: string) => bn ? bangla : english;
+  const params = useSearchParams(); const pathname = usePathname(); const router = useRouter();
+  const from = params.get("from") || `${today().slice(0, 7)}-01`; const to = params.get("to") || today();
+  const fromAt = Date.parse(`${from}T00:00:00+06:00`); const toAt = Date.parse(`${to}T00:00:00+06:00`) + 86_400_000;
+  const [batchId, setBatchId] = useState(""); const [examId, setExamId] = useState(""); const [report, setReport] = useState("result-sheet"); const [studentId, setStudentId] = useState("");
+  const collections = useQuery(api.reports.finance.collections, { fromAt, toAt, paginationOpts: pagination }); const dues = useQuery(api.reports.finance.dues, { paginationOpts: pagination });
+  const collectionsCsv = useQuery(api.reports.exports.collectionsCsv, { fromAt, toAt, locale }); const duesCsv = useQuery(api.reports.exports.duesCsv, { locale }); const ageingCsv = useQuery(api.reports.exports.receivableAgeingCsv, { locale }); const adjustmentsCsv = useQuery(api.reports.exports.adjustmentsCsv, { fromAt, toAt, locale }); const cashClosingsCsv = useQuery(api.reports.exports.cashClosingsCsv, { locale });
+  const workspace = useQuery(api.academics.options.ownerWorkspace, {}); const students = useQuery(api.students.owner.listStudents, { status: "active", paginationOpts: pagination }); const exams = useQuery(api.exams.functions.listManaged, {});
+  if (!collections || !dues || !collectionsCsv || !duesCsv || !ageingCsv || !adjustmentsCsv || !cashClosingsCsv || !workspace || !students || !exams) return <PortalPageState state="loading" locale={locale} />;
+  const published = exams.filter((exam) => exam.status === "published"); const total = collections.page.reduce((sum, row) => sum + row.amountMinor, 0);
+  const updateDates = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const data = new FormData(event.currentTarget); const next = new URLSearchParams(params); next.set("from", String(data.get("from"))); next.set("to", String(data.get("to"))); router.replace(`${pathname}?${next}`); };
+  const selectOptions = (items: { id: string; text: string }[]) => <SelectContent><SelectGroup>{items.map((item) => <SelectItem key={item.id} value={item.id}>{item.text}</SelectItem>)}</SelectGroup></SelectContent>;
+  return <div className="reports-workspace">
+    <header className="portal-page-header"><p className="eyebrow">{t("অপারেশনাল রিপোর্ট", "Operational reports")}</p><h1>{t("রিপোর্ট সেন্টার", "Report centre")}</h1><p>{t("প্রথমে অন-স্ক্রিন প্রিভিউ দেখুন, তারপর যাচাই করা A4 কপি প্রিন্ট করুন।", "Review reports on screen first, then print a verified A4 copy.")}</p></header>
+    <Card className="reports-date-card"><CardHeader><CardTitle className="flex items-center gap-2"><CalendarRange />{t("রিপোর্টিং সময়সীমা", "Reporting period")}</CardTitle><CardDescription>{t("উপস্থিতি ও আর্থিক সারাংশের জন্য ব্যবহৃত।", "Used by attendance and the financial summary.")}</CardDescription></CardHeader><CardContent><form onSubmit={updateDates}><FieldGroup className="reports-date-fields"><Field><FieldLabel htmlFor="from">{t("শুরু", "From")}</FieldLabel><Input id="from" name="from" type="date" defaultValue={from} /></Field><Field><FieldLabel htmlFor="to">{t("শেষ", "To")}</FieldLabel><Input id="to" name="to" type="date" defaultValue={to} /></Field><Button type="submit">{t("প্রয়োগ করুন", "Apply period")}</Button></FieldGroup></form></CardContent></Card>
+    <Tabs defaultValue="academic" className="reports-tabs"><TabsList className="reports-tabs-list"><TabsTrigger value="academic"><GraduationCap data-icon="inline-start" />{t("একাডেমিক", "Academic")}</TabsTrigger><TabsTrigger value="finance"><ReceiptText data-icon="inline-start" />{t("ফাইন্যান্স", "Finance")}</TabsTrigger></TabsList>
+      <TabsContent value="academic"><div className="reports-section-intro"><div><h2>{t("উপস্থিতি ও ফলাফল", "Attendance and results")}</h2><p>{t("প্রতিটি রিপোর্ট প্রিন্ট-রেডি প্রিভিউ হিসেবে খোলে।", "Every report opens as a print-ready preview.")}</p></div><Badge variant="neutral">{t("প্রিন্ট-রেডি", "Print-ready")}</Badge></div><div className="reports-launch-grid">
+        <Card><CardHeader><CardTitle>{t("ব্যাচ উপস্থিতি", "Batch attendance")}</CardTitle><CardDescription>{t("নির্বাচিত সময়ের উপস্থিতি, দেরি এবং অনুপস্থিতি দেখুন।", "Review present, late, and absent records for the selected period.")}</CardDescription></CardHeader><CardContent><Field><FieldLabel>{t("ব্যাচ", "Batch")}</FieldLabel><Select value={batchId} onValueChange={setBatchId}><SelectTrigger><SelectValue placeholder={t("ব্যাচ বাছুন", "Select a batch")} /></SelectTrigger>{selectOptions(workspace.batches.map((b) => ({ id: b.batchId, text: bn ? b.nameBn : b.nameEn })))}</Select></Field></CardContent><CardFooter><Button disabled={!batchId} onClick={() => router.push(`/${locale}/owner/reports/attendance/${batchId}?from=${from}&to=${to}`)}>{t("প্রিভিউ খুলুন", "Open preview")}<ChevronRight data-icon="inline-end" /></Button></CardFooter></Card>
+        <Card><CardHeader><CardTitle>{t("পরীক্ষার ফলাফল", "Exam results")}</CardTitle><CardDescription>{t("ফলাফল শিট, মেধাতালিকা অথবা বিষয় বিশ্লেষণ খুলুন।", "Open a result sheet, merit list, or subject analysis.")}</CardDescription></CardHeader><CardContent><FieldGroup className="gap-3"><Field><FieldLabel>{t("পরীক্ষা", "Exam")}</FieldLabel><Select value={examId} onValueChange={setExamId}><SelectTrigger><SelectValue placeholder={t("পরীক্ষা বাছুন", "Select an exam")} /></SelectTrigger>{selectOptions(published.map((e) => ({ id: e.examId, text: bn ? e.nameBn : e.nameEn })))}</Select></Field><Field><FieldLabel>{t("প্রিভিউ", "Preview")}</FieldLabel><Select value={report} onValueChange={setReport}><SelectTrigger><SelectValue /></SelectTrigger>{selectOptions([{ id: "result-sheet", text: t("ফলাফল শিট", "Result sheet") }, { id: "merit-list", text: t("মেধাতালিকা", "Merit list") }, { id: "subject-analysis", text: t("বিষয় বিশ্লেষণ", "Subject analysis") }])}</Select></Field></FieldGroup></CardContent><CardFooter><Button disabled={!examId} onClick={() => router.push(`/${locale}/owner/reports/exams/${examId}/${report}`)}>{t("প্রিভিউ খুলুন", "Open preview")}<ChevronRight data-icon="inline-end" /></Button></CardFooter></Card>
+        <Card><CardHeader><CardTitle>{t("ব্যক্তিগত ফলাফল", "Individual result")}</CardTitle><CardDescription>{t("একজন শিক্ষার্থীর পূর্ণ প্রকাশিত ফলাফল দেখুন।", "View a student’s complete published result.")}</CardDescription></CardHeader><CardContent><Field><FieldLabel>{t("শিক্ষার্থী", "Student")}</FieldLabel><Select value={studentId} onValueChange={setStudentId}><SelectTrigger><SelectValue placeholder={t("শিক্ষার্থী বাছুন", "Select a student")} /></SelectTrigger>{selectOptions(students.page.map((s) => ({ id: s.studentId, text: `${s.studentNumber} · ${s.displayName}` })))}</Select></Field></CardContent><CardFooter><Button variant="secondary" disabled={!studentId || !examId} onClick={() => router.push(`/${locale}/owner/reports/exams/${examId}/students/${studentId}`)}>{t("ফলাফল খুলুন", "Open result")}<ChevronRight data-icon="inline-end" /></Button></CardFooter></Card>
+      </div></TabsContent>
+      <TabsContent value="finance"><div className="reports-section-intro"><div><h2>{t("আর্থিক এবং শিক্ষার্থী বিবরণী", "Finance and student statements")}</h2><p>{t("বর্তমান পেমেন্ট ও বকেয়া দেখুন অথবা শিক্ষার্থীর সম্পূর্ণ হিসাব খুলুন।", "Review current payment and due information, or open a full student statement.")}</p></div><Badge variant="neutral">{from} — {to}</Badge></div><Card className="reports-statement-card"><CardHeader><CardTitle>{t("শিক্ষার্থী হিসাব", "Student statement")}</CardTitle></CardHeader><CardContent><Field><FieldLabel>{t("শিক্ষার্থী", "Student")}</FieldLabel><Select value={studentId} onValueChange={setStudentId}><SelectTrigger><SelectValue placeholder={t("শিক্ষার্থী বাছুন", "Select a student")} /></SelectTrigger>{selectOptions(students.page.map((s) => ({ id: s.studentId, text: `${s.studentNumber} · ${s.displayName}` })))}</Select></Field></CardContent><CardFooter><Button disabled={!studentId} onClick={() => router.push(`/${locale}/owner/reports/students/${studentId}/statement`)}>{t("বিবরণী খুলুন", "Open statement")}<ChevronRight data-icon="inline-end" /></Button></CardFooter></Card></TabsContent>
+    </Tabs>
+    <section className="reports-finance-overview"><div className="reports-section-intro"><div><h2>{t("আর্থিক সারাংশ", "Financial summary")}</h2><p>{from} — {to}</p></div><Button variant="secondary" onClick={() => window.print()}><Printer data-icon="inline-start" />{t("সারাংশ প্রিন্ট", "Print summary")}</Button></div><div className="reports-summary-grid"><Card><CardHeader><CardDescription>{t("পেমেন্ট", "Payments")}</CardDescription><CardTitle className="font-mono text-2xl">{collections.page.length}</CardTitle></CardHeader></Card><Card><CardHeader><CardDescription>{t("সংগৃহীত", "Collected")}</CardDescription><CardTitle className="font-mono text-2xl">{money(total)}</CardTitle></CardHeader></Card><Card><CardHeader><CardDescription>{t("বকেয়া শিক্ষার্থী", "Students with dues")}</CardDescription><CardTitle className="font-mono text-2xl text-[var(--danger)]">{dues.page.length}</CardTitle></CardHeader></Card></div><div className="reports-data-grid"><Card><CardHeader><CardTitle>{t("সাম্প্রতিক পেমেন্ট", "Recent payments")}</CardTitle></CardHeader><CardContent className="p-0"><Table><TableHeader><TableRow><TableHead>{t("রসিদ", "Receipt")}</TableHead><TableHead>{t("শিক্ষার্থী", "Student")}</TableHead><TableHead className="text-right">{t("পরিমাণ", "Amount")}</TableHead></TableRow></TableHeader><TableBody>{collections.page.slice(0, 6).map((row) => <TableRow key={row.paymentId}><TableCell className="font-mono">{row.receiptNumber}</TableCell><TableCell>{row.studentName}</TableCell><TableCell className="text-right font-mono">{money(row.amountMinor)}</TableCell></TableRow>)}</TableBody></Table></CardContent><CardFooter><Button variant="secondary" size="sm" onClick={() => downloadCsv(collectionsCsv)}><Download data-icon="inline-start" />CSV</Button></CardFooter></Card><Card><CardHeader><CardTitle>{t("বর্তমান বকেয়া", "Current dues")}</CardTitle></CardHeader><CardContent className="p-0"><Table><TableHeader><TableRow><TableHead>{t("শিক্ষার্থী", "Student")}</TableHead><TableHead className="text-right">{t("বকেয়া", "Outstanding")}</TableHead></TableRow></TableHeader><TableBody>{dues.page.slice(0, 6).map((row) => <TableRow key={row.studentId}><TableCell>{row.studentName}</TableCell><TableCell className="text-right font-mono text-[var(--danger)]">{money(row.outstandingMinor)}</TableCell></TableRow>)}</TableBody></Table></CardContent><CardFooter><Button variant="secondary" size="sm" onClick={() => downloadCsv(duesCsv)}><Download data-icon="inline-start" />CSV</Button></CardFooter></Card></div><Card><CardHeader><CardTitle>{t("আর্থিক CSV এক্সপোর্ট", "Financial CSV exports")}</CardTitle></CardHeader><CardContent className="reports-export-actions"><Button variant="secondary" onClick={() => downloadCsv(ageingCsv)}><FileSpreadsheet data-icon="inline-start" />{t("বকেয়ার বয়স", "Receivable ageing")}</Button><Button variant="secondary" onClick={() => downloadCsv(adjustmentsCsv)}><FileSpreadsheet data-icon="inline-start" />{t("সমন্বয়", "Adjustments")}</Button><Button variant="secondary" onClick={() => downloadCsv(cashClosingsCsv)}><FileSpreadsheet data-icon="inline-start" />{t("ক্যাশ ক্লোজিং", "Cash closings")}</Button></CardContent></Card></section>
+  </div>;
 }

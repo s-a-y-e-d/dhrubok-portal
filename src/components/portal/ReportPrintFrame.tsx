@@ -2,7 +2,10 @@
 
 import type { ReactNode } from "react";
 import { useQuery } from "convex/react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Printer } from "lucide-react";
 import { api } from "@convex/_generated/api";
+import { Button } from "@/components/ui/button";
 import { PortalPageState } from "./PortalPageState";
 
 interface ReportPrintFrameProps {
@@ -15,14 +18,20 @@ interface ReportPrintFrameProps {
 
 export function ReportPrintFrame({ locale, eyebrow, title, subtitle, children }: ReportPrintFrameProps) {
   const bn = locale === "bn";
+  const router = useRouter();
   const settings = useQuery(api.settings.getPublic, {});
   if (settings === undefined) return <PortalPageState state="loading" locale={locale} />;
   return (
     <section className="report-sheet">
       <div className="receipt-toolbar" data-print-hidden>
-        <button className="button button-primary" type="button" onClick={() => window.print()}>
+        <Button variant="secondary" type="button" onClick={() => router.back()}>
+          <ArrowLeft data-icon="inline-start" />
+          {bn ? "ফিরে যান" : "Back to reports"}
+        </Button>
+        <Button type="button" onClick={() => window.print()}>
+          <Printer data-icon="inline-start" />
           {bn ? "প্রিন্ট করুন" : "Print report"}
-        </button>
+        </Button>
       </div>
       <header className="receipt-head">
         <div>
