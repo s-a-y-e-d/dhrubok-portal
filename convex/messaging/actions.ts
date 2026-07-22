@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { env, internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
+import { ENABLED_SMS_EVENT_TYPES } from "./templateCatalog";
 import {
   BulkSmsBdError,
   getBulkSmsBdBalance,
@@ -12,7 +13,7 @@ export const sendQueued = internalAction({
   handler: async (ctx, args) => {
     const message = await ctx.runQuery(internal.messaging.functions.getForDelivery, args);
     if (!message || (message.status !== "queued" && message.status !== "failed")) return null;
-    if (!["admission_received", "admission_accepted", "attendance_late", "attendance_absent", "payment_posted"].includes(message.eventType)) {
+    if (!ENABLED_SMS_EVENT_TYPES.has(message.eventType as never)) {
       await ctx.runMutation(internal.messaging.functions.cancelDisallowed, args);
       return null;
     }

@@ -8,13 +8,15 @@ let worklist: Record<string, unknown> | undefined;
 
 vi.mock("convex/react", () => ({
   useMutation: () => prepare,
-  useQuery: (_reference: unknown, args: Record<string, unknown>) =>
-    "limit" in args
-      ? worklist
-      : {
-          courses: [],
-          batches: [],
-        },
+  useQuery: (_reference: unknown, args: Record<string, unknown> | "skip") =>
+    args === "skip"
+      ? undefined
+      : "limit" in args
+        ? worklist
+        : {
+            courses: [],
+            batches: [],
+          },
 }));
 
 vi.mock("next/navigation", () => ({

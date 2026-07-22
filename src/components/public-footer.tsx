@@ -1,7 +1,10 @@
 import Link from "next/link";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 
-export function PublicFooter({ dictionary, title, body }: { dictionary: Dictionary; title?: string; body?: string }) {
+export function PublicFooter({ dictionary, title, body, navigation }: { dictionary: Dictionary; title?: string; body?: string; navigation: Array<{ key: string; label: string; visible: boolean }> }) {
+  const pathByKey: Record<string, string> = { home: ".", courses: "./courses", teachers: "./teachers", about: "./about", contact: "./contact", admission: "./admission", sign_in: "./sign-in" };
+  const primary = navigation.filter((item) => item.visible && !["admission", "sign_in"].includes(item.key));
+  const actions = navigation.filter((item) => item.visible && ["admission", "sign_in"].includes(item.key));
   return (
     <footer className="public-footer border-t border-border bg-slate-50/50 py-12 dark:bg-slate-900/50">
       <div className="container flex flex-col gap-10">
@@ -27,18 +30,7 @@ export function PublicFooter({ dictionary, title, body }: { dictionary: Dictiona
               {dictionary.nav.home}
             </h4>
             <div className="flex flex-col gap-1.5 text-sm">
-              <Link className="text-foreground/80 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" href="./courses">
-                {dictionary.nav.courses}
-              </Link>
-              <Link className="text-foreground/80 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" href="./teachers">
-                {dictionary.nav.teachers}
-              </Link>
-              <Link className="text-foreground/80 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" href="./about">
-                {dictionary.nav.about}
-              </Link>
-              <Link className="text-foreground/80 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" href="./contact">
-                {dictionary.nav.contact}
-              </Link>
+              {primary.map((item) => <Link key={item.key} className="text-foreground/80 hover:text-emerald-600 transition-colors" href={pathByKey[item.key] ?? "."}>{item.label}</Link>)}
             </div>
           </div>
 
@@ -48,12 +40,7 @@ export function PublicFooter({ dictionary, title, body }: { dictionary: Dictiona
               {dictionary.brand.name} Portal
             </h4>
             <div className="flex flex-col gap-1.5 text-sm">
-              <Link className="text-foreground/80 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" href="./admission">
-                {dictionary.nav.apply}
-              </Link>
-              <Link className="text-foreground/80 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" href="./sign-in">
-                {dictionary.nav.signIn}
-              </Link>
+              {actions.map((item) => <Link key={item.key} className="text-foreground/80 hover:text-emerald-600 transition-colors" href={pathByKey[item.key] ?? "."}>{item.label}</Link>)}
             </div>
           </div>
         </div>

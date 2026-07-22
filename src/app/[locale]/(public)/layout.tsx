@@ -7,6 +7,7 @@ import type { Metadata } from "next";
 import { publicMetadata } from "./_metadata";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@convex/_generated/api";
+import { websiteCmsEnabled } from "@/lib/features";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -22,9 +23,19 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 export default async function PublicLayout({ children, params }: { children: React.ReactNode; params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  const [dictionary, footer] = await Promise.all([
+  const defaultNavigation = locale === "bn" ? [
+    { key: "home", label: "à¦¹à§‹à¦®", visible: true }, { key: "courses", label: "à¦•à§‹à¦°à§à¦¸", visible: true }, { key: "teachers", label: "à¦¶à¦¿à¦•à§à¦·à¦•", visible: true },
+    { key: "about", label: "à¦†à¦®à¦¾à¦¦à§‡à¦° à¦¸à¦®à§à¦ªà¦°à§à¦•à§‡", visible: true }, { key: "contact", label: "à¦¯à§‹à¦—à¦¾à¦¯à§‹à¦—", visible: true },
+    { key: "admission", label: "à¦­à¦°à§à¦¤à¦¿", visible: true }, { key: "sign_in", label: "à¦¸à¦¾à¦‡à¦¨ à¦‡à¦¨", visible: true },
+  ] : [
+    { key: "home", label: "Home", visible: true }, { key: "courses", label: "Courses", visible: true }, { key: "teachers", label: "Teachers", visible: true },
+    { key: "about", label: "About", visible: true }, { key: "contact", label: "Contact", visible: true },
+    { key: "admission", label: "Admission", visible: true }, { key: "sign_in", label: "Sign in", visible: true },
+  ];
+  const [dictionary, footer, siteLayout] = await Promise.all([
     getDictionary(locale),
     fetchQuery(api.publicSite.public.getContentBlock, { key: "footer", locale }),
+    websiteCmsEnabled ? fetchQuery(api.publicSite.public.getSiteLayout, { locale }).catch(() => ({ homeSections: [], navigation: defaultNavigation })) : Promise.resolve({ homeSections: [], navigation: defaultNavigation }),
   ]);
-  return <><PublicHeader locale={locale} dictionary={dictionary} /><main id="main-content">{children}</main><PublicFooter dictionary={dictionary} title={footer?.title.value} body={footer?.body.value} /></>;
+  return <><PublicHeader locale={locale} dictionary={dictionary} navigation={siteLayout.navigation} /><main id="main-content">{children}</main><PublicFooter dictionary={dictionary} title={footer?.title.value} body={footer?.body.value} navigation={siteLayout.navigation} /></>;
 }

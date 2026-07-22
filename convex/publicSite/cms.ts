@@ -12,7 +12,22 @@ import {
   requireTrimmed,
   validatePublicImageMetadata,
   validatePublicHref,
+  homeSectionKeyValidator,
+  navigationKeyValidator,
 } from "./shared";
+
+const homeSectionValidator = v.object({ key: homeSectionKeyValidator, visible: v.boolean() });
+const navigationItemValidator = v.object({ key: navigationKeyValidator, labelBn: v.string(), labelEn: v.string(), visible: v.boolean() });
+const defaultHomeSections = ["hero", "courses", "batches", "achievements", "teachers", "gallery", "contact"].map((key) => ({ key, visible: true })) as Array<{ key: "hero" | "courses" | "batches" | "achievements" | "teachers" | "gallery" | "contact"; visible: boolean }>;
+const defaultNavigation = [
+  { key: "home", labelBn: "হোম", labelEn: "Home", visible: true },
+  { key: "courses", labelBn: "কোর্স", labelEn: "Courses", visible: true },
+  { key: "teachers", labelBn: "শিক্ষক", labelEn: "Teachers", visible: true },
+  { key: "about", labelBn: "আমাদের সম্পর্কে", labelEn: "About", visible: true },
+  { key: "contact", labelBn: "যোগাযোগ", labelEn: "Contact", visible: true },
+  { key: "admission", labelBn: "ভর্তি", labelEn: "Admission", visible: true },
+  { key: "sign_in", labelBn: "সাইন ইন", labelEn: "Sign in", visible: true },
+] as const;
 
 const contentInputValidator = v.object({
   titleBn: v.string(), titleEn: v.string(), bodyBn: v.string(), bodyEn: v.string(),
@@ -100,6 +115,83 @@ export const listContentPreviews = query({
       return block ? await contentPreview(ctx, block._id) : null;
     }));
     return previews.filter((preview) => preview !== null);
+  },
+});
+
+export const getLayoutWorkspace = query({
+  args: {},
+  returns: v.object({ homeSections: v.array(homeSectionValidator), navigation: v.array(navigationItemValidator), hasDraftChanges: v.boolean() }),
+  handler: async (ctx) => {
+    await requireOwner(ctx);
+    const layout = await ctx.db.query("siteLayouts").withIndex("by_singletonKey", (q) => q.eq("singletonKey", "public-site")).unique();
+    return layout
+      ? { homeSections: layout.draftHomeSections, navigation: layout.draftNavigation, hasDraftChanges: layout.hasDraftChanges }
+      : { homeSections: defaultHomeSections, navigation: [...defaultNavigation], hasDraftChanges: false };
+  },
+});
+
+export const getPublishSummary = query({
+  args: {},
+  returns: v.object({
+    contentKeys: v.array(contentBlockKeyValidator),
+    galleryDraftCount: v.number(),
+    structureDraft: v.boolean(),
+  }),
+  handler: async (ctx) => {
+    await requireOwner(ctx);
+    const [content, gallery, layout] = await Promise.all([
+      ctx.db.query("siteContentBlocks").withIndex("by_status", (q) => q.eq("status", "draft")).take(20),
+      ctx.db.query("galleryItems").withIndex("by_status_and_sortOrder", (q) => q.eq("status", "draft")).take(100),
+      ctx.db.query("siteLayouts").withIndex("by_singletonKey", (q) => q.eq("singletonKey", "public-site")).unique(),
+    ]);
+    return {
+      contentKeys: content.map((block) => block.key),
+      galleryDraftCount: gallery.length,
+      structureDraft: layout?.hasDraftChanges ?? false,
+    };
+  },
+});
+
+export const saveLayoutDraft = mutation({
+  args: { homeSections: v.array(homeSectionValidator), navigation: v.array(navigationItemValidator) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { account } = await requireOwner(ctx);
+    const sectionKeys = new Set(args.homeSections.map((item) => item.key));
+    const navKeys = new Set(args.navigation.map((item) => item.key));
+    if (sectionKeys.size !== defaultHomeSections.length || navKeys.size !== defaultNavigation.length) throw new Error("Website structure is incomplete");
+    for (const item of args.navigation) {
+      requireTrimmed(item.labelBn, "Bangla navigation label", 80);
+      requireTrimmed(item.labelEn, "English navigation label", 80);
+    }
+    const existing = await ctx.db.query("siteLayouts").withIndex("by_singletonKey", (q) => q.eq("singletonKey", "public-site")).unique();
+    const now = Date.now();
+    if (existing) await ctx.db.patch("siteLayouts", existing._id, { draftHomeSections: args.homeSections, draftNavigation: args.navigation, hasDraftChanges: true, updatedAt: now, updatedByAccountId: account._id });
+    else await ctx.db.insert("siteLayouts", { singletonKey: "public-site", draftHomeSections: args.homeSections, publishedHomeSections: defaultHomeSections, draftNavigation: args.navigation, publishedNavigation: [...defaultNavigation], hasDraftChanges: true, updatedAt: now, updatedByAccountId: account._id });
+    return null;
+  },
+});
+
+export const publishWebsite = mutation({
+  args: {}, returns: v.null(),
+  handler: async (ctx) => {
+    const { account } = await requireOwner(ctx);
+    const now = Date.now();
+    const blocks = await ctx.db.query("siteContentBlocks").withIndex("by_status", (q) => q.eq("status", "draft")).take(20);
+    for (const block of blocks) {
+      requireAtLeastOneTranslation(block.titleBn, block.titleEn, "Title");
+      requireAtLeastOneTranslation(block.bodyBn, block.bodyEn, "Body");
+      const revision = await ctx.db.query("siteContentRevisions").withIndex("by_contentBlockId_and_revision", (q) => q.eq("contentBlockId", block._id).eq("revision", block.draftRevision)).unique();
+      if (!revision) await ctx.db.insert("siteContentRevisions", { contentBlockId: block._id, revision: block.draftRevision, titleBn: block.titleBn, titleEn: block.titleEn, bodyBn: block.bodyBn, bodyEn: block.bodyEn, primaryCtaLabelBn: block.primaryCtaLabelBn, primaryCtaLabelEn: block.primaryCtaLabelEn, primaryCtaHref: block.primaryCtaHref, mediaStorageId: block.mediaStorageId, publishedAt: now, publishedByAccountId: account._id });
+      await ctx.db.patch("siteContentBlocks", block._id, { status: "published", publishedRevision: block.draftRevision, updatedAt: now, updatedByAccountId: account._id });
+    }
+    const gallery = await ctx.db.query("galleryItems").withIndex("by_status_and_sortOrder", (q) => q.eq("status", "draft")).take(101);
+    if (gallery.length > 100) throw new Error("Publish at most 100 gallery drafts at a time");
+    for (const item of gallery) await ctx.db.patch("galleryItems", item._id, { status: "published", updatedAt: now });
+    const layout = await ctx.db.query("siteLayouts").withIndex("by_singletonKey", (q) => q.eq("singletonKey", "public-site")).unique();
+    if (layout) await ctx.db.patch("siteLayouts", layout._id, { publishedHomeSections: layout.draftHomeSections, publishedNavigation: layout.draftNavigation, hasDraftChanges: false, updatedAt: now, updatedByAccountId: account._id });
+    await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: "cms.website_published", entityType: "siteLayouts", entityId: layout?._id ?? "public-site", summary: "Published website changes" });
+    return null;
   },
 });
 

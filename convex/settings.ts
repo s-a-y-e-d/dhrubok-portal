@@ -15,6 +15,7 @@ const ownerSettingsValidator = v.object({
   settingsId: v.id("coachingSettings"), nameBn: v.string(), nameEn: v.string(), shortNameBn: v.string(), shortNameEn: v.string(),
   defaultLocale: localeValidator, defaultGuardianSmsLocale: localeValidator,
   publicAdmissionsOpen: v.boolean(), smsEnabled: v.boolean(), receiptFooterBn: v.string(), receiptFooterEn: v.string(), updatedAt: v.number(),
+  automaticDueRemindersEnabled: v.boolean(), automaticDueReminderDay: v.number(),
   smsConfigured: v.boolean(), smsSenderIdConfigured: v.boolean(),
 });
 
@@ -33,6 +34,8 @@ export const getOwner = query({
       defaultGuardianSmsLocale: current.defaultGuardianSmsLocale,
       publicAdmissionsOpen: current.publicAdmissionsOpen,
       smsEnabled: current.smsEnabled,
+      automaticDueRemindersEnabled: current.automaticDueRemindersEnabled ?? false,
+      automaticDueReminderDay: current.automaticDueReminderDay ?? 15,
       receiptFooterBn: current.receiptFooterBn,
       receiptFooterEn: current.receiptFooterEn,
       updatedAt: current.updatedAt,
@@ -80,6 +83,8 @@ export const initialize = mutation({
       receiptFooterBn: "ধন্যবাদ",
       receiptFooterEn: "Thank you",
       smsEnabled: false,
+      automaticDueRemindersEnabled: false,
+      automaticDueReminderDay: 15,
       publicAdmissionsOpen: false,
       createdAt: now,
       updatedAt: now,
@@ -130,6 +135,29 @@ export const setSmsEnabled = mutation({
     const updatedAt = Date.now();
     await ctx.db.patch("coachingSettings", settings._id, { smsEnabled: args.enabled, updatedAt, updatedByAccountId: account._id });
     await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: "settings.sms_delivery_updated", entityType: "coachingSettings", entityId: settings._id, summary: args.enabled ? "Enabled SMS delivery" : "Disabled SMS delivery" });
+    return null;
+  },
+});
+
+export const setAutomaticDueReminders = mutation({
+  args: { enabled: v.boolean(), day: v.number(), expectedUpdatedAt: v.number() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { account } = await requireOwner(ctx);
+    if (!Number.isInteger(args.day) || args.day < 1 || args.day > 28)
+      throw new Error("Automatic reminder day must be between 1 and 28");
+    const settings = (await ctx.db.query("coachingSettings").take(1))[0];
+    if (!settings) throw new Error("Coaching settings are not initialized");
+    if (settings.updatedAt !== args.expectedUpdatedAt)
+      throw new Error("Settings have been modified by another owner. Please reload and try again.");
+    const updatedAt = Date.now();
+    await ctx.db.patch("coachingSettings", settings._id, {
+      automaticDueRemindersEnabled: args.enabled,
+      automaticDueReminderDay: args.day,
+      updatedAt,
+      updatedByAccountId: account._id,
+    });
+    await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: "settings.automatic_due_reminders_updated", entityType: "coachingSettings", entityId: settings._id, summary: args.enabled ? "Enabled automatic due reminders" : "Disabled automatic due reminders", metadata: { day: args.day } });
     return null;
   },
 });

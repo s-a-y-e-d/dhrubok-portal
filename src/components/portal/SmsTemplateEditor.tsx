@@ -8,13 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { MessageSquareText, RotateCcw, Save } from "lucide-react";
 import { toast } from "sonner";
 
-type EditableKey = "attendance_late" | "attendance_absent" | "payment_posted";
+type EditableKey = "attendance_late" | "attendance_absent" | "payment_posted" | "due_reminder";
 type TemplateRow = {
   templateId: string; key: string; name: string; bodyBn: string; bodyEn: string;
   enabled: boolean; variables: string[]; updatedAt: number;
@@ -24,6 +25,7 @@ const META: Record<EditableKey, { titleEn: string; titleBn: string; variables: s
   attendance_late: { titleEn: "Attendance — Late", titleBn: "উপস্থিতি — বিলম্ব", variables: ["brand", "studentName", "classDate", "attendanceStatus", "batchName"] },
   attendance_absent: { titleEn: "Attendance — Absent", titleBn: "উপস্থিতি — অনুপস্থিত", variables: ["brand", "studentName", "classDate", "attendanceStatus", "batchName"] },
   payment_posted: { titleEn: "Payment — Received", titleBn: "পেমেন্ট — গ্রহণ করা হয়েছে", variables: ["brand", "studentName", "amount", "receiptNumber", "collectionDate"] },
+  due_reminder: { titleEn: "Finance — Due reminder", titleBn: "ফাইন্যান্স — বকেয়া স্মরণ", variables: ["brand", "studentName", "amount"] },
 };
 const SAMPLE: Record<string, string> = {
   brand: "Dhrubok", studentName: "Rahim Ahmed", classDate: "2026-07-20",
@@ -164,18 +166,46 @@ function SmsDeliveryControl({ locale, settings }: {
   );
 }
 
+function AutomaticDueReminderControl({ locale, settings }: {
+  locale: "bn" | "en";
+  settings: { automaticDueRemindersEnabled?: boolean; automaticDueReminderDay?: number; updatedAt: number };
+}) {
+  const bn = locale === "bn";
+  const save = useMutation(api.settings.setAutomaticDueReminders);
+  const [enabled, setEnabled] = useState(settings.automaticDueRemindersEnabled ?? false);
+  const [day, setDay] = useState(String(settings.automaticDueReminderDay ?? 15));
+  const [busy, setBusy] = useState(false);
+  const hasChanges =
+    enabled !== (settings.automaticDueRemindersEnabled ?? false) ||
+    Number(day) !== (settings.automaticDueReminderDay ?? 15);
+  async function submit() {
+    setBusy(true);
+    try {
+      await save({ enabled, day: Number(day), expectedUpdatedAt: settings.updatedAt });
+      toast.success(bn ? "স্বয়ংক্রিয় বকেয়া SMS সেটিং সংরক্ষিত হয়েছে।" : "Automatic due reminder setting saved.");
+    } catch (cause) { toast.error(cause instanceof Error ? cause.message : "Could not save automatic reminder setting"); }
+    finally { setBusy(false); }
+  }
+  return <Card>
+    <CardHeader><CardTitle>{bn ? "স্বয়ংক্রিয় বকেয়া SMS" : "Automatic due SMS"}</CardTitle><CardDescription>{bn ? "প্রতি মাসে নির্বাচিত তারিখে সন্ধ্যা ৭টায় বকেয়া থাকা শিক্ষার্থীদের অভিভাবককে SMS পাঠানো হবে। একই মাসে দ্বিতীয়বার পাঠানো হবে না।" : "At 7:00 PM on the selected day each month, guardians of students with overdue fees receive an SMS. A guardian is never reminded twice in one month."}</CardDescription></CardHeader>
+    <CardContent className="flex flex-col gap-4"><Field orientation="horizontal"><Checkbox id="automatic-due-enabled" checked={enabled} onCheckedChange={(value) => setEnabled(value === true)} /><div className="flex flex-col gap-1"><FieldLabel htmlFor="automatic-due-enabled">{bn ? "স্বয়ংক্রিয় বকেয়া SMS চালু করুন" : "Enable automatic due SMS"}</FieldLabel><FieldDescription>{bn ? "মূল SMS ডেলিভারি বন্ধ থাকলে কোনো SMS পাঠানো হবে না।" : "The main SMS Delivery switch remains the final master control."}</FieldDescription></div></Field><Field><FieldLabel htmlFor="automatic-due-day">{bn ? "মাসের দিন (১–২৮)" : "Day of month (1–28)"}</FieldLabel><Input id="automatic-due-day" type="number" min="1" max="28" value={day} onChange={(event) => setDay(event.target.value)} /></Field></CardContent>
+    <CardFooter><Button type="button" disabled={busy || !hasChanges} onClick={() => void submit()}><Save data-icon="inline-start" />{bn ? "সেটিং সংরক্ষণ" : "Save setting"}</Button></CardFooter>
+  </Card>;
+}
+
 export function SmsTemplateEditor({ locale, settings }: {
   locale: "bn" | "en";
-  settings: { smsEnabled: boolean; smsConfigured: boolean; smsSenderIdConfigured: boolean; updatedAt: number };
+  settings: { smsEnabled: boolean; smsConfigured: boolean; smsSenderIdConfigured: boolean; automaticDueRemindersEnabled?: boolean; automaticDueReminderDay?: number; updatedAt: number };
 }) {
   const bn = locale === "bn";
   const templates = useQuery(api.messaging.templateFunctions.list, {});
   const seed = useMutation(api.messaging.templateFunctions.seedDefaults);
   if (!Array.isArray(templates)) return null;
   const byKey = new Map(templates.map((row) => [row.key, row]));
-  const missing = (["attendance_late", "attendance_absent", "payment_posted"] as EditableKey[]).some((key) => !byKey.has(key));
+  const missing = (["attendance_late", "attendance_absent", "payment_posted", "due_reminder"] as EditableKey[]).some((key) => !byKey.has(key));
   if (missing) return <div className="flex flex-col gap-4">
     <SmsDeliveryControl key={settings.updatedAt} locale={locale} settings={settings} />
+    <AutomaticDueReminderControl key={`automatic-${settings.updatedAt}`} locale={locale} settings={settings} />
     <Card>
       <CardHeader><CardTitle>{bn ? "SMS টেমপ্লেট" : "SMS templates"}</CardTitle><CardDescription>{bn ? "সম্পাদনার আগে ডিফল্ট টেমপ্লেট তৈরি করুন।" : "Create the default templates before editing them."}</CardDescription></CardHeader>
       <CardFooter><Button type="button" onClick={() => void seed({})}>{bn ? "ডিফল্ট তৈরি করুন" : "Create defaults"}</Button></CardFooter>
@@ -184,13 +214,15 @@ export function SmsTemplateEditor({ locale, settings }: {
   return (
     <section className="flex flex-col gap-4" aria-labelledby="sms-template-heading">
       <SmsDeliveryControl key={settings.updatedAt} locale={locale} settings={settings} />
+      <AutomaticDueReminderControl key={`automatic-${settings.updatedAt}`} locale={locale} settings={settings} />
       <div><h2 id="sms-template-heading" className="text-xl font-semibold">{bn ? "SMS টেমপ্লেট" : "SMS templates"}</h2><p className="text-sm text-muted-foreground">{bn ? "উপস্থিতি ও পেমেন্ট বার্তার বাংলা এবং ইংরেজি সংস্করণ পরিচালনা করুন।" : "Manage Bangla and English attendance and payment messages."}</p></div>
       <Tabs defaultValue="attendance">
-        <TabsList><TabsTrigger value="attendance">{bn ? "উপস্থিতি" : "Attendance"}</TabsTrigger><TabsTrigger value="payment">{bn ? "পেমেন্ট" : "Payment"}</TabsTrigger></TabsList>
+        <TabsList><TabsTrigger value="attendance">{bn ? "উপস্থিতি" : "Attendance"}</TabsTrigger><TabsTrigger value="payment">{bn ? "পেমেন্ট" : "Payment"}</TabsTrigger><TabsTrigger value="finance">{bn ? "ফাইন্যান্স" : "Finance"}</TabsTrigger></TabsList>
         <TabsContent value="attendance" className="grid gap-4 lg:grid-cols-2">
           {(["attendance_late", "attendance_absent"] as EditableKey[]).map((key) => <TemplateCard key={`${key}:${byKey.get(key)!.updatedAt}`} locale={locale} row={byKey.get(key)! as TemplateRow} templateKey={key} />)}
         </TabsContent>
         <TabsContent value="payment"><TemplateCard key={`payment_posted:${byKey.get("payment_posted")!.updatedAt}`} locale={locale} row={byKey.get("payment_posted")! as TemplateRow} templateKey="payment_posted" /></TabsContent>
+        <TabsContent value="finance"><TemplateCard key={`due_reminder:${byKey.get("due_reminder")!.updatedAt}`} locale={locale} row={byKey.get("due_reminder")! as TemplateRow} templateKey="due_reminder" /></TabsContent>
       </Tabs>
     </section>
   );

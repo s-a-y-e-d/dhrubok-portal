@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import styles from "./portal.module.css";
 import { DevAccountSwitcher } from "./DevAccountSwitcher";
+import { websiteCmsEnabled } from "@/lib/features";
 
 // Navigation Item Definition
 interface NavItemDef {
@@ -436,7 +437,7 @@ export function PortalShell({
 
   const navGroups =
     role === "owner"
-      ? ownerNavGroups
+      ? ownerNavGroups.map((group) => ({ ...group, items: group.items.filter((item) => websiteCmsEnabled || item.path !== "/website") }))
       : role === "teacher"
         ? teacherNavGroups
         : studentNavGroups;

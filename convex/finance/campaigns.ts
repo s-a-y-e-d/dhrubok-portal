@@ -1,11 +1,14 @@
 import { v } from "convex/values";
-import { mutation, query } from "../_generated/server";
+import { internalMutation, mutation, query } from "../_generated/server";
 import { requireOwner, requireOwnerForFinancialMutation } from "../model/auth";
 import { assertMinorUnits } from "../model/money";
 import { nextIdentifier } from "../model/identifiers";
 import { writeAudit } from "../model/audit";
 import { enqueueSms } from "../messaging/model";
 import { estimateSmsSegments } from "../messaging/templates";
+import { renderSmsTemplate } from "../messaging/templates";
+import { SMS_TEMPLATE_DEFAULTS } from "../messaging/templateCatalog";
+import { dhakaDate } from "../model/dates";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 
@@ -30,10 +33,17 @@ const DEFAULT_EN =
 function money(minor: number) {
   return (minor / 100).toFixed(2);
 }
-function render(template: string, student: string, overdueMinor: number) {
+function render(template: string, brand: string, student: string, overdueMinor: number) {
   return template
+    .replaceAll("{brand}", brand)
     .replaceAll("{student}", student)
+    .replaceAll("{studentName}", student)
     .replaceAll("{amount}", money(overdueMinor));
+}
+
+function startOfDhakaMonth() {
+  const [year, month] = dhakaDate().split("-").map(Number);
+  return Date.parse(`${year}-${String(month).padStart(2, "0")}-01T00:00:00+06:00`);
 }
 
 export const createPreview = mutation({
@@ -130,9 +140,62 @@ export const createPreview = mutation({
         current.overdueOver90Minor;
       byStudent.set(summary.studentId, current);
     }
+    // The owner Finance workspace is backed by monthlyFeeRecords. For students
+    // with those records, they are authoritative over potentially stale
+    // aggregate summaries.
+    const legacyTotals = new Map<string, number>();
+    const legacyScope = new Map<string, Audience>();
+    const overdueRecords = await ctx.db
+      .query("monthlyFeeRecords")
+      .withIndex("by_status_and_dueDate", (q) =>
+        q.eq("status", "unpaid").lt("dueDate", dhakaDate()),
+      )
+      .take(1000);
+    for (const record of overdueRecords) {
+      legacyTotals.set(
+        record.studentId,
+        (legacyTotals.get(record.studentId) ?? 0) + record.amountMinor,
+      );
+      if (
+        (args.scopeType === "course" && record.courseId !== args.courseId) ||
+        (args.scopeType === "batch" && record.batchId !== args.batchId) ||
+        (requested && !requested.has(record.studentId))
+      )
+        continue;
+      const current = legacyScope.get(record.studentId) ?? {
+          studentId: record.studentId,
+          currentMinor: 0,
+          overdue1To15Minor: 0,
+          overdue16To30Minor: 0,
+          overdue31To60Minor: 0,
+          overdue61To90Minor: 0,
+          overdueOver90Minor: 0,
+          overdueMinor: 0,
+      };
+      const days = Math.floor(
+        (Date.parse(`${dhakaDate()}T00:00:00+06:00`) -
+          Date.parse(`${record.dueDate}T00:00:00+06:00`)) /
+          86_400_000,
+      );
+      if (days <= 15) current.overdue1To15Minor += record.amountMinor;
+      else if (days <= 30) current.overdue16To30Minor += record.amountMinor;
+      else if (days <= 60) current.overdue31To60Minor += record.amountMinor;
+      else if (days <= 90) current.overdue61To90Minor += record.amountMinor;
+      else current.overdueOver90Minor += record.amountMinor;
+      current.overdueMinor += record.amountMinor;
+      legacyScope.set(record.studentId, current);
+    }
+    for (const [studentId, summary] of legacyScope) byStudent.set(studentId, summary);
     const now = Date.now();
-    const templateBn = args.templateBn?.trim() || DEFAULT_BN;
-    const templateEn = args.templateEn?.trim() || DEFAULT_EN;
+    const settings = (await ctx.db.query("coachingSettings").take(1))[0];
+    const configuredTemplate = await ctx.db
+      .query("smsTemplates")
+      .withIndex("by_key", (q) => q.eq("key", "due_reminder"))
+      .unique();
+    if (configuredTemplate && !configuredTemplate.enabled)
+      throw new Error("The Due reminder SMS template is disabled in Settings");
+    const templateBn = args.templateBn?.trim() || configuredTemplate?.bodyBn || DEFAULT_BN;
+    const templateEn = args.templateEn?.trim() || configuredTemplate?.bodyEn || DEFAULT_EN;
     const campaignNumber = await nextIdentifier(
       ctx,
       "due_campaign",
@@ -142,6 +205,7 @@ export const createPreview = mutation({
     const campaignId = await ctx.db.insert("dueReminderCampaigns", {
       campaignNumber,
       status: "previewed",
+      source: "manual",
       scopeType: args.scopeType,
       courseId: args.courseId,
       batchId: args.batchId,
@@ -192,13 +256,14 @@ export const createPreview = mutation({
         continue;
       const student = await ctx.db.get("students", summary.studentId);
       if (!student) continue;
-      const previous = args.suppressIfRemindedSince
+      const suppressSince = Math.max(args.suppressIfRemindedSince ?? 0, startOfDhakaMonth());
+      const previous = suppressSince
         ? await ctx.db
             .query("dueReminderCampaignRecipients")
             .withIndex("by_studentId_and_createdAt", (q) =>
               q
                 .eq("studentId", student._id)
-                .gte("createdAt", args.suppressIfRemindedSince!),
+                .gte("createdAt", suppressSince),
             )
             .order("desc")
             .first()
@@ -208,10 +273,22 @@ export const createPreview = mutation({
         args.localeMode === "student_preference"
           ? student.preferredSmsLocale
           : args.localeMode;
+      const totalSummary = await ctx.db
+        .query("studentFinancialSummaries")
+        .withIndex("by_studentId", (q) => q.eq("studentId", student._id))
+        .unique();
+      const totalOverdueMinor =
+        legacyTotals.get(student._id) ??
+        totalSummary?.overdueMinor ??
+        selectedOverdueMinor;
+      if (totalOverdueMinor <= 0) continue;
       const body = render(
         locale === "bn" ? templateBn : templateEn,
+        locale === "bn"
+          ? (settings?.shortNameBn ?? settings?.nameBn ?? "Dhrubok")
+          : (settings?.shortNameEn ?? settings?.nameEn ?? "Dhrubok"),
         student.displayName,
-        selectedOverdueMinor,
+        totalOverdueMinor,
       );
       const segmentCount = estimateSmsSegments(body).segmentCount;
       await ctx.db.insert("dueReminderCampaignRecipients", {
@@ -219,7 +296,7 @@ export const createPreview = mutation({
         studentId: student._id,
         courseId: args.courseId,
         batchId: args.batchId,
-        overdueMinorSnapshot: selectedOverdueMinor,
+        overdueMinorSnapshot: totalOverdueMinor,
         currentMinor: summary.currentMinor ?? 0,
         overdue1To15Minor: summary.overdue1To15Minor ?? 0,
         overdue16To30Minor: summary.overdue16To30Minor ?? 0,
@@ -510,5 +587,64 @@ export const listCampaigns = query({
       .withIndex("by_status_and_createdAt")
       .order("desc")
       .take(50);
+  },
+});
+
+export const runAutomaticDueReminders = internalMutation({
+  args: {},
+  returns: v.object({ queued: v.number(), suppressed: v.number() }),
+  handler: async (ctx) => {
+    const settings = (await ctx.db.query("coachingSettings").take(1))[0];
+    const date = dhakaDate();
+    const day = Number(date.slice(-2));
+    if (!settings?.smsEnabled || !settings.automaticDueRemindersEnabled || settings.automaticDueReminderDay !== day)
+      return { queued: 0, suppressed: 0 };
+    const runKey = `automatic-due:${date}`;
+    if (await ctx.db.query("dueReminderCampaigns").withIndex("by_automaticRunKey", (q) => q.eq("automaticRunKey", runKey)).unique())
+      return { queued: 0, suppressed: 0 };
+    const owner = await ctx.db.query("portalAccounts").withIndex("by_role_and_status", (q) => q.eq("role", "owner").eq("status", "active")).first();
+    if (!owner) return { queued: 0, suppressed: 0 };
+    const template = await ctx.db.query("smsTemplates").withIndex("by_key", (q) => q.eq("key", "due_reminder")).unique();
+    if (template && !template.enabled) return { queued: 0, suppressed: 0 };
+    const source = template ?? SMS_TEMPLATE_DEFAULTS.due_reminder;
+    const now = Date.now();
+    const campaignId = await ctx.db.insert("dueReminderCampaigns", {
+      campaignNumber: await nextIdentifier(ctx, "due_campaign", "DUE", Number(date.slice(0, 4))),
+      status: "queued", source: "automatic", automaticRunKey: runKey, scopeType: "all", ageingBuckets: [], localeMode: "student_preference",
+      templateBnSnapshot: source.bodyBn, templateEnSnapshot: source.bodyEn, resolvedStudentCount: 0, eligibleRecipientCount: 0, suppressedRecipientCount: 0, queuedMessageCount: 0, deliveredMessageCount: 0, failedMessageCount: 0, estimatedSegments: 0,
+      createdByAccountId: owner._id, approvedByAccountId: owner._id, createdAt: now, previewedAt: now, queuedAt: now,
+    });
+    const aggregateSummaries = await ctx.db.query("studentFinancialSummaries").withIndex("by_overdueMinor", (q) => q.gt("overdueMinor", 0)).take(500);
+    const summaries: Array<{ studentId: Id<"students">; overdueMinor: number; currentMinor: number; overdue1To15Minor: number; overdue16To30Minor: number; overdue31To60Minor: number; overdue61To90Minor: number; overdueOver90Minor: number }> = aggregateSummaries.map((row) => ({ studentId: row.studentId, overdueMinor: row.overdueMinor, currentMinor: row.currentMinor ?? 0, overdue1To15Minor: row.overdue1To15Minor ?? 0, overdue16To30Minor: row.overdue16To30Minor ?? 0, overdue31To60Minor: row.overdue31To60Minor ?? 0, overdue61To90Minor: row.overdue61To90Minor ?? 0, overdueOver90Minor: row.overdueOver90Minor ?? 0 }));
+    const records = await ctx.db.query("monthlyFeeRecords").withIndex("by_status_and_dueDate", (q) => q.eq("status", "unpaid").lt("dueDate", date)).take(1000);
+    const legacy = new Map<string, (typeof summaries)[number]>();
+    for (const record of records) {
+      const current = legacy.get(record.studentId) ?? { studentId: record.studentId, overdueMinor: 0, currentMinor: 0, overdue1To15Minor: 0, overdue16To30Minor: 0, overdue31To60Minor: 0, overdue61To90Minor: 0, overdueOver90Minor: 0 };
+      const days = Math.floor((Date.parse(`${date}T00:00:00+06:00`) - Date.parse(`${record.dueDate}T00:00:00+06:00`)) / 86_400_000);
+      current.overdueMinor += record.amountMinor;
+      if (days <= 15) current.overdue1To15Minor += record.amountMinor; else if (days <= 30) current.overdue16To30Minor += record.amountMinor; else if (days <= 60) current.overdue31To60Minor += record.amountMinor; else if (days <= 90) current.overdue61To90Minor += record.amountMinor; else current.overdueOver90Minor += record.amountMinor;
+      legacy.set(record.studentId, current);
+    }
+    for (const legacySummary of legacy.values()) {
+      const aggregateIndex = summaries.findIndex((row) => row.studentId === legacySummary.studentId);
+      if (aggregateIndex >= 0) summaries[aggregateIndex] = legacySummary;
+      else summaries.push(legacySummary);
+    }
+    let queued = 0, suppressed = 0, segments = 0, eligible = 0;
+    for (const summary of summaries) {
+      const student = await ctx.db.get("students", summary.studentId);
+      if (!student) continue;
+      const previous = await ctx.db.query("dueReminderCampaignRecipients").withIndex("by_studentId_and_createdAt", (q) => q.eq("studentId", student._id).gte("createdAt", startOfDhakaMonth())).first();
+      const locale = student.preferredSmsLocale;
+      const body = renderSmsTemplate(locale === "bn" ? source.bodyBn : source.bodyEn, { brand: locale === "bn" ? settings.shortNameBn : settings.shortNameEn, studentName: student.displayName, amount: money(summary.overdueMinor) }).body;
+      const status = previous ? "suppressed" as const : "eligible" as const;
+      const recipientId = await ctx.db.insert("dueReminderCampaignRecipients", { campaignId, studentId: student._id, overdueMinorSnapshot: summary.overdueMinor, currentMinor: summary.currentMinor ?? 0, overdue1To15Minor: summary.overdue1To15Minor ?? 0, overdue16To30Minor: summary.overdue16To30Minor ?? 0, overdue31To60Minor: summary.overdue31To60Minor ?? 0, overdue61To90Minor: summary.overdue61To90Minor ?? 0, overdueOver90Minor: summary.overdueOver90Minor ?? 0, guardianPhoneSnapshot: student.guardianPhone, locale, messageBodySnapshot: body, segmentCount: estimateSmsSegments(body).segmentCount, status, suppressionReason: previous ? "Already reminded this month" : undefined, createdAt: now, updatedAt: now });
+      if (previous) { suppressed++; continue; }
+      const ids = await enqueueSms(ctx, { idempotencyKey: `due:${campaignId}:${student._id}`, eventType: "due_reminder", relatedEntityType: "dueReminderCampaign", relatedEntityId: campaignId, studentId: student._id, guardianPhone: student.guardianPhone, locale, body });
+      await ctx.db.patch("dueReminderCampaignRecipients", recipientId, { status: "queued", smsMessageId: ids[0], lastAttemptAt: now, updatedAt: now });
+      eligible++; queued += ids.length; segments += estimateSmsSegments(body).segmentCount;
+    }
+    await ctx.db.patch("dueReminderCampaigns", campaignId, { resolvedStudentCount: summaries.length, eligibleRecipientCount: eligible, suppressedRecipientCount: suppressed, queuedMessageCount: queued, estimatedSegments: segments });
+    return { queued, suppressed };
   },
 });

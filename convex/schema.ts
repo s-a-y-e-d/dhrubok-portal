@@ -53,6 +53,8 @@ export default defineSchema({
     receiptFooterEn: v.string(),
     smsSenderId: v.optional(v.string()),
     smsEnabled: v.boolean(),
+    automaticDueRemindersEnabled: v.optional(v.boolean()),
+    automaticDueReminderDay: v.optional(v.number()),
     publicAdmissionsOpen: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -883,6 +885,8 @@ export default defineSchema({
       v.literal("batch"),
       v.literal("custom"),
     ),
+    source: v.optional(v.union(v.literal("manual"), v.literal("automatic"))),
+    automaticRunKey: v.optional(v.string()),
     courseId: v.optional(v.id("courses")),
     batchId: v.optional(v.id("batches")),
     ageingBuckets: v.array(
@@ -928,7 +932,8 @@ export default defineSchema({
       "createdByAccountId",
       "createdAt",
     ])
-    .index("by_campaignNumber", ["campaignNumber"]),
+    .index("by_campaignNumber", ["campaignNumber"])
+    .index("by_automaticRunKey", ["automaticRunKey"]),
 
   dueReminderCampaignRecipients: defineTable({
     campaignId: v.id("dueReminderCampaigns"),
@@ -1652,6 +1657,28 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_status_and_sortOrder", ["status", "sortOrder"]),
+  siteLayouts: defineTable({
+    singletonKey: v.literal("public-site"),
+    draftHomeSections: v.array(v.object({
+      key: v.union(v.literal("hero"), v.literal("courses"), v.literal("batches"), v.literal("achievements"), v.literal("teachers"), v.literal("gallery"), v.literal("contact")),
+      visible: v.boolean(),
+    })),
+    publishedHomeSections: v.array(v.object({
+      key: v.union(v.literal("hero"), v.literal("courses"), v.literal("batches"), v.literal("achievements"), v.literal("teachers"), v.literal("gallery"), v.literal("contact")),
+      visible: v.boolean(),
+    })),
+    draftNavigation: v.array(v.object({
+      key: v.union(v.literal("home"), v.literal("courses"), v.literal("teachers"), v.literal("about"), v.literal("contact"), v.literal("admission"), v.literal("sign_in")),
+      labelBn: v.string(), labelEn: v.string(), visible: v.boolean(),
+    })),
+    publishedNavigation: v.array(v.object({
+      key: v.union(v.literal("home"), v.literal("courses"), v.literal("teachers"), v.literal("about"), v.literal("contact"), v.literal("admission"), v.literal("sign_in")),
+      labelBn: v.string(), labelEn: v.string(), visible: v.boolean(),
+    })),
+    hasDraftChanges: v.boolean(),
+    updatedAt: v.number(),
+    updatedByAccountId: v.id("portalAccounts"),
+  }).index("by_singletonKey", ["singletonKey"]),
 
   auditLogs: defineTable({
     actorAccountId: v.optional(v.id("portalAccounts")),

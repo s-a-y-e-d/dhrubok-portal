@@ -121,6 +121,32 @@ describe("public website CMS", () => {
     expect(audit[0]).toMatchObject({ actorAccountId: accountId, actorRole: "owner", entityType: "siteContentBlocks" });
   });
 
+  it("publishes saved content and website structure together", async () => {
+    const t = convexTest(schema, modules);
+    await seedOwner(t);
+    const owner = t.withIdentity({ tokenIdentifier: "clerk|owner", email: "owner@example.com" });
+    await owner.mutation(anyApi.publicSite.cms.saveContentDraft, { key: "hero", content: draftContent });
+    await owner.mutation(anyApi.publicSite.cms.saveLayoutDraft, {
+      homeSections: [
+        { key: "hero", visible: true }, { key: "teachers", visible: true }, { key: "courses", visible: true },
+        { key: "batches", visible: false }, { key: "achievements", visible: true }, { key: "gallery", visible: true }, { key: "contact", visible: true },
+      ],
+      navigation: [
+        { key: "home", labelBn: "à¦¹à§‹à¦®", labelEn: "Start", visible: true }, { key: "courses", labelBn: "à¦•à§‹à¦°à§à¦¸", labelEn: "Courses", visible: true },
+        { key: "teachers", labelBn: "à¦¶à¦¿à¦•à§à¦·à¦•", labelEn: "Teachers", visible: true }, { key: "about", labelBn: "à¦ªà¦°à¦¿à¦šà§Ÿ", labelEn: "About", visible: true },
+        { key: "contact", labelBn: "à¦¯à§‹à¦—à¦¾à¦¯à§‹à¦—", labelEn: "Contact", visible: true }, { key: "admission", labelBn: "à¦­à¦°à§à¦¤à¦¿", labelEn: "Admission", visible: true },
+        { key: "sign_in", labelBn: "à¦¸à¦¾à¦‡à¦¨ à¦‡à¦¨", labelEn: "Sign in", visible: true },
+      ],
+    });
+
+    await expect(t.query(anyApi.publicSite.public.getContentBlock, { key: "hero", locale: "en" })).resolves.toBeNull();
+    await owner.mutation(anyApi.publicSite.cms.publishWebsite, {});
+    await expect(t.query(anyApi.publicSite.public.getContentBlock, { key: "hero", locale: "en" })).resolves.toMatchObject({ title: { value: "Draft" } });
+    const publishedLayout = await t.query(anyApi.publicSite.public.getSiteLayout, { locale: "en" });
+    expect(publishedLayout.homeSections.slice(0, 2).map((item: { key: string }) => item.key)).toEqual(["hero", "teachers"]);
+    expect(publishedLayout.navigation[0]).toMatchObject({ key: "home", label: "Start", visible: true });
+  });
+
   it("keeps gallery drafts private, publishes localized media, and archives without deletion", async () => {
     const t = convexTest(schema, modules);
     await seedOwner(t);

@@ -15,6 +15,16 @@ export const contentBlockKeyValidator = v.union(
 
 export type ContentBlockKey = Doc<"siteContentBlocks">["key"];
 
+export const homeSectionKeyValidator = v.union(
+  v.literal("hero"), v.literal("courses"), v.literal("batches"),
+  v.literal("achievements"), v.literal("teachers"), v.literal("gallery"), v.literal("contact"),
+);
+
+export const navigationKeyValidator = v.union(
+  v.literal("home"), v.literal("courses"), v.literal("teachers"),
+  v.literal("about"), v.literal("contact"), v.literal("admission"), v.literal("sign_in"),
+);
+
 export const localizedTextValidator = v.object({
   value: v.string(),
   requestedLocale: localeValidator,

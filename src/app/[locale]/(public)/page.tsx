@@ -7,6 +7,7 @@ import { api } from "@convex/_generated/api";
 import { notFound } from "next/navigation";
 import { isLocale } from "@/lib/i18n/config";
 import { descriptionFrom, publicMetadata } from "./_metadata";
+import { websiteCmsEnabled } from "@/lib/features";
 import {
   ArrowRight,
   BookOpen,
@@ -41,7 +42,8 @@ export default async function PublicHome({ params }: { params: Promise<{ locale:
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
 
-  const [hero, achievement, courses, batches, teachers, gallery, contact, settings] = await Promise.all([
+  const defaultSections = ["hero", "courses", "batches", "achievements", "teachers", "gallery", "contact"].map((key) => ({ key, visible: true }));
+  const [hero, achievement, courses, batches, teachers, gallery, contact, settings, siteLayout] = await Promise.all([
     fetchQuery(api.publicSite.public.getContentBlock, { key: "hero", locale }),
     fetchQuery(api.publicSite.public.getContentBlock, { key: "achievement_intro", locale }),
     fetchQuery(api.publicSite.public.listCourses, { locale, limit: 6 }),
@@ -50,17 +52,20 @@ export default async function PublicHome({ params }: { params: Promise<{ locale:
     fetchQuery(api.publicSite.public.listGallery, { locale, limit: 6 }),
     fetchQuery(api.publicSite.public.getContentBlock, { key: "contact", locale }),
     fetchQuery(api.settings.getPublic, {}),
+    websiteCmsEnabled ? fetchQuery(api.publicSite.public.getSiteLayout, { locale }).catch(() => ({ homeSections: defaultSections, navigation: [] })) : Promise.resolve({ homeSections: defaultSections, navigation: [] }),
   ]);
 
   const bn = locale === "bn";
   const heroHref = hero?.primaryCtaHref || `/${locale}/admission`;
   const heroLabel = hero?.primaryCtaLabel.value || (bn ? "ভর্তির আবেদন" : "Apply for admission");
   const address = settings ? (bn ? settings.addressBn : settings.addressEn) : "";
+  const sectionConfig = new Map(siteLayout.homeSections.map((item, index) => [item.key, { ...item, order: index }]));
+  const sectionProps = (key: "hero" | "courses" | "batches" | "achievements" | "teachers" | "gallery" | "contact") => ({ hidden: sectionConfig.get(key)?.visible === false, style: { order: sectionConfig.get(key)?.order ?? 99 } });
 
   return (
     <div className="flex flex-col gap-16 py-10">
       {/* Hero Section */}
-      <section className="container">
+      <section className="container" {...sectionProps("hero")}>
         <div className={`grid grid-cols-1 items-center gap-10 ${hero?.mediaUrl ? "lg:grid-cols-12" : "max-w-3xl"}`}>
           <div className={`flex flex-col items-start gap-5 ${hero?.mediaUrl ? "lg:col-span-7" : ""}`}>
             <p className="eyebrow">{bn ? "ধ্রুবক কোচিং সেন্টার" : "Dhrubok Coaching Centre"}</p>
@@ -136,7 +141,7 @@ export default async function PublicHome({ params }: { params: Promise<{ locale:
       </section>
 
       {/* Active Courses Section */}
-      <section className="container" aria-labelledby="courses-title">
+      <section className="container" aria-labelledby="courses-title" {...sectionProps("courses")}>
         <div className="section-heading flex items-end justify-between border-b border-[var(--border)] pb-4 mb-8">
           <div>
             <p className="eyebrow">{bn ? "একাডেমিক" : "Academic"}</p>
@@ -184,7 +189,7 @@ export default async function PublicHome({ params }: { params: Promise<{ locale:
       </section>
 
       {/* Open Batches Section */}
-      <section className="container" aria-labelledby="batches-title">
+      <section className="container" aria-labelledby="batches-title" {...sectionProps("batches")}>
         <div className="section-heading border-b border-[var(--border)] pb-4 mb-8">
           <div>
             <p className="eyebrow">{bn ? "ভর্তি চলছে" : "Admissions open"}</p>
@@ -235,7 +240,7 @@ export default async function PublicHome({ params }: { params: Promise<{ locale:
 
       {/* Achievements Section */}
       {achievement && (
-        <section className="container">
+        <section className="container" {...sectionProps("achievements")}>
           <div className="rounded-xl border border-[var(--brand-soft)] bg-[var(--brand-muted)] p-8 md:p-10 text-center max-w-4xl mx-auto flex flex-col items-center gap-3">
             <p className="eyebrow">{bn ? "আমাদের অর্জন" : "Our achievements"}</p>
             <h2 className="text-2xl font-bold text-[var(--ink)] md:text-3xl">{achievement.title.value}</h2>
@@ -245,7 +250,7 @@ export default async function PublicHome({ params }: { params: Promise<{ locale:
       )}
 
       {/* Teachers Directory */}
-      <section className="container">
+      <section className="container" {...sectionProps("teachers")}>
         <div className="section-heading flex items-end justify-between border-b border-[var(--border)] pb-4 mb-8">
           <div>
             <p className="eyebrow">{bn ? "শিক্ষকমণ্ডলী" : "Faculty"}</p>
@@ -283,7 +288,7 @@ export default async function PublicHome({ params }: { params: Promise<{ locale:
 
       {/* Life at Dhrubok / Gallery */}
       {gallery.length > 0 && (
-        <section className="container" aria-labelledby="gallery-title">
+        <section className="container" aria-labelledby="gallery-title" {...sectionProps("gallery")}>
           <div className="section-heading border-b border-[var(--border)] pb-4 mb-8">
             <h2 id="gallery-title" className="text-2xl font-bold text-[var(--ink)] md:text-3xl">
               {bn ? "ধ্রুবকের মুহূর্ত" : "Life at Dhrubok"}
@@ -304,7 +309,7 @@ export default async function PublicHome({ params }: { params: Promise<{ locale:
 
       {/* Contact Section */}
       {(contact || settings) && (
-        <section className="container">
+        <section className="container" {...sectionProps("contact")}>
           <div className="rounded-xl border border-[var(--border)] bg-[var(--canvas-soft)] p-8 md:p-10">
             <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
               <div className="flex flex-col gap-2 max-w-xl">

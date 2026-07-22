@@ -731,8 +731,35 @@ describe("finance invariants", () => {
     expect(detail?.recipients).toHaveLength(1);
     expect(detail?.recipients[0]).toMatchObject({
       studentId: data.studentId,
-      overdueMinorSnapshot: 20_000,
+      overdueMinorSnapshot: 30_000,
     });
+  });
+
+  it("uses Finance monthly-fee dues when financial summaries have not been materialized", async () => {
+    const t = convexTest(schema, modules);
+    const data = await fixture(t);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("monthlyFeeRecords", {
+        studentId: data.studentId,
+        enrolmentId: data.enrolmentId,
+        courseId: data.courseId,
+        batchId: data.batchId,
+        periodKey: "2026-01",
+        dueDate: "2026-01-15",
+        amountMinor: 350_000,
+        status: "unpaid",
+        createdAt: Date.now(),
+      });
+    });
+    const owner = t.withIdentity({ tokenIdentifier: "clerk|owner", email: "owner@example.com", emailVerified: true });
+    const campaignId = await owner.mutation(api.finance.campaigns.createPreview, {
+      scopeType: "all",
+      ageingBuckets: [],
+      localeMode: "en",
+    });
+    const detail = await owner.query(api.finance.campaigns.getCampaign, { campaignId });
+    expect(detail?.campaign.eligibleRecipientCount).toBe(1);
+    expect(detail?.recipients[0]).toMatchObject({ studentId: data.studentId, overdueMinorSnapshot: 350_000 });
   });
 
   it("groups a multi-course student once and collects course fees on one receipt", async () => {

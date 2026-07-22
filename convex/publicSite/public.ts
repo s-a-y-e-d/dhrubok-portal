@@ -8,6 +8,25 @@ import {
   localize,
 } from "./shared";
 
+const defaultHomeSections = ["hero", "courses", "batches", "achievements", "teachers", "gallery", "contact"].map((key) => ({ key, visible: true })) as Array<{ key: "hero" | "courses" | "batches" | "achievements" | "teachers" | "gallery" | "contact"; visible: boolean }>;
+const defaultNavigation = [
+  { key: "home", labelBn: "হোম", labelEn: "Home", visible: true }, { key: "courses", labelBn: "কোর্স", labelEn: "Courses", visible: true },
+  { key: "teachers", labelBn: "শিক্ষক", labelEn: "Teachers", visible: true }, { key: "about", labelBn: "আমাদের সম্পর্কে", labelEn: "About", visible: true },
+  { key: "contact", labelBn: "যোগাযোগ", labelEn: "Contact", visible: true }, { key: "admission", labelBn: "ভর্তি", labelEn: "Admission", visible: true },
+  { key: "sign_in", labelBn: "সাইন ইন", labelEn: "Sign in", visible: true },
+] as const;
+
+export const getSiteLayout = query({
+  args: { locale: localeValidator },
+  returns: v.object({ homeSections: v.array(v.object({ key: v.string(), visible: v.boolean() })), navigation: v.array(v.object({ key: v.string(), label: v.string(), visible: v.boolean() })) }),
+  handler: async (ctx, args) => {
+    const layout = await ctx.db.query("siteLayouts").withIndex("by_singletonKey", (q) => q.eq("singletonKey", "public-site")).unique();
+    const sections = layout?.publishedHomeSections ?? defaultHomeSections;
+    const navigation = layout?.publishedNavigation ?? defaultNavigation;
+    return { homeSections: sections, navigation: navigation.map((item) => ({ key: item.key, label: args.locale === "bn" ? item.labelBn : item.labelEn, visible: item.visible })) };
+  },
+});
+
 const contentBlockValidator = v.object({
   key: contentBlockKeyValidator,
   title: localizedTextValidator,
@@ -191,13 +210,10 @@ export const listSitemapEntries = query({
     notices: v.array(v.object({ id: v.id("notices"), publishedAt: v.number() })),
   }),
   handler: async (ctx) => {
-    const [courses, notices] = await Promise.all([
-      ctx.db.query("courses").withIndex("by_isPublic_and_status_and_publicSortOrder", (q) => q.eq("isPublic", true).eq("status", "active")).take(200),
-      ctx.db.query("notices").withIndex("by_audienceType_and_status", (q) => q.eq("audienceType", "public").eq("status", "published")).take(500),
-    ]);
+    const courses = await ctx.db.query("courses").withIndex("by_isPublic_and_status_and_publicSortOrder", (q) => q.eq("isPublic", true).eq("status", "active")).take(200);
     return {
       courseSlugs: courses.map((course) => course.slug),
-      notices: notices.map((notice) => ({ id: notice._id, publishedAt: notice.publishedAt ?? notice.updatedAt })),
+      notices: [],
     };
   },
 });

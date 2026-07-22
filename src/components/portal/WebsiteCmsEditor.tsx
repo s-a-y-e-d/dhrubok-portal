@@ -1,301 +1,147 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element -- Convex returns short-lived signed URLs that cannot be allowlisted as a stable image host. */
+/* eslint-disable @next/next/no-img-element -- Convex media uses expiring signed URLs. */
 
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { useState, type FormEvent } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+import { ArrowDown, ArrowUp, Eye, GripVertical, ImagePlus, Monitor, Save, Smartphone, Upload, ExternalLink } from "lucide-react";
+import { toast } from "sonner";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { PortalPageState } from "./PortalPageState";
 
 type Locale = "bn" | "en";
-type FeedbackValue = { ok: boolean; text: string } | null;
 type ContentKey = "hero" | "about_summary" | "contact" | "achievement_intro" | "admission_intro" | "footer";
+type HomeKey = "hero" | "courses" | "batches" | "achievements" | "teachers" | "gallery" | "contact";
+type NavKey = "home" | "courses" | "teachers" | "about" | "contact" | "admission" | "sign_in";
+type LayoutRow = { key: HomeKey; visible: boolean };
+type NavRow = { key: NavKey; labelBn: string; labelEn: string; visible: boolean };
 
 const contentKeys: ContentKey[] = ["hero", "about_summary", "contact", "achievement_intro", "admission_intro", "footer"];
-const allowedImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-const maxImageBytes = 8 * 1024 * 1024;
+const homeLabels: Record<HomeKey, { bn: string; en: string }> = {
+  hero: { bn: "হিরো", en: "Hero" }, courses: { bn: "কোর্স", en: "Courses" }, batches: { bn: "ব্যাচ", en: "Open batches" },
+  achievements: { bn: "অর্জন", en: "Achievements" }, teachers: { bn: "শিক্ষক", en: "Teachers" }, gallery: { bn: "গ্যালারি", en: "Gallery" }, contact: { bn: "যোগাযোগ", en: "Contact" },
+};
+const contentLabels: Record<ContentKey, { bn: string; en: string }> = {
+  hero: { bn: "হোম হিরো", en: "Home hero" }, about_summary: { bn: "আমাদের সম্পর্কে", en: "About us" }, contact: { bn: "যোগাযোগ", en: "Contact" },
+  achievement_intro: { bn: "অর্জন", en: "Achievements" }, admission_intro: { bn: "ভর্তি", en: "Admission" }, footer: { bn: "ফুটার", en: "Footer" },
+};
 
-function Feedback({ value }: { value: FeedbackValue }) {
-  return value ? <p className={`form-message ${value.ok ? "success" : "error"}`} role={value.ok ? "status" : "alert"}>{value.text}</p> : null;
+function move<T>(rows: T[], from: number, to: number) {
+  if (to < 0 || to >= rows.length) return rows;
+  const next = [...rows]; const [item] = next.splice(from, 1); next.splice(to, 0, item); return next;
 }
 
-function formatEditor(name: string | null, updatedAt: number, locale: Locale) {
+function ReorderRow({ label, visible, index, count, onVisible, onMove, onDrop }: { label: string; visible: boolean; index: number; count: number; onVisible: (value: boolean) => void; onMove: (to: number) => void; onDrop: (from: number) => void }) {
+  return <div className="flex min-h-11 items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--canvas)] px-2" draggable onDragStart={(event) => event.dataTransfer.setData("text/plain", String(index))} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); onDrop(Number(event.dataTransfer.getData("text/plain"))); }}>
+    <GripVertical className="text-muted-foreground" aria-hidden="true" />
+    <Checkbox checked={visible} onCheckedChange={(checked) => onVisible(checked === true)} aria-label={`${label} visibility`} />
+    <span className="min-w-0 flex-1 truncate text-sm font-medium">{label}</span>
+    <Button type="button" variant="ghost" size="icon" disabled={index === 0} onClick={() => onMove(index - 1)} aria-label={`Move ${label} up`}><ArrowUp /></Button>
+    <Button type="button" variant="ghost" size="icon" disabled={index === count - 1} onClick={() => onMove(index + 1)} aria-label={`Move ${label} down`}><ArrowDown /></Button>
+  </div>;
+}
+
+function MiniPreview({ locale, sections, navigation, hero, device }: { locale: Locale; sections: LayoutRow[]; navigation: NavRow[]; hero: { title: string; body: string; cta: string; mediaUrl: string | null }; device: "desktop" | "mobile" }) {
   const bn = locale === "bn";
-  const date = new Intl.DateTimeFormat(bn ? "bn-BD" : "en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Dhaka" }).format(updatedAt);
-  return `${name || (bn ? "অজানা সম্পাদক" : "Unknown editor")} · ${date}`;
+  const visibleNav = navigation.filter((item) => item.visible);
+  return <div className={device === "mobile" ? "mx-auto w-[360px] max-w-full" : "w-full"}>
+    <div className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--canvas)] shadow-none">
+      <div className="flex h-12 items-center gap-3 border-b border-[var(--border)] px-4"><strong className="mr-auto text-sm">ধ্রুবক</strong>{device === "desktop" && visibleNav.slice(0, 5).map((item) => <span className="text-[10px] text-muted-foreground" key={item.key}>{bn ? item.labelBn : item.labelEn}</span>)}<span className="rounded-sm bg-primary px-2 py-1 text-[10px] text-primary-foreground">{bn ? "ভর্তি" : "Apply"}</span></div>
+      <div className="flex flex-col">
+        {sections.filter((item) => item.visible).map((section) => section.key === "hero" ? <section className="grid min-h-56 items-center gap-5 p-6 sm:grid-cols-2" key={section.key}>
+          <div className="flex flex-col items-start gap-3"><span className="text-[9px] font-semibold uppercase text-muted-foreground">Dhrubok Coaching Centre</span><h2 className="text-xl font-semibold leading-tight">{hero.title || (bn ? "পরিকল্পিত শেখা, পরিষ্কার অগ্রগতি" : "Structured learning, clear progress")}</h2><p className="line-clamp-3 text-xs text-muted-foreground">{hero.body || (bn ? "শিক্ষার্থীদের জন্য নির্ভরযোগ্য শিক্ষা ও অগ্রগতি।" : "Dependable learning and progress for every student.")}</p>{hero.cta && <span className="rounded-sm bg-primary px-3 py-2 text-[10px] text-primary-foreground">{hero.cta}</span>}</div>
+          <div className="flex aspect-video items-center justify-center overflow-hidden rounded-md bg-muted">{hero.mediaUrl ? <img src={hero.mediaUrl} alt="" className="size-full object-cover" /> : <ImagePlus className="text-muted-foreground" />}</div>
+        </section> : <section className="border-t border-[var(--border)] p-6" key={section.key}><p className="text-[9px] font-medium uppercase text-muted-foreground">{homeLabels[section.key][locale]}</p><h3 className="mt-1 text-base font-semibold">{homeLabels[section.key][locale]}</h3><div className="mt-3 grid grid-cols-3 gap-2">{[0, 1, 2].map((value) => <div className="h-14 rounded-md border border-[var(--border)] bg-[var(--canvas-soft)]" key={value} />)}</div></section>)}
+      </div>
+    </div>
+  </div>;
 }
 
-function validateClientImage(file: File) {
-  if (!allowedImageTypes.has(file.type.toLowerCase())) throw new Error("Choose a JPEG, PNG, or WebP image.");
-  if (file.size > maxImageBytes) throw new Error("Image must be 8 MB or smaller.");
-}
-
-function CmsImage({ src, alt }: { src: string; alt: string }) {
-  return <img src={src} alt={alt} width={960} height={540} style={{ width: "100%", height: "auto" }} />;
-}
-
-function ContentEditor({ locale }: { locale: Locale }) {
-  const [key, setKey] = useState<ContentKey>("hero");
-  const preview = useQuery(api.publicSite.cms.getContentPreview, { key });
+function ContentPanel({ locale, contentKey, onDirty, onPreview }: { locale: Locale; contentKey: ContentKey; onDirty: (dirty: boolean) => void; onPreview: (value: { title: string; body: string; cta: string; mediaUrl: string | null }) => void }) {
+  const preview = useQuery(api.publicSite.cms.getContentPreview, { key: contentKey });
   if (preview === undefined) return <PortalPageState state="loading" locale={locale} />;
-  return <ContentDraftForm key={`${key}:${preview?.updatedAt ?? 0}`} locale={locale} contentKey={key} preview={preview} onKeyChange={setKey} />;
+  return <ContentForm key={`${contentKey}:${preview?.updatedAt ?? 0}`} locale={locale} contentKey={contentKey} preview={preview} onDirty={onDirty} onPreview={onPreview} />;
 }
 
-function ContentDraftForm({ locale, contentKey, preview, onKeyChange }: {
-  locale: Locale;
-  contentKey: ContentKey;
-  preview: NonNullable<ReturnType<typeof useQuery<typeof api.publicSite.cms.getContentPreview>>> | null;
-  onKeyChange: (key: ContentKey) => void;
-}) {
-  const bn = locale === "bn";
-  const [language, setLanguage] = useState<Locale>(locale);
-  const [draft, setDraft] = useState({
-    titleBn: preview?.titleBn ?? "", titleEn: preview?.titleEn ?? "", bodyBn: preview?.bodyBn ?? "", bodyEn: preview?.bodyEn ?? "",
-    primaryCtaLabelBn: preview?.primaryCtaLabelBn ?? "", primaryCtaLabelEn: preview?.primaryCtaLabelEn ?? "", primaryCtaHref: preview?.primaryCtaHref ?? "",
-  });
-  const [mediaStorageId, setMediaStorageId] = useState<Id<"_storage"> | null>(preview?.mediaStorageId ?? null);
-  const [mediaUrl, setMediaUrl] = useState<string | null>(preview?.mediaUrl ?? null);
-  const [busy, setBusy] = useState(false);
-  const [feedback, setFeedback] = useState<FeedbackValue>(null);
-  const [confirmPublish, setConfirmPublish] = useState(false);
-  const save = useMutation(api.publicSite.cms.saveContentDraft);
-  const publish = useMutation(api.publicSite.cms.publishContent);
-  const generateUploadUrl = useMutation(api.publicSite.cms.generateImageUploadUrl);
-
-  async function upload(file: File) {
-    validateClientImage(file);
-    setBusy(true);
-    setFeedback(null);
-    try {
-      const uploadUrl = await generateUploadUrl({});
-      const response = await fetch(uploadUrl, { method: "POST", headers: { "Content-Type": file.type }, body: file });
-      if (!response.ok) throw new Error("Image upload failed.");
-      const result = await response.json() as { storageId: Id<"_storage"> };
-      setMediaStorageId(result.storageId);
-      setMediaUrl(URL.createObjectURL(file));
-      setFeedback({ ok: true, text: bn ? "ছবি আপলোড হয়েছে। খসড়া সংরক্ষণ করুন।" : "Image uploaded. Save the draft to attach it." });
-    } catch (cause) {
-      setFeedback({ ok: false, text: cause instanceof Error ? cause.message : "Could not upload image." });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setBusy(true);
-    setFeedback(null);
-    try {
-      await save({
-        key: contentKey,
-        content: {
-          ...draft,
-          primaryCtaLabelBn: draft.primaryCtaLabelBn || null,
-          primaryCtaLabelEn: draft.primaryCtaLabelEn || null,
-          primaryCtaHref: draft.primaryCtaHref || null,
-          mediaStorageId,
-        },
-      });
-      setFeedback({ ok: true, text: bn ? "খসড়া সংরক্ষিত হয়েছে; প্রকাশ না করা পর্যন্ত এটি ব্যক্তিগত থাকবে।" : "Draft saved; it remains private until published." });
-      setConfirmPublish(false);
-    } catch (cause) {
-      setFeedback({ ok: false, text: cause instanceof Error ? cause.message : "Could not save draft." });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function publishDraft() {
-    setBusy(true);
-    setFeedback(null);
-    try {
-      await publish({ key: contentKey });
-      setFeedback({ ok: true, text: bn ? "সংরক্ষিত খসড়াটি প্রকাশিত হয়েছে।" : "The saved draft is now published." });
-      setConfirmPublish(false);
-    } catch (cause) {
-      setFeedback({ ok: false, text: cause instanceof Error ? cause.message : "Could not publish content." });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const title = language === "bn" ? draft.titleBn : draft.titleEn;
-  const body = language === "bn" ? draft.bodyBn : draft.bodyEn;
-  const cta = language === "bn" ? draft.primaryCtaLabelBn : draft.primaryCtaLabelEn;
-  return <>
-    <label className="standalone-field">{bn ? "কনটেন্ট অংশ" : "Content section"}
-      <select value={contentKey} onChange={(event) => { onKeyChange(event.target.value as ContentKey); setFeedback(null); }}>{contentKeys.map((value) => <option key={value} value={value}>{value.replaceAll("_", " ")}</option>)}</select>
-    </label>
-    <div className="status-tabs" role="tablist" aria-label={bn ? "সম্পাদনার ভাষা" : "Editing language"}>
-      <button type="button" role="tab" aria-selected={language === "bn"} onClick={() => setLanguage("bn")}>বাংলা</button>
-      <button type="button" role="tab" aria-selected={language === "en"} onClick={() => setLanguage("en")}>English</button>
-    </div>
-    <form className="operation-form" onSubmit={submit}>
-      <fieldset><legend>{language === "bn" ? "বাংলা কনটেন্ট" : "English content"}</legend>
-        <label>{language === "bn" ? "শিরোনাম" : "Title"}<input value={title} onChange={(event) => setDraft((current) => ({ ...current, [language === "bn" ? "titleBn" : "titleEn"]: event.target.value }))} /></label>
-        <label>{language === "bn" ? "মূল লেখা" : "Body"}<textarea rows={8} value={body} onChange={(event) => setDraft((current) => ({ ...current, [language === "bn" ? "bodyBn" : "bodyEn"]: event.target.value }))} /></label>
-        <label>{language === "bn" ? "বোতামের লেখা" : "CTA label"}<input value={cta} onChange={(event) => setDraft((current) => ({ ...current, [language === "bn" ? "primaryCtaLabelBn" : "primaryCtaLabelEn"]: event.target.value }))} /></label>
-      </fieldset>
-      <fieldset><legend>{bn ? "লিংক ও মিডিয়া" : "Link and media"}</legend>
-        <label>CTA URL<input value={draft.primaryCtaHref} onChange={(event) => setDraft((current) => ({ ...current, primaryCtaHref: event.target.value }))} placeholder={`/${locale}/admission`} /></label>
-        <label>{bn ? "ছবি (JPEG, PNG বা WebP; সর্বোচ্চ ৮ MB)" : "Image (JPEG, PNG, or WebP; 8 MB maximum)"}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file); }} /></label>
-      </fieldset>
-      <article className="content-card" aria-label={bn ? "খসড়া প্রিভিউ" : "Draft preview"}>
-        <p className="eyebrow">{bn ? "খসড়া প্রিভিউ" : "Draft preview"} · {language === "bn" ? "বাংলা" : "English"}</p>
-        {mediaUrl && <CmsImage src={mediaUrl} alt="" />}
-        <h2>{title || (bn ? "শিরোনাম নেই" : "Untitled")}</h2><p>{body || (bn ? "মূল লেখা নেই" : "No body copy")}</p>
-        {cta && <span className="button button-primary">{cta}</span>}
-      </article>
-      {preview && <p className="editor-meta">{formatEditor(preview.updatedByDisplayName, preview.updatedAt, locale)} · {bn ? "খসড়া" : "Draft"} v{preview.draftRevision} · {bn ? "প্রকাশিত" : "Published"} v{preview.publishedRevision}</p>}
-      <Feedback value={feedback} />
-      {confirmPublish && <div className="irreversible-confirmation" role="alert"><p>{bn ? "সর্বশেষ সংরক্ষিত খসড়াটি এখনই সবার জন্য প্রকাশিত হবে। বর্তমান ফর্মের অসংরক্ষিত পরিবর্তন প্রকাশিত হবে না।" : "The latest saved draft will become public now. Unsaved form changes will not be published."}</p><div className="form-actions"><button type="button" className="button button-primary" disabled={busy} onClick={() => void publishDraft()}>{bn ? "প্রকাশ নিশ্চিত করুন" : "Confirm publish"}</button><button type="button" className="button button-secondary" onClick={() => setConfirmPublish(false)}>{bn ? "বাতিল" : "Cancel"}</button></div></div>}
-      <div className="form-actions"><button className="button button-secondary" disabled={busy}>{bn ? "খসড়া সংরক্ষণ" : "Save draft"}</button><button className="button button-primary" type="button" disabled={busy || !preview} onClick={() => setConfirmPublish(true)}>{bn ? "প্রকাশ করুন" : "Publish"}</button></div>
-    </form>
-  </>;
-}
-
-function GalleryEditor({ locale }: { locale: Locale }) {
-  const items = useQuery(api.publicSite.cms.listGalleryPreviews, {});
-  const [editingId, setEditingId] = useState<Id<"galleryItems"> | null>(null);
-  if (items === undefined) return <PortalPageState state="loading" locale={locale} />;
-  const editing = items.find((item) => item.id === editingId) ?? null;
-  return <>
-    <GalleryDraftForm key={`${editing?.id ?? "new"}:${editing?.updatedAt ?? 0}`} locale={locale} item={editing} onDone={() => setEditingId(null)} />
-    <div className="card-grid">
-      {items.map((item) => <GalleryCard key={item.id} locale={locale} item={item} onEdit={() => setEditingId(item.id)} />)}
-    </div>
-  </>;
-}
-
-type GalleryPreview = NonNullable<ReturnType<typeof useQuery<typeof api.publicSite.cms.listGalleryPreviews>>>[number];
-
-function GalleryDraftForm({ locale, item, onDone }: { locale: Locale; item: GalleryPreview | null; onDone: () => void }) {
-  const bn = locale === "bn";
-  const [language, setLanguage] = useState<Locale>(locale);
-  const [fields, setFields] = useState({ titleBn: item?.titleBn ?? "", titleEn: item?.titleEn ?? "", altBn: item?.altBn ?? "", altEn: item?.altEn ?? "", sortOrder: item?.sortOrder ?? 0 });
-  const [storageId, setStorageId] = useState<Id<"_storage"> | null>(item?.imageStorageId ?? null);
-  const [imageUrl, setImageUrl] = useState<string | null>(item?.imageUrl ?? null);
-  const [busy, setBusy] = useState(false);
-  const [feedback, setFeedback] = useState<FeedbackValue>(null);
-  const create = useMutation(api.publicSite.cms.createGalleryItem);
-  const update = useMutation(api.publicSite.cms.updateGalleryItem);
-  const generateUploadUrl = useMutation(api.publicSite.cms.generateImageUploadUrl);
-
-  async function upload(file: File) {
-    validateClientImage(file);
-    setBusy(true);
-    try {
-      const uploadUrl = await generateUploadUrl({});
-      const response = await fetch(uploadUrl, { method: "POST", headers: { "Content-Type": file.type }, body: file });
-      if (!response.ok) throw new Error("Image upload failed.");
-      const result = await response.json() as { storageId: Id<"_storage"> };
-      setStorageId(result.storageId); setImageUrl(URL.createObjectURL(file));
-      setFeedback({ ok: true, text: bn ? "ছবি আপলোড হয়েছে। খসড়া সংরক্ষণ করুন।" : "Image uploaded. Save the draft to attach it." });
-    } catch (cause) {
-      setFeedback({ ok: false, text: cause instanceof Error ? cause.message : "Could not upload image." });
-    } finally { setBusy(false); }
-  }
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!storageId) { setFeedback({ ok: false, text: bn ? "একটি ছবি নির্বাচন করুন।" : "Choose an image." }); return; }
-    setBusy(true); setFeedback(null);
-    try {
-      if (item) await update({ galleryItemId: item.id, ...fields, imageStorageId: storageId });
-      else await create({ ...fields, imageStorageId: storageId });
-      setFeedback({ ok: true, text: bn ? "গ্যালারি খসড়া সংরক্ষিত হয়েছে।" : "Gallery draft saved." });
-      if (item) onDone();
-      else { setFields({ titleBn: "", titleEn: "", altBn: "", altEn: "", sortOrder: 0 }); setStorageId(null); setImageUrl(null); }
-    } catch (cause) { setFeedback({ ok: false, text: cause instanceof Error ? cause.message : "Could not save gallery draft." }); }
-    finally { setBusy(false); }
-  }
-
-  const title = language === "bn" ? fields.titleBn : fields.titleEn;
-  const alt = language === "bn" ? fields.altBn : fields.altEn;
-  return <form className="operation-form" onSubmit={submit}>
-    <fieldset><legend>{item ? (bn ? "গ্যালারি খসড়া সম্পাদনা" : "Edit gallery draft") : (bn ? "নতুন গ্যালারি খসড়া" : "New gallery draft")}</legend>
-      <div className="status-tabs" role="tablist" aria-label={bn ? "সম্পাদনার ভাষা" : "Editing language"}><button type="button" role="tab" aria-selected={language === "bn"} onClick={() => setLanguage("bn")}>বাংলা</button><button type="button" role="tab" aria-selected={language === "en"} onClick={() => setLanguage("en")}>English</button></div>
-      <label>{language === "bn" ? "শিরোনাম" : "Title"}<input required value={title} onChange={(event) => setFields((current) => ({ ...current, [language === "bn" ? "titleBn" : "titleEn"]: event.target.value }))} /></label>
-      <label>{language === "bn" ? "বিকল্প বর্ণনা" : "Alternative text"}<textarea required rows={3} value={alt} onChange={(event) => setFields((current) => ({ ...current, [language === "bn" ? "altBn" : "altEn"]: event.target.value }))} /><small>{bn ? "ছবিতে কী দেখা যাচ্ছে তা সংক্ষেপে লিখুন।" : "Briefly describe what the image shows."}</small></label>
-      <div className="form-grid"><label>{bn ? "ক্রম" : "Sort order"}<input type="number" min={0} max={100000} required value={fields.sortOrder} onChange={(event) => setFields((current) => ({ ...current, sortOrder: Number(event.target.value) }))} /></label><label>{bn ? "ছবি (JPEG, PNG বা WebP; সর্বোচ্চ ৮ MB)" : "Image (JPEG, PNG, or WebP; 8 MB maximum)"}<input type="file" accept="image/jpeg,image/png,image/webp" required={!storageId} onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file); }} /></label></div>
-      {imageUrl && <CmsImage src={imageUrl} alt={alt} />}
-    </fieldset>
-    <Feedback value={feedback} />
-    <div className="form-actions"><button className="button button-secondary" disabled={busy}>{bn ? "খসড়া সংরক্ষণ" : "Save draft"}</button>{item && <button type="button" className="button button-secondary" onClick={onDone}>{bn ? "বাতিল" : "Cancel"}</button>}</div>
+function ContentForm({ locale, contentKey, preview, onDirty, onPreview }: { locale: Locale; contentKey: ContentKey; preview: { titleBn: string; titleEn: string; bodyBn: string; bodyEn: string; primaryCtaLabelBn: string | null; primaryCtaLabelEn: string | null; primaryCtaHref: string | null; mediaStorageId: Id<"_storage"> | null; mediaUrl: string | null; status: "draft" | "published" } | null; onDirty: (dirty: boolean) => void; onPreview: (value: { title: string; body: string; cta: string; mediaUrl: string | null }) => void }) {
+  const bn = locale === "bn"; const [language, setLanguage] = useState<Locale>(locale); const [busy, setBusy] = useState(false);
+  const [fields, setFields] = useState({ titleBn: preview?.titleBn ?? "", titleEn: preview?.titleEn ?? "", bodyBn: preview?.bodyBn ?? "", bodyEn: preview?.bodyEn ?? "", primaryCtaLabelBn: preview?.primaryCtaLabelBn ?? "", primaryCtaLabelEn: preview?.primaryCtaLabelEn ?? "", primaryCtaHref: preview?.primaryCtaHref ?? "" });
+  const [mediaStorageId, setMediaStorageId] = useState<Id<"_storage"> | null>(preview?.mediaStorageId ?? null); const [mediaUrl, setMediaUrl] = useState(preview?.mediaUrl ?? null);
+  const save = useMutation(api.publicSite.cms.saveContentDraft); const uploadUrl = useMutation(api.publicSite.cms.generateImageUploadUrl);
+  const update = (patch: Partial<typeof fields>) => { const next = { ...fields, ...patch }; setFields(next); onDirty(true); onPreview({ title: language === "bn" ? next.titleBn : next.titleEn, body: language === "bn" ? next.bodyBn : next.bodyEn, cta: language === "bn" ? next.primaryCtaLabelBn : next.primaryCtaLabelEn, mediaUrl }); };
+  async function upload(file: File) { if (!new Set(["image/jpeg", "image/png", "image/webp"]).has(file.type) || file.size > 8 * 1024 * 1024) return toast.error(bn ? "JPEG, PNG বা WebP ছবি বাছুন (সর্বোচ্চ ৮ MB)।" : "Choose a JPEG, PNG, or WebP image up to 8 MB."); setBusy(true); try { const url = await uploadUrl({}); const response = await fetch(url, { method: "POST", headers: { "Content-Type": file.type }, body: file }); if (!response.ok) throw new Error("Upload failed"); const result = await response.json() as { storageId: Id<"_storage"> }; const localUrl = URL.createObjectURL(file); setMediaStorageId(result.storageId); setMediaUrl(localUrl); onDirty(true); onPreview({ title: language === "bn" ? fields.titleBn : fields.titleEn, body: language === "bn" ? fields.bodyBn : fields.bodyEn, cta: language === "bn" ? fields.primaryCtaLabelBn : fields.primaryCtaLabelEn, mediaUrl: localUrl }); toast.success(bn ? "ছবি প্রস্তুত। খসড়া সংরক্ষণ করুন।" : "Image ready. Save the draft."); } catch { toast.error(bn ? "ছবি আপলোড করা যায়নি।" : "Could not upload image."); } finally { setBusy(false); } }
+  async function submit(event: FormEvent) { event.preventDefault(); setBusy(true); try { await save({ key: contentKey, content: { ...fields, primaryCtaLabelBn: fields.primaryCtaLabelBn || null, primaryCtaLabelEn: fields.primaryCtaLabelEn || null, primaryCtaHref: fields.primaryCtaHref || null, mediaStorageId } }); onDirty(false); toast.success(bn ? "খসড়া সংরক্ষিত হয়েছে।" : "Draft saved."); } catch (error) { toast.error(error instanceof Error ? error.message : "Could not save draft"); } finally { setBusy(false); } }
+  return <form onSubmit={submit} className="flex flex-col gap-4">
+    <div className="flex items-center justify-between"><ToggleGroup type="single" value={language} onValueChange={(value) => value && setLanguage(value as Locale)} variant="outline" size="sm"><ToggleGroupItem value="bn">বাংলা</ToggleGroupItem><ToggleGroupItem value="en">English</ToggleGroupItem></ToggleGroup><Badge variant={preview?.status === "published" ? "success" : "neutral"}>{preview?.status === "published" ? (bn ? "প্রকাশিত" : "Published") : (bn ? "খসড়া" : "Draft")}</Badge></div>
+    <FieldGroup><Field><FieldLabel htmlFor="cms-title">{language === "bn" ? "শিরোনাম" : "Title"}</FieldLabel><Input id="cms-title" value={language === "bn" ? fields.titleBn : fields.titleEn} onChange={(event) => update(language === "bn" ? { titleBn: event.target.value } : { titleEn: event.target.value })} /></Field>
+    <Field><FieldLabel htmlFor="cms-body">{language === "bn" ? "মূল লেখা" : "Body"}</FieldLabel><Textarea id="cms-body" rows={7} value={language === "bn" ? fields.bodyBn : fields.bodyEn} onChange={(event) => update(language === "bn" ? { bodyBn: event.target.value } : { bodyEn: event.target.value })} /></Field>
+    <Field><FieldLabel htmlFor="cms-cta">{language === "bn" ? "বাটনের লেখা" : "Button label"}</FieldLabel><Input id="cms-cta" value={language === "bn" ? fields.primaryCtaLabelBn : fields.primaryCtaLabelEn} onChange={(event) => update(language === "bn" ? { primaryCtaLabelBn: event.target.value } : { primaryCtaLabelEn: event.target.value })} /></Field>
+    <Field><FieldLabel htmlFor="cms-url">{bn ? "বাটনের লিংক" : "Button link"}</FieldLabel><Input id="cms-url" value={fields.primaryCtaHref} onChange={(event) => update({ primaryCtaHref: event.target.value })} placeholder={`/${locale}/admission`} /></Field>
+    <Field><FieldLabel htmlFor="cms-image">{bn ? "ছবি" : "Image"}</FieldLabel><Input id="cms-image" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file); }} /><FieldDescription>{bn ? "JPEG, PNG বা WebP; সর্বোচ্চ ৮ MB" : "JPEG, PNG, or WebP; 8 MB maximum"}</FieldDescription></Field></FieldGroup>
+    <Button disabled={busy}>{busy ? <Spinner data-icon="inline-start" /> : <Save data-icon="inline-start" />}{bn ? "খসড়া সংরক্ষণ" : "Save draft"}</Button>
   </form>;
 }
 
-function GalleryCard({ locale, item, onEdit }: { locale: Locale; item: GalleryPreview; onEdit: () => void }) {
-  const bn = locale === "bn";
-  const [action, setAction] = useState<"publish" | "archive" | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [feedback, setFeedback] = useState<FeedbackValue>(null);
-  const publish = useMutation(api.publicSite.cms.publishGalleryItem);
-  const archive = useMutation(api.publicSite.cms.archiveGalleryItem);
-  async function execute() {
-    if (!action) return;
-    setBusy(true); setFeedback(null);
-    try {
-      if (action === "publish") await publish({ galleryItemId: item.id }); else await archive({ galleryItemId: item.id });
-      setFeedback({ ok: true, text: action === "publish" ? (bn ? "ছবিটি প্রকাশিত হয়েছে।" : "Image published.") : (bn ? "ছবিটি আর্কাইভ হয়েছে।" : "Image archived.") });
-      setAction(null);
-    } catch (cause) { setFeedback({ ok: false, text: cause instanceof Error ? cause.message : "Could not update gallery item." }); }
-    finally { setBusy(false); }
-  }
-  return <article className="content-card">
-    {item.imageUrl && <CmsImage src={item.imageUrl} alt={bn ? item.altBn : item.altEn} />}
-    <p className="eyebrow">{item.status} · #{item.sortOrder}</p><h2>{bn ? item.titleBn : item.titleEn}</h2><p>{bn ? item.altBn : item.altEn}</p>
-    <p className="editor-meta">{formatEditor(item.updatedByDisplayName, item.updatedAt, locale)}</p><Feedback value={feedback} />
-    {action && <div className="irreversible-confirmation" role="alert"><p>{action === "publish" ? (bn ? "এই ছবি এখন সবার জন্য প্রকাশিত হবে।" : "This image will become public now.") : (bn ? "এই ছবি পাবলিক গ্যালারি থেকে সরিয়ে আর্কাইভ করা হবে।" : "This image will be removed from the public gallery and archived.")}</p><div className="form-actions"><button type="button" className="button button-primary" disabled={busy} onClick={() => void execute()}>{bn ? "নিশ্চিত করুন" : "Confirm"}</button><button type="button" className="button button-secondary" onClick={() => setAction(null)}>{bn ? "বাতিল" : "Cancel"}</button></div></div>}
-    {item.status !== "archived" && <div className="form-actions"><button type="button" className="button button-secondary" onClick={onEdit}>{bn ? "সম্পাদনা" : "Edit"}</button>{item.status === "draft" && <button type="button" className="button button-primary" onClick={() => setAction("publish")}>{bn ? "প্রকাশ" : "Publish"}</button>}<button type="button" className="button button-secondary" onClick={() => setAction("archive")}>{bn ? "আর্কাইভ" : "Archive"}</button></div>}
-  </article>;
+function StructurePanel({ locale, initial, onChange, onDirty }: { locale: Locale; initial: { homeSections: LayoutRow[]; navigation: NavRow[] }; onChange: (homeSections: LayoutRow[], navigation: NavRow[]) => void; onDirty: (dirty: boolean) => void }) {
+  const bn = locale === "bn"; const [sections, setSections] = useState(initial.homeSections); const [navigation, setNavigation] = useState(initial.navigation); const [busy, setBusy] = useState(false); const save = useMutation(api.publicSite.cms.saveLayoutDraft);
+  const commit = (nextSections = sections, nextNavigation = navigation) => { setSections(nextSections); setNavigation(nextNavigation); onChange(nextSections, nextNavigation); onDirty(true); };
+  async function submit() { setBusy(true); try { await save({ homeSections: sections, navigation }); onDirty(false); toast.success(bn ? "ওয়েবসাইটের কাঠামোর খসড়া সংরক্ষিত।" : "Website structure draft saved."); } catch (error) { toast.error(error instanceof Error ? error.message : "Could not save structure"); } finally { setBusy(false); } }
+  return <div className="flex flex-col gap-5"><section className="flex flex-col gap-2"><div><h3 className="text-sm font-semibold">{bn ? "হোমপেজের অংশ" : "Homepage sections"}</h3><p className="text-xs text-muted-foreground">{bn ? "টেনে বা তীর দিয়ে সাজান।" : "Drag or use arrows to reorder."}</p></div>{sections.map((row, index) => <ReorderRow key={row.key} label={homeLabels[row.key][locale]} visible={row.visible} index={index} count={sections.length} onVisible={(visible) => commit(sections.map((item) => item.key === row.key ? { ...item, visible } : item))} onMove={(to) => commit(move(sections, index, to))} onDrop={(from) => commit(move(sections, from, index))} />)}</section>
+    <Separator /><section className="flex flex-col gap-2"><div><h3 className="text-sm font-semibold">{bn ? "নেভিগেশন" : "Navigation"}</h3><p className="text-xs text-muted-foreground">{bn ? "মূল গন্তব্যগুলো সুরক্ষিত; নাম, ক্রম ও দৃশ্যমানতা বদলানো যায়।" : "Destinations are protected; labels, order, and visibility are editable."}</p></div>{navigation.map((row, index) => <div className="flex flex-col gap-2" key={row.key}><ReorderRow label={locale === "bn" ? row.labelBn : row.labelEn} visible={row.visible} index={index} count={navigation.length} onVisible={(visible) => commit(sections, navigation.map((item) => item.key === row.key ? { ...item, visible } : item))} onMove={(to) => commit(sections, move(navigation, index, to))} onDrop={(from) => commit(sections, move(navigation, from, index))} /><div className="grid grid-cols-2 gap-2 pl-8"><Input aria-label="Bangla label" value={row.labelBn} onChange={(event) => commit(sections, navigation.map((item) => item.key === row.key ? { ...item, labelBn: event.target.value } : item))} /><Input aria-label="English label" value={row.labelEn} onChange={(event) => commit(sections, navigation.map((item) => item.key === row.key ? { ...item, labelEn: event.target.value } : item))} /></div></div>)}</section>
+    <Button onClick={() => void submit()} disabled={busy}>{busy ? <Spinner data-icon="inline-start" /> : <Save data-icon="inline-start" />}{bn ? "কাঠামোর খসড়া সংরক্ষণ" : "Save structure draft"}</Button></div>;
 }
 
-function PublicationEditor({ locale }: { locale: Locale }) {
-  const data = useQuery(api.publicSite.cms.getPublicationWorkspace, {});
+function GalleryPanel({ locale }: { locale: Locale }) {
+  const items = useQuery(api.publicSite.cms.listGalleryPreviews, {}); const bn = locale === "bn"; const uploadUrl = useMutation(api.publicSite.cms.generateImageUploadUrl); const create = useMutation(api.publicSite.cms.createGalleryItem); const archive = useMutation(api.publicSite.cms.archiveGalleryItem); const [busy, setBusy] = useState(false);
+  async function add(file: File) { setBusy(true); try { const url = await uploadUrl({}); const response = await fetch(url, { method: "POST", headers: { "Content-Type": file.type }, body: file }); const result = await response.json() as { storageId: Id<"_storage"> }; await create({ titleBn: file.name, titleEn: file.name, altBn: file.name, altEn: file.name, imageStorageId: result.storageId, sortOrder: items?.length ?? 0 }); toast.success(bn ? "গ্যালারি খসড়া যোগ হয়েছে।" : "Gallery draft added."); } catch { toast.error(bn ? "ছবি যোগ করা যায়নি।" : "Could not add image."); } finally { setBusy(false); } }
+  if (items === undefined) return <PortalPageState state="loading" locale={locale} />;
+  return <div className="flex flex-col gap-4"><Field><FieldLabel htmlFor="gallery-upload">{bn ? "গ্যালারিতে ছবি যোগ করুন" : "Add gallery image"}</FieldLabel><Input id="gallery-upload" type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={(event) => { const file = event.target.files?.[0]; if (file) void add(file); }} /></Field><div className="grid gap-3 sm:grid-cols-2">{items.filter((item) => item.status !== "archived").map((item) => <Card key={item.id}>{item.imageUrl && <img src={item.imageUrl} alt={bn ? item.altBn : item.altEn} className="aspect-video w-full object-cover" />}<CardHeader><div className="flex items-start justify-between gap-2"><CardTitle>{bn ? item.titleBn : item.titleEn}</CardTitle><Badge variant={item.status === "published" ? "success" : "neutral"}>{item.status === "published" ? (bn ? "প্রকাশিত" : "Published") : (bn ? "খসড়া" : "Draft")}</Badge></div></CardHeader><CardFooter><Button variant="secondary" size="sm" onClick={() => void archive({ galleryItemId: item.id })}>{bn ? "লুকান" : "Hide"}</Button></CardFooter></Card>)}</div></div>;
+}
+
+function VisibilityPanel({ locale }: { locale: Locale }) {
+  const data = useQuery(api.publicSite.cms.getPublicationWorkspace, {}); const bn = locale === "bn"; const setCourse = useMutation(api.publicSite.cms.setCoursePublication); const setTeacher = useMutation(api.publicSite.cms.setTeacherPublication);
   if (data === undefined) return <PortalPageState state="loading" locale={locale} />;
-  return <div className="detail-grid"><PublicationList locale={locale} kind="course" rows={data.courses} /><PublicationList locale={locale} kind="teacher" rows={data.teachers} /></div>;
+  const rows = [...data.courses.map((item) => ({ id: item.courseId, kind: "course" as const, label: bn ? item.nameBn : item.nameEn, visible: item.isPublic, order: item.publicSortOrder })), ...data.teachers.map((item) => ({ id: item.teacherId, kind: "teacher" as const, label: item.displayName, visible: item.isPublic, order: item.publicSortOrder }))];
+  return <div className="flex flex-col gap-2">{rows.map((row) => <div className="flex min-h-11 items-center gap-3 rounded-md border border-[var(--border)] bg-[var(--canvas)] px-3" key={`${row.kind}:${row.id}`}><Checkbox defaultChecked={row.visible} onCheckedChange={(checked) => { const isPublic = checked === true; const request = row.kind === "course" ? setCourse({ courseId: row.id as Id<"courses">, isPublic, publicSortOrder: row.order }) : setTeacher({ teacherId: row.id as Id<"teachers">, isPublic, publicSortOrder: row.order }); void request.then(() => toast.success(bn ? "দৃশ্যমানতা সংরক্ষিত।" : "Visibility saved.")).catch((error) => toast.error(error instanceof Error ? error.message : "Could not save")); }} /><span className="min-w-0 flex-1 truncate text-sm font-medium">{row.label}</span><Badge variant="neutral">{row.kind === "course" ? (bn ? "কোর্স" : "Course") : (bn ? "শিক্ষক" : "Teacher")}</Badge></div>)}</div>;
 }
 
-function PublicationList({ locale, kind, rows }: {
-  locale: Locale;
-  kind: "course" | "teacher";
-  rows: Array<{ courseId?: Id<"courses">; teacherId?: Id<"teachers">; nameBn?: string; nameEn?: string; displayName?: string; isPublic: boolean; publicSortOrder: number }>;
-}) {
-  const bn = locale === "bn";
-  return <section><h2>{kind === "course" ? (bn ? "পাবলিক কোর্স" : "Public courses") : (bn ? "পাবলিক শিক্ষক" : "Public teachers")}</h2>{rows.map((row) => <PublicationRow key={String(row.courseId ?? row.teacherId)} locale={locale} kind={kind} row={row} />)}</section>;
-}
-
-function PublicationRow({ locale, kind, row }: {
-  locale: Locale;
-  kind: "course" | "teacher";
-  row: { courseId?: Id<"courses">; teacherId?: Id<"teachers">; nameBn?: string; nameEn?: string; displayName?: string; isPublic: boolean; publicSortOrder: number };
-}) {
-  const bn = locale === "bn";
-  const [busy, setBusy] = useState(false);
-  const [feedback, setFeedback] = useState<FeedbackValue>(null);
-  const setCourse = useMutation(api.publicSite.cms.setCoursePublication);
-  const setTeacher = useMutation(api.publicSite.cms.setTeacherPublication);
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); const data = new FormData(event.currentTarget); setBusy(true); setFeedback(null);
-    try {
-      const isPublic = data.get("isPublic") === "on"; const publicSortOrder = Number(data.get("publicSortOrder"));
-      if (kind === "course" && row.courseId) await setCourse({ courseId: row.courseId, isPublic, publicSortOrder });
-      if (kind === "teacher" && row.teacherId) await setTeacher({ teacherId: row.teacherId, isPublic, publicSortOrder });
-      setFeedback({ ok: true, text: bn ? "প্রকাশনার অবস্থা সংরক্ষিত হয়েছে।" : "Publication status saved." });
-    } catch (cause) { setFeedback({ ok: false, text: cause instanceof Error ? cause.message : "Could not save publication status." }); }
-    finally { setBusy(false); }
-  }
-  return <form className="operation-form" onSubmit={submit}><h3>{kind === "course" ? (bn ? row.nameBn : row.nameEn) : row.displayName}</h3><div className="form-grid"><label className="check-row"><input name="isPublic" type="checkbox" defaultChecked={row.isPublic} /><span>{bn ? "পাবলিক ওয়েবসাইটে দেখান" : "Show on public website"}</span></label><label>{bn ? "ক্রম" : "Sort order"}<input name="publicSortOrder" type="number" min={0} max={100000} defaultValue={row.publicSortOrder} required /></label></div><Feedback value={feedback} /><button className="button button-secondary" disabled={busy}>{bn ? "সংরক্ষণ" : "Save"}</button></form>;
+function WebsiteWorkspace({ locale, layout }: { locale: Locale; layout: { homeSections: LayoutRow[]; navigation: NavRow[]; hasDraftChanges: boolean } }) {
+  const bn = locale === "bn"; const [activeTab, setActiveTab] = useState("pages"); const [pendingTab, setPendingTab] = useState<string | null>(null); const [contentKey, setContentKey] = useState<ContentKey>("hero"); const [dirtyLocation, setDirtyLocation] = useState<string | null>(null); const [pendingKey, setPendingKey] = useState<ContentKey | null>(null); const [publishOpen, setPublishOpen] = useState(false); const [publishing, setPublishing] = useState(false); const publish = useMutation(api.publicSite.cms.publishWebsite); const publishSummary = useQuery(api.publicSite.cms.getPublishSummary, {});
+  const [sections, setSections] = useState<LayoutRow[]>(layout.homeSections); const [navigation, setNavigation] = useState<NavRow[]>(layout.navigation); const [device, setDevice] = useState<"desktop" | "mobile">("desktop"); const [hero, setHero] = useState({ title: "", body: "", cta: "", mediaUrl: null as string | null });
+  const dirty = dirtyLocation !== null;
+  useEffect(() => { const warn = (event: BeforeUnloadEvent) => { if (dirty) event.preventDefault(); }; window.addEventListener("beforeunload", warn); return () => window.removeEventListener("beforeunload", warn); }, [dirty]);
+  const hasDraft = useMemo(() => dirty || layout?.hasDraftChanges, [dirty, layout?.hasDraftChanges]);
+  async function doPublish() { setPublishing(true); try { await publish({}); setPublishOpen(false); toast.success(bn ? "ওয়েবসাইট প্রকাশিত হয়েছে।" : "Website published."); } catch (error) { toast.error(error instanceof Error ? error.message : "Could not publish website"); } finally { setPublishing(false); } }
+  return <div className="flex flex-col gap-5">
+    <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">CMS</p><h1 className="text-2xl font-semibold">{bn ? "পাবলিক ওয়েবসাইট" : "Public website"}</h1><p className="text-sm text-muted-foreground">{bn ? "কন্টেন্ট সাজান, পাশে দেখুন, একবারে প্রকাশ করুন।" : "Edit, preview, and publish the website in one place."}</p></div><div className="flex items-center gap-2"><Badge variant={hasDraft ? "neutral" : "success"}>{hasDraft ? (bn ? "খসড়া" : "Draft") : (bn ? "প্রকাশিত" : "Published")}</Badge><Button variant="secondary" asChild><a href={`/${locale}`} target="_blank" rel="noreferrer"><ExternalLink data-icon="inline-start" />{bn ? "সাইট খুলুন" : "Open site"}</a></Button><Button onClick={() => setPublishOpen(true)}><Upload data-icon="inline-start" />{bn ? "পর্যালোচনা ও প্রকাশ" : "Review & publish"}</Button></div></header>
+    <Tabs value={activeTab} onValueChange={(value) => { if (dirty) setPendingTab(value); else setActiveTab(value); }}><TabsList className="w-full justify-start overflow-x-auto"><TabsTrigger value="pages">{bn ? "পেজ" : "Pages"}</TabsTrigger><TabsTrigger value="structure">{bn ? "কাঠামো" : "Structure"}</TabsTrigger><TabsTrigger value="gallery">{bn ? "গ্যালারি" : "Gallery"}</TabsTrigger><TabsTrigger value="visibility">{bn ? "দৃশ্যমানতা" : "Visibility"}</TabsTrigger></TabsList>
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(340px,0.8fr)_minmax(520px,1.2fr)]">
+        <Card className="min-w-0"><CardHeader><CardTitle>{bn ? "সম্পাদক" : "Editor"}</CardTitle><CardDescription>{bn ? "পরিবর্তন আগে খসড়া হিসেবে সংরক্ষণ করুন।" : "Save changes as a draft before publishing."}</CardDescription></CardHeader><CardContent><TabsContent value="pages" className="mt-0 flex flex-col gap-4"><Select value={contentKey} onValueChange={(value) => { const next = value as ContentKey; if (dirty) setPendingKey(next); else setContentKey(next); }}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectLabel>{bn ? "পেজের কন্টেন্ট" : "Page content"}</SelectLabel>{contentKeys.map((key) => <SelectItem key={key} value={key}>{contentLabels[key][locale]}</SelectItem>)}</SelectGroup></SelectContent></Select><ContentPanel locale={locale} contentKey={contentKey} onDirty={(value) => setDirtyLocation(value ? contentLabels[contentKey][locale] : null)} onPreview={contentKey === "hero" ? setHero : () => undefined} /></TabsContent><TabsContent value="structure" className="mt-0"><StructurePanel locale={locale} initial={{ homeSections: sections, navigation }} onChange={(nextSections, nextNavigation) => { setSections(nextSections); setNavigation(nextNavigation); }} onDirty={(value) => setDirtyLocation(value ? (bn ? "কাঠামো" : "Structure") : null)} /></TabsContent><TabsContent value="gallery" className="mt-0"><GalleryPanel locale={locale} /></TabsContent><TabsContent value="visibility" className="mt-0"><VisibilityPanel locale={locale} /></TabsContent></CardContent></Card>
+        <Card className="min-w-0 bg-[var(--canvas-soft)]"><CardHeader><div className="flex items-center justify-between gap-2"><CardTitle className="flex items-center gap-2"><Eye />{bn ? "লাইভ প্রিভিউ" : "Live preview"}</CardTitle><ToggleGroup type="single" value={device} onValueChange={(value) => value && setDevice(value as "desktop" | "mobile")} variant="outline" size="sm"><ToggleGroupItem value="desktop" aria-label="Desktop preview"><Monitor /></ToggleGroupItem><ToggleGroupItem value="mobile" aria-label="Mobile preview"><Smartphone /></ToggleGroupItem></ToggleGroup></div></CardHeader><CardContent><div className="p-2"><MiniPreview locale={locale} sections={sections} navigation={navigation} hero={hero} device={device} /></div></CardContent></Card>
+      </div>
+    </Tabs>
+    <AlertDialog open={pendingTab !== null} onOpenChange={(open) => !open && setPendingTab(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{bn ? "অসংরক্ষিত পরিবর্তন বাদ দেবেন?" : "Discard unsaved changes?"}</AlertDialogTitle><AlertDialogDescription>{bn ? `${dirtyLocation ?? "এই অংশ"}-এর অসংরক্ষিত পরিবর্তন হারিয়ে যাবে।` : `Unsaved changes in ${dirtyLocation ?? "this section"} will be lost.`}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>{bn ? "এখানেই থাকুন" : "Keep editing"}</AlertDialogCancel><AlertDialogAction onClick={() => { if (pendingTab) setActiveTab(pendingTab); setDirtyLocation(null); setPendingTab(null); }}>{bn ? "পরিবর্তন বাদ দিন" : "Discard changes"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+    <AlertDialog open={pendingKey !== null} onOpenChange={(open) => !open && setPendingKey(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{bn ? "সংরক্ষণ না করে পরিবর্তন করবেন?" : "Discard unsaved changes?"}</AlertDialogTitle><AlertDialogDescription>{bn ? "এই কন্টেন্টে করা অসংরক্ষিত পরিবর্তন হারিয়ে যাবে।" : "Unsaved changes to this content will be lost."}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>{bn ? "এখানেই থাকুন" : "Keep editing"}</AlertDialogCancel><AlertDialogAction onClick={() => { if (pendingKey) setContentKey(pendingKey); setDirtyLocation(null); setPendingKey(null); }}>{bn ? "পরিবর্তন বাদ দিন" : "Discard changes"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+    <AlertDialog open={publishOpen} onOpenChange={setPublishOpen}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{bn ? "ওয়েবসাইট প্রকাশ করবেন?" : "Publish website?"}</AlertDialogTitle><AlertDialogDescription>{bn ? "সংরক্ষিত কন্টেন্ট, গ্যালারি এবং কাঠামোর সব খসড়া একসাথে প্রকাশিত হবে। অসংরক্ষিত ফর্মের পরিবর্তন অন্তর্ভুক্ত হবে না।" : "All saved content, gallery, and structure drafts will be published together. Unsaved form changes are not included."}</AlertDialogDescription>{dirty && <p className="text-sm text-[var(--warning-deep)]" role="status">{bn ? `প্রকাশ বন্ধ আছে: ${dirtyLocation} অংশে অসংরক্ষিত পরিবর্তন আছে। আগে খসড়া সংরক্ষণ করুন।` : `Publishing is disabled: ${dirtyLocation} has unsaved changes. Save its draft first.`}</p>}{publishSummary && <div className="flex flex-col gap-1 text-sm text-muted-foreground"><p className="font-medium text-foreground">{bn ? "এগুলো প্রকাশিত হবে:" : "These saved drafts will be published:"}</p>{publishSummary.contentKeys.map((key) => <p key={key}>• {contentLabels[key][locale]}</p>)}{publishSummary.structureDraft && <p>• {bn ? "হোমপেজ ও নেভিগেশন কাঠামো" : "Homepage and navigation structure"}</p>}{publishSummary.galleryDraftCount > 0 && <p>• {bn ? `${publishSummary.galleryDraftCount}টি গ্যালারি ছবি` : `${publishSummary.galleryDraftCount} gallery image${publishSummary.galleryDraftCount === 1 ? "" : "s"}`}</p>}{publishSummary.contentKeys.length === 0 && !publishSummary.structureDraft && publishSummary.galleryDraftCount === 0 && <p>{bn ? "এখনও কোনো সংরক্ষিত খসড়া নেই।" : "There are no saved drafts yet."}</p>}</div>}</AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>{bn ? "বাতিল" : "Cancel"}</AlertDialogCancel><AlertDialogAction disabled={publishing || dirty} onClick={() => void doPublish()}>{publishing && <Spinner data-icon="inline-start" />}{dirty ? (bn ? "আগে খসড়া সংরক্ষণ করুন" : "Save draft first") : (bn ? "প্রকাশ করুন" : "Publish")}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+  </div>;
 }
 
 export function WebsiteCmsEditor({ locale }: { locale: Locale }) {
-  const bn = locale === "bn";
-  const [section, setSection] = useState<"content" | "gallery" | "publication">("content");
-  return <>
-    <header className="portal-page-header"><p className="eyebrow">CMS</p><h1>{bn ? "পাবলিক ওয়েবসাইট" : "Public website"}</h1><p>{bn ? "দ্বিভাষিক কনটেন্ট, মিডিয়া ও প্রকাশনার দৃশ্যমানতা পরিচালনা করুন।" : "Manage bilingual content, media, and public visibility."}</p></header>
-    <div className="status-tabs" role="tablist" aria-label={bn ? "ওয়েবসাইট পরিচালনা" : "Website management"}><button type="button" role="tab" aria-selected={section === "content"} onClick={() => setSection("content")}>{bn ? "কনটেন্ট" : "Content"}</button><button type="button" role="tab" aria-selected={section === "gallery"} onClick={() => setSection("gallery")}>{bn ? "গ্যালারি" : "Gallery"}</button><button type="button" role="tab" aria-selected={section === "publication"} onClick={() => setSection("publication")}>{bn ? "দৃশ্যমানতা" : "Visibility"}</button></div>
-    {section === "content" ? <ContentEditor locale={locale} /> : section === "gallery" ? <GalleryEditor locale={locale} /> : <PublicationEditor locale={locale} />}
-  </>;
+  const layout = useQuery(api.publicSite.cms.getLayoutWorkspace, {});
+  if (layout === undefined) return <PortalPageState state="loading" locale={locale} />;
+  return <WebsiteWorkspace locale={locale} layout={{ homeSections: layout.homeSections as LayoutRow[], navigation: layout.navigation as NavRow[], hasDraftChanges: layout.hasDraftChanges }} />;
 }

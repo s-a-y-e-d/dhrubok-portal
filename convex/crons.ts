@@ -26,4 +26,10 @@ crons.cron(
   internal.reports.summaries.refreshToday,
   {},
 );
+crons.cron(
+  "automatic monthly due reminders",
+  "0 13 * * *",
+  internal.finance.campaigns.runAutomaticDueReminders,
+  {},
+);
 export default crons;

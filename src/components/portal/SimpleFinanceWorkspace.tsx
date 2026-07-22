@@ -2,6 +2,7 @@
 
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,6 +65,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   FileText,
+  MessageSquareText,
   ReceiptText,
 } from "lucide-react";
 import Link from "next/link";
@@ -240,6 +242,7 @@ function MonthlyFees({ locale }: { locale: "bn" | "en" }) {
           </Card>
         ))}
       </div>
+      <DueSmsCampaign locale={locale} scopes={scopes} />
       <Card>
         <CardHeader>
           <CardTitle>
@@ -527,6 +530,38 @@ function MonthlyFees({ locale }: { locale: "bn" | "en" }) {
       </Card>
     </div>
   );
+}
+
+function DueSmsCampaign({ locale, scopes }: { locale: "bn" | "en"; scopes: { courses: Array<{ courseId: string; nameBn: string; nameEn: string }>; batches: Array<{ batchId: string; courseId: string; nameBn: string; nameEn: string }> } }) {
+  const bn = locale === "bn";
+  const createPreview = useMutation(api.finance.campaigns.createPreview);
+  const queueCampaign = useMutation(api.finance.campaigns.queueCampaign);
+  const [open, setOpen] = useState(false);
+  const [scopeType, setScopeType] = useState<"all" | "course" | "batch">("all");
+  const [courseId, setCourseId] = useState("");
+  const [batchId, setBatchId] = useState("");
+  const [campaignId, setCampaignId] = useState<Id<"dueReminderCampaigns">>();
+  const campaign = useQuery(api.finance.campaigns.getCampaign, campaignId ? { campaignId } : "skip");
+  const [busy, setBusy] = useState(false);
+  const filteredBatches = scopes.batches.filter((batch) => !courseId || batch.courseId === courseId);
+  async function preview() {
+    setBusy(true);
+    try {
+      const id = await createPreview({ scopeType, courseId: courseId ? courseId as Id<"courses"> : undefined, batchId: batchId ? batchId as Id<"batches"> : undefined, ageingBuckets: [], localeMode: "student_preference" });
+      setCampaignId(id);
+    } catch (cause) { toast.error(cause instanceof Error ? cause.message : "Could not create due SMS preview"); }
+    finally { setBusy(false); }
+  }
+  async function send() {
+    if (!campaignId) return;
+    setBusy(true);
+    try { const result = await queueCampaign({ campaignId, confirmed: true }); toast.success(bn ? `${result.queued}টি SMS কিউ করা হয়েছে।` : `${result.queued} SMS queued.`); setOpen(false); setCampaignId(undefined); }
+    catch (cause) { toast.error(cause instanceof Error ? cause.message : "Could not queue due SMS"); }
+    finally { setBusy(false); }
+  }
+  return <Card>
+    <CardHeader className="flex-row items-start justify-between gap-4"><div><CardTitle className="flex items-center gap-2"><MessageSquareText />{bn ? "বকেয়া SMS" : "Due SMS"}</CardTitle><CardDescription>{bn ? "বকেয়া থাকা শিক্ষার্থীদের অভিভাবককে স্মরণ করান। একই মাসে দ্বিতীয়বার SMS পাঠানো হয় না।" : "Remind guardians of students with overdue fees. A guardian is not reminded twice in the same month."}</CardDescription></div><Dialog open={open} onOpenChange={(value) => { setOpen(value); if (!value) setCampaignId(undefined); }}><Button onClick={() => setOpen(true)}><MessageSquareText data-icon="inline-start" />{bn ? "বকেয়া SMS পাঠান" : "Send due SMS"}</Button><DialogContent><DialogHeader><DialogTitle>{bn ? "বকেয়া SMS পাঠান" : "Send due SMS"}</DialogTitle><DialogDescription>{bn ? "পাঠানোর আগে প্রাপকদের তালিকা যাচাই করুন।" : "Review recipients before queueing messages."}</DialogDescription></DialogHeader>{!campaign ? <FieldGroup><Field><FieldLabel>{bn ? "পরিধি" : "Audience"}</FieldLabel><Select value={scopeType} onValueChange={(value) => { setScopeType(value as "all" | "course" | "batch"); setCourseId(""); setBatchId(""); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">{bn ? "সব শিক্ষার্থী" : "All students"}</SelectItem><SelectItem value="course">{bn ? "একটি কোর্স" : "A course"}</SelectItem><SelectItem value="batch">{bn ? "একটি ব্যাচ" : "A batch"}</SelectItem></SelectContent></Select></Field>{scopeType !== "all" && <Field><FieldLabel>{bn ? "কোর্স" : "Course"}</FieldLabel><Select value={courseId} onValueChange={setCourseId}><SelectTrigger><SelectValue placeholder={bn ? "কোর্স বাছুন" : "Choose course"} /></SelectTrigger><SelectContent>{scopes.courses.map((course) => <SelectItem key={course.courseId} value={course.courseId}>{bn ? course.nameBn : course.nameEn}</SelectItem>)}</SelectContent></Select></Field>}{scopeType === "batch" && <Field><FieldLabel>{bn ? "ব্যাচ" : "Batch"}</FieldLabel><Select value={batchId} onValueChange={setBatchId}><SelectTrigger><SelectValue placeholder={bn ? "ব্যাচ বাছুন" : "Choose batch"} /></SelectTrigger><SelectContent>{filteredBatches.map((batch) => <SelectItem key={batch.batchId} value={batch.batchId}>{bn ? batch.nameBn : batch.nameEn}</SelectItem>)}</SelectContent></Select></Field>}</FieldGroup> : <div className="flex flex-col gap-3"><Alert><AlertTitle>{bn ? "পাঠানোর পূর্বরূপ" : "Sending preview"}</AlertTitle><AlertDescription>{bn ? `${campaign.campaign.eligibleRecipientCount} জন প্রাপক · ${campaign.campaign.suppressedRecipientCount} জনকে এ মাসে আগে পাঠানোর কারণে বাদ দেওয়া হয়েছে · আনুমানিক ${campaign.campaign.estimatedSegments} SMS সেগমেন্ট।` : `${campaign.campaign.eligibleRecipientCount} eligible recipients · ${campaign.campaign.suppressedRecipientCount} already reminded this month · estimated ${campaign.campaign.estimatedSegments} SMS segments.`}</AlertDescription></Alert><div className="max-h-48 overflow-y-auto rounded border p-2 text-sm">{campaign.recipients.slice(0, 20).map((row) => <div key={row._id} className="flex justify-between gap-3 py-1"><span>{row.displayName}</span><span className="font-mono">{money(row.overdueMinorSnapshot, locale)}</span></div>)}</div></div>}<DialogFooter>{campaign ? <><Button variant="secondary" disabled={busy} onClick={() => setCampaignId(undefined)}>{bn ? "পরিবর্তন" : "Change"}</Button><Button disabled={busy || campaign.campaign.eligibleRecipientCount === 0} onClick={() => void send()}>{bn ? "নিশ্চিত করে পাঠান" : "Confirm and send"}</Button></> : <Button disabled={busy || (scopeType === "course" && !courseId) || (scopeType === "batch" && (!courseId || !batchId))} onClick={() => void preview()}>{bn ? "পূর্বরূপ দেখুন" : "Preview recipients"}</Button>}</DialogFooter></DialogContent></Dialog></CardHeader>
+  </Card>;
 }
 
 type WorklistStudent = {

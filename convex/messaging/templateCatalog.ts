@@ -31,7 +31,7 @@ export const SMS_TEMPLATE_DEFAULTS = {
   },
   result_published: { name: "Result published", bodyBn: "{brand}: পরীক্ষার ফল প্রকাশিত হয়েছে।", bodyEn: "{brand}: Exam result published.", allowedVariables: ["brand"] },
   result_corrected: { name: "Result corrected", bodyBn: "{brand}: সংশোধিত পরীক্ষার ফল প্রকাশিত হয়েছে।", bodyEn: "{brand}: Corrected exam result published.", allowedVariables: ["brand"] },
-  due_reminder: { name: "Due reminder", bodyBn: "{brand}: বকেয়া ফি পরিশোধের জন্য অফিসে যোগাযোগ করুন।", bodyEn: "{brand}: Please contact the office about overdue fees.", allowedVariables: ["brand"] },
+  due_reminder: { name: "Due reminder", bodyBn: "{brand}: {studentName}-এর বকেয়া ৳ {amount}। অনুগ্রহ করে অফিসে যোগাযোগ করুন।", bodyEn: "{brand}: {studentName} has overdue fees of BDT {amount}. Please contact the office.", allowedVariables: ["brand", "studentName", "amount"] },
   custom_notice: { name: "Custom notice", bodyBn: "{brand}: {notice}", bodyEn: "{brand}: {notice}", allowedVariables: ["brand", "notice"] },
 } as const;
 
@@ -39,5 +39,5 @@ export type SmsTemplateKey = keyof typeof SMS_TEMPLATE_DEFAULTS;
 
 export const ENABLED_SMS_EVENT_TYPES = new Set<SmsTemplateKey>([
   "admission_received", "admission_accepted", "attendance_late",
-  "attendance_absent", "payment_posted",
+  "attendance_absent", "payment_posted", "due_reminder",
 ]);

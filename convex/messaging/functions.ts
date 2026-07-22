@@ -6,6 +6,8 @@ import { requireOwner } from "../model/auth";
 import { writeAudit } from "../model/audit";
 import { paginationResultFields } from "../model/validators";
 import { ENABLED_SMS_EVENT_TYPES } from "./templateCatalog";
+import { enqueueSms } from "./model";
+import { normalizeBangladeshPhone } from "../model/normalization";
 
 const deliveryView = v.object({
   messageId: v.id("smsMessages"), status: v.union(v.literal("queued"), v.literal("sending"), v.literal("accepted"), v.literal("sent"), v.literal("delivered"), v.literal("failed"), v.literal("cancelled")),
@@ -99,5 +101,25 @@ export const retry = mutation({
     await ctx.scheduler.runAfter(0, internal.messaging.actions.sendQueued, { messageId: row._id });
     await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: "sms.retry", entityType: "smsMessage", entityId: row._id, summary: "SMS retry requested" });
     return null;
+  },
+});
+
+export const sendTest = mutation({
+  args: { recipient: v.string() },
+  returns: v.object({ queued: v.number() }),
+  handler: async (ctx, args) => {
+    const { account } = await requireOwner(ctx);
+    const recipient = normalizeBangladeshPhone(args.recipient);
+    const ids = await enqueueSms(ctx, {
+      idempotencyKey: `sms-test:${recipient}:${Date.now()}`,
+      eventType: "due_reminder",
+      relatedEntityType: "smsTest",
+      relatedEntityId: account._id,
+      guardianPhone: recipient,
+      locale: "en",
+      body: "Dhrubok: This is a test SMS. আপনার SMS সেবা সঠিকভাবে কাজ করছে।",
+    });
+    await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: "sms.test_queued", entityType: "smsTest", entityId: recipient, summary: "Test SMS queued" });
+    return { queued: ids.length };
   },
 });

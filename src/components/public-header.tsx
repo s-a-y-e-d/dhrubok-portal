@@ -7,17 +7,17 @@ import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { Menu, X, Globe, ArrowRight } from "lucide-react";
 
-export function PublicHeader({ locale, dictionary }: { locale: Locale; dictionary: Dictionary }) {
+type PublicNavigationItem = { key: string; label: string; visible: boolean };
+
+export function PublicHeader({ locale, dictionary, navigation }: { locale: Locale; dictionary: Dictionary; navigation: PublicNavigationItem[] }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const base = `/${locale}`;
 
-  const navLinks = [
-    { href: `${base}/courses`, label: dictionary.nav.courses },
-    { href: `${base}/teachers`, label: dictionary.nav.teachers },
-    { href: `${base}/about`, label: dictionary.nav.about },
-    { href: `${base}/contact`, label: dictionary.nav.contact },
-  ];
+  const pathByKey: Record<string, string> = { home: "", courses: "/courses", teachers: "/teachers", about: "/about", contact: "/contact", admission: "/admission", sign_in: "/sign-in" };
+  const navLinks = navigation.filter((item) => item.visible && !["admission", "sign_in"].includes(item.key)).map((item) => ({ href: `${base}${pathByKey[item.key] ?? ""}`, label: item.label }));
+  const admission = navigation.find((item) => item.key === "admission");
+  const signIn = navigation.find((item) => item.key === "sign_in");
 
   const targetLocale = locale === "bn" ? "en" : "bn";
   const altLocalePath = pathname ? pathname.replace(`/${locale}`, `/${targetLocale}`) : `/${targetLocale}`;
@@ -34,7 +34,8 @@ export function PublicHeader({ locale, dictionary }: { locale: Locale; dictionar
         {/* Desktop Links */}
         <div className="public-links hidden items-center gap-6 md:flex">
           {navLinks.map((link) => {
-            const isActive = pathname === link.href || pathname?.startsWith(`${link.href}/`);
+            const isHome = link.href === base;
+            const isActive = isHome ? pathname === base || pathname === `${base}/` : pathname === link.href || pathname?.startsWith(`${link.href}/`);
             return (
               <Link
                 key={link.href}
@@ -60,14 +61,12 @@ export function PublicHeader({ locale, dictionary }: { locale: Locale; dictionar
             <span>{dictionary.common.language}</span>
           </Link>
 
-          <Link className="text-link text-sm font-medium text-[var(--ink-secondary)] hover:text-[var(--ink)] px-2 py-1" href={`${base}/sign-in`}>
-            {dictionary.nav.signIn}
-          </Link>
+          {signIn?.visible && <Link className="text-link text-sm font-medium text-[var(--ink-secondary)] hover:text-[var(--ink)] px-2 py-1" href={`${base}/sign-in`}>{signIn.label}</Link>}
 
-          <Link className="button button-primary text-sm gap-1.5" href={`${base}/admission`}>
-            <span>{dictionary.nav.apply}</span>
+          {admission?.visible && <Link className="button button-primary text-sm gap-1.5" href={`${base}/admission`}>
+            <span>{admission.label}</span>
             <ArrowRight className="size-4" />
-          </Link>
+          </Link>}
         </div>
 
         {/* Mobile menu button */}
@@ -114,22 +113,22 @@ export function PublicHeader({ locale, dictionary }: { locale: Locale; dictionar
             <div className="h-px bg-[var(--border)] my-1" />
 
             <div className="flex flex-col gap-2.5">
-              <Link
+              {admission?.visible && <Link
                 className="button button-primary w-full justify-center gap-2 text-base h-11"
                 href={`${base}/admission`}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                <span>{dictionary.nav.apply}</span>
+                <span>{admission.label}</span>
                 <ArrowRight className="size-4" />
-              </Link>
+              </Link>}
 
-              <Link
+              {signIn?.visible && <Link
                 className="button button-secondary w-full justify-center text-base h-11"
                 href={`${base}/sign-in`}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                {dictionary.nav.signIn}
-              </Link>
+                {signIn.label}
+              </Link>}
             </div>
           </div>
         </div>

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source not "../../.next-stale";
 
 :root {
   --brand: #3ecf8e;
@@ -127,6 +128,12 @@ html[data-portal-theme="dark"] {
 
 * {
   box-sizing: border-box;
+}
+
+/* Bare Tailwind `border` utilities should use the design-system default,
+   rather than inherit the text colour (white in the dark owner portal). */
+.border {
+  border-color: var(--border);
 }
 
 html {
