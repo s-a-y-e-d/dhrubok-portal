@@ -108,7 +108,7 @@ export const owner = query({
         batchId: session.batchId,
         batchName: batch ? localized(account.locale, batch.nameBn, batch.nameEn) : "—",
         teacherName: teacher?.displayName ?? "—",
-        subjectName: subject ? localized(account.locale, subject.nameBn, subject.nameEn) : "—",
+        subjectName: subject ? subject.nameEn : "—",
         startsAt: session.startsAt,
         endsAt: session.endsAt,
         status: session.status,
@@ -246,7 +246,7 @@ export const teacher = query({
         startsAt: session.startsAt,
         endsAt: session.endsAt,
         status: session.status,
-        subjectName: subject ? localized(account.locale, subject.nameBn, subject.nameEn) : "—",
+        subjectName: subject ? subject.nameEn : "—",
         rosterCount: session.rosterCount,
       };
     }));
@@ -263,7 +263,7 @@ export const teacher = query({
         ctx.db.query("examSubjects").withIndex("by_examId_and_sortOrder", (q) => q.eq("examId", exam._id)).take(100),
       ]);
       const subjects = await Promise.all(examSubdocs.map(es => ctx.db.get("subjects", es.subjectId)));
-      const subjectName = subjects.map(s => s ? localized(account.locale, s.nameBn, s.nameEn) : "").filter(Boolean).join(", ") || null;
+      const subjectName = subjects.map(s => s?.nameEn ?? "").filter(Boolean).join(", ") || null;
 
       assignedExams.push({
         examId: exam._id,
@@ -381,7 +381,7 @@ export const student = query({
       nextClassDetail = {
         batchId: next.batch._id,
         batchName: localized(account.locale, next.batch.nameBn, next.batch.nameEn),
-        subjectName: localized(account.locale, next.subject?.nameBn, next.subject?.nameEn),
+        subjectName: next.subject?.nameEn ?? "—",
         teacherName: teacher?.displayName ?? "—",
         date: next.date,
         weekday: next.schedule.weekday,
@@ -395,7 +395,7 @@ export const student = query({
       thisWeekClasses.push({
         batchId: cand.batch._id,
         batchName: localized(account.locale, cand.batch.nameBn, cand.batch.nameEn),
-        subjectName: localized(account.locale, cand.subject?.nameBn, cand.subject?.nameEn),
+        subjectName: cand.subject?.nameEn ?? "—",
         teacherName: teacher?.displayName ?? "—",
         date: cand.date,
         weekday: cand.schedule.weekday,

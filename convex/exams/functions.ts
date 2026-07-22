@@ -141,7 +141,7 @@ export const create = mutation({
           q.eq("courseId", args.courseId).eq("subjectId", subjectId),
         )
         .unique();
-      if (!subject || subject.status !== "active" || !courseSubject)
+      if (!subject || !courseSubject)
         throw new Error(`Subject ${index + 1} is not active in this course`);
     }
     for (const batchId of args.batchIds) {

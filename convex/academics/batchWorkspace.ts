@@ -280,7 +280,7 @@ export const getBatchDetails = query({
           teacherId: teacher._id,
           teacherName: teacher.displayName,
           subjectId: subject?._id,
-          subjectNameBn: subject?.nameBn,
+          subjectNameBn: subject?.nameEn,
           subjectNameEn: subject?.nameEn,
         });
     }
@@ -299,7 +299,7 @@ export const getBatchDetails = query({
           teacherId: teacher._id,
           teacherName: teacher.displayName,
           subjectId: subject?._id,
-          subjectNameBn: subject?.nameBn,
+          subjectNameBn: subject?.nameEn,
           subjectNameEn: subject?.nameEn,
         });
     }

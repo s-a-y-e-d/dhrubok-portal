@@ -41,30 +41,6 @@ export async function requireAdmissionsOpen(ctx: DbCtx) {
   return settings[0];
 }
 
-export async function validateOpenSelection(
-  ctx: DbCtx,
-  courseId: Id<"courses">,
-  batchId: Id<"batches">,
-) {
-  const [course, batch] = await Promise.all([
-    ctx.db.get("courses", courseId),
-    ctx.db.get("batches", batchId),
-  ]);
-  if (!course || course.status !== "active" || !course.isPublic) {
-    throw new Error("Selected course is not open for admission");
-  }
-  if (
-    !batch ||
-    batch.courseId !== courseId ||
-    batch.status !== "active" ||
-    !batch.isPublic ||
-    !batch.admissionOpen
-  ) {
-    throw new Error("Selected batch is not open for admission");
-  }
-  return { course, batch };
-}
-
 export async function validateOwnerSelection(
   ctx: DbCtx,
   courseId: Id<"courses">,

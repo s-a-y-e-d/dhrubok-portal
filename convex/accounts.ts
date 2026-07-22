@@ -5,6 +5,7 @@ import { localeValidator, paginationResultFields } from "./model/validators";
 import { normalizeEmail } from "./model/normalization";
 import { requireAccount, requireOwner } from "./model/auth";
 import { writeAudit } from "./model/audit";
+import { userError } from "./model/userErrors";
 
 const activeAccountResult = v.object({
   status: v.literal("active"),
@@ -77,7 +78,7 @@ export const bootstrapFirstOwner = mutation({
     if (existing.length > 0 || reserved.length > 0) throw new Error("Owner bootstrap has already been completed");
     const normalizedLoginEmail = normalizeEmail(args.email);
     const duplicateEmail = await ctx.db.query("portalAccounts").withIndex("by_normalizedLoginEmail", (q) => q.eq("normalizedLoginEmail", normalizedLoginEmail)).unique();
-    if (duplicateEmail) throw new Error("An account already uses this email");
+    if (duplicateEmail) userError("DUPLICATE_EMAIL", { field: "email" });
     const now = Date.now();
     const ownerProfileId = await ctx.db.insert("ownerProfiles", { displayName: args.displayName.trim(), email: args.email.trim(), status: "active", createdAt: now, updatedAt: now });
     const accountId = await ctx.db.insert("portalAccounts", { role: "owner", status: "reserved", loginEmail: args.email.trim(), normalizedLoginEmail, ownerProfileId, locale: args.locale, createdAt: now, updatedAt: now });
@@ -93,7 +94,7 @@ export const reserveOwner = mutation({
     const { account } = await requireOwner(ctx);
     const normalizedLoginEmail = normalizeEmail(args.email);
     const duplicate = await ctx.db.query("portalAccounts").withIndex("by_normalizedLoginEmail", (q) => q.eq("normalizedLoginEmail", normalizedLoginEmail)).unique();
-    if (duplicate) throw new Error("An account already uses this email");
+    if (duplicate) userError("DUPLICATE_EMAIL", { field: "email" });
     const now = Date.now();
     const ownerProfileId = await ctx.db.insert("ownerProfiles", { displayName: args.displayName.trim(), email: args.email.trim(), phone: args.phone?.trim(), status: "active", createdAt: now, updatedAt: now });
     const accountId = await ctx.db.insert("portalAccounts", { role: "owner", status: "reserved", loginEmail: args.email.trim(), normalizedLoginEmail, ownerProfileId, locale: args.locale, createdAt: now, updatedAt: now, createdByAccountId: account._id });
@@ -108,9 +109,9 @@ export const suspendOwner = mutation({
   handler: async (ctx, args) => {
     const { account: actor } = await requireOwner(ctx);
     const target = await ctx.db.get("portalAccounts", args.accountId);
-    if (!target || target.role !== "owner" || target.status !== "active") throw new Error("Owner account not found");
+    if (!target || target.role !== "owner" || target.status !== "active") userError("RECORD_NOT_EDITABLE");
     const activeOwners = await ctx.db.query("portalAccounts").withIndex("by_role_and_status", (q) => q.eq("role", "owner").eq("status", "active")).take(2);
-    if (activeOwners.length <= 1) throw new Error("The last active owner cannot be suspended");
+    if (activeOwners.length <= 1) userError("LAST_ACTIVE_OWNER");
     await ctx.db.patch("portalAccounts", target._id, { status: "suspended", updatedAt: Date.now() });
     await ctx.db.patch("ownerProfiles", target.ownerProfileId, { status: "disabled", updatedAt: Date.now() });
     await writeAudit(ctx, { actorAccountId: actor._id, actorRole: "owner", action: "owner.suspended", entityType: "portalAccount", entityId: target._id, summary: "Owner access suspended" });
@@ -124,7 +125,7 @@ export const reactivateOwner = mutation({
   handler: async (ctx, args) => {
     const { account: actor } = await requireOwner(ctx);
     const target = await ctx.db.get("portalAccounts", args.accountId);
-    if (!target || target.role !== "owner" || target.status !== "suspended") throw new Error("Suspended owner account not found");
+    if (!target || target.role !== "owner" || target.status !== "suspended") userError("RECORD_NOT_EDITABLE");
     await ctx.db.patch("portalAccounts", target._id, { status: "active", updatedAt: Date.now() });
     await ctx.db.patch("ownerProfiles", target.ownerProfileId, { status: "active", updatedAt: Date.now() });
     await writeAudit(ctx, { actorAccountId: actor._id, actorRole: "owner", action: "owner.reactivated", entityType: "portalAccount", entityId: target._id, summary: "Owner access reactivated" });
@@ -158,14 +159,14 @@ export const resetLoginReservation = mutation({
   handler: async (ctx, args) => {
     const { account: actor } = await requireOwner(ctx);
     const target = await ctx.db.get("portalAccounts", args.accountId);
-    if (!target) throw new Error("Portal account not found");
+    if (!target) userError("RECORD_NOT_EDITABLE");
     if (target.role === "owner" && target.status === "active") {
       const activeOwners = await ctx.db.query("portalAccounts").withIndex("by_role_and_status", (q) => q.eq("role", "owner").eq("status", "active")).take(2);
-      if (activeOwners.length <= 1) throw new Error("The last active owner cannot be unlinked");
+      if (activeOwners.length <= 1) userError("LAST_ACTIVE_OWNER");
     }
     const normalizedLoginEmail = normalizeEmail(args.newEmail);
     const duplicate = await ctx.db.query("portalAccounts").withIndex("by_normalizedLoginEmail", (q) => q.eq("normalizedLoginEmail", normalizedLoginEmail)).unique();
-    if (duplicate && duplicate._id !== target._id) throw new Error("An account already uses this email");
+    if (duplicate && duplicate._id !== target._id) userError("DUPLICATE_EMAIL", { field: "newEmail" });
     await ctx.db.patch("portalAccounts", target._id, {
       loginEmail: args.newEmail.trim(), normalizedLoginEmail, tokenIdentifier: undefined,
       status: "reserved", claimedAt: undefined, lastSignedInAt: undefined, updatedAt: Date.now(),

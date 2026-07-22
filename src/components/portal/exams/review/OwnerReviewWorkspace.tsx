@@ -115,9 +115,7 @@ export function OwnerReviewWorkspace({
               <tr key={row.assignment._id}>
                 <td>
                   {row.subjectDoc
-                    ? bn
-                      ? row.subjectDoc.nameBn
-                      : row.subjectDoc.nameEn
+                    ? row.subjectDoc.nameEn
                     : "—"}
                 </td>
                 <td>
@@ -246,7 +244,7 @@ export function OwnerReviewWorkspace({
                     return (
                       <tr key={row._id}>
                         <td>
-                          {subject ? (bn ? subject.nameBn : subject.nameEn) : "—"}
+                          {subject ? subject.nameEn : "—"}
                         </td>
                         <td>
                           {row.mcqScoreScaled === undefined

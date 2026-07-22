@@ -855,9 +855,6 @@ a {
   height: 1px;
   overflow: hidden;
 }
-.turnstile-box {
-  min-height: 65px;
-}
 .form-message {
   margin: 0;
   border-radius: 6px;

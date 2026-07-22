@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Globe2,
+  Pencil,
   Plus,
   Search,
   Trash2,
@@ -37,6 +38,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { ResponsiveDetailDrawer } from "@/components/portal/ResponsiveDetailDrawer";
 import {
@@ -56,9 +63,16 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/portal/DatePicker";
+import { friendlyError } from "@/components/portal/academics/shared/utils";
 import { cn } from "@/lib/utils";
 
 type Locale = "bn" | "en";
+type SubjectListItem = {
+  subjectId: Id<"subjects">;
+  code: string;
+  nameEn: string;
+  isConnected: boolean;
+};
 const academicStatusLabel = (status: string, bn: boolean) => {
   const labels: Record<string, [string, string]> = {
     active: ["সক্রিয়", "Active"],
@@ -109,6 +123,8 @@ const minutes = (value: string) => {
   const [hour, minute] = value.split(":").map(Number);
   return hour * 60 + minute;
 };
+const isValidCode = (value: string) =>
+  /^[A-Z0-9][A-Z0-9_-]{0,31}$/.test(value.trim().toUpperCase());
 
 function WizardSteps({ step, bn }: { step: number; bn: boolean }) {
   const labels = bn
@@ -219,6 +235,14 @@ function CourseCreateDialog({
       );
       return false;
     }
+    if (step === 1 && !isValidCode(course.code)) {
+      setMessage(
+        bn
+          ? "কোর্স কোডে ১–৩২টি ইংরেজি অক্ষর, সংখ্যা, আন্ডারস্কোর (_) বা হাইফেন (-) ব্যবহার করুন।"
+          : "Course code must be 1–32 letters or numbers and may include underscores (_) or hyphens (-).",
+      );
+      return false;
+    }
     if (
       step === 2 &&
       (!teachers.length ||
@@ -263,6 +287,14 @@ function CourseCreateDialog({
   };
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (batch.code && !isValidCode(batch.code)) {
+      setMessage(
+        bn
+          ? "ব্যাচ কোডে ১–৩২টি ইংরেজি অক্ষর, সংখ্যা, আন্ডারস্কোর (_) বা হাইফেন (-) ব্যবহার করুন।"
+          : "Batch code must be 1–32 letters or numbers and may include underscores (_) or hyphens (-).",
+      );
+      return;
+    }
     if (
       !batch.nameBn ||
       !batch.nameEn ||
@@ -312,7 +344,7 @@ function CourseCreateDialog({
       onOpenChange(false);
       onCreated(result.courseId);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
+      setMessage(friendlyError(error, bn));
     } finally {
       setBusy(false);
     }
@@ -683,7 +715,7 @@ function CourseCreateDialog({
                       {bn ? "ক্লাস যোগ" : "Add class"}
                     </Button>
                   </div>
-                  {routine.map((row, index) => {
+                  {routine.map((row) => {
                     const mappedSubjects =
                       teachers.find(
                         (teacher) => teacher.teacherId === row.teacherId,
@@ -906,6 +938,204 @@ function CourseCreateDialog({
   );
 }
 
+function SubjectCatalog({
+  locale,
+  onFeedback,
+}: {
+  locale: Locale;
+  onFeedback: (message: string) => void;
+}) {
+  const bn = locale === "bn";
+  const subjects = useQuery(api.academics.subjects.listCatalog, {});
+  const createSubject = useMutation(api.academics.subjects.create);
+  const updateSubject = useMutation(api.academics.subjects.update);
+  const removeSubject = useMutation(api.academics.subjects.remove);
+  const [query, setQuery] = useState("");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editing, setEditing] = useState<SubjectListItem | null>(null);
+  const [nameEn, setNameEn] = useState("");
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<SubjectListItem | null>(null);
+
+  const filteredSubjects = useMemo(() => {
+    const term = query.trim().toLocaleLowerCase();
+    if (!term) return subjects ?? [];
+    return (subjects ?? []).filter(
+      (subject) =>
+        subject.nameEn.toLocaleLowerCase().includes(term) ||
+        subject.code.toLocaleLowerCase().includes(term),
+    );
+  }, [query, subjects]);
+
+  const openCreate = () => {
+    setEditing(null);
+    setNameEn("");
+    setCode("");
+    setError(null);
+    setDrawerOpen(true);
+  };
+  const openEdit = (subject: SubjectListItem) => {
+    setEditing(subject);
+    setNameEn(subject.nameEn);
+    setCode(subject.code);
+    setError(null);
+    setDrawerOpen(true);
+  };
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      if (editing) {
+        await updateSubject({ subjectId: editing.subjectId, nameEn, code });
+        onFeedback(bn ? "বিষয় আপডেট হয়েছে।" : "Subject updated.");
+      } else {
+        await createSubject({ nameEn, code });
+        onFeedback(bn ? "বিষয় যোগ হয়েছে।" : "Subject added.");
+      }
+      setDrawerOpen(false);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="grid gap-4 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--canvas)] p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">{bn ? "বিষয় তালিকা" : "Subject list"}</h2>
+          <p className="text-sm text-[var(--ink-mute)]">
+            {bn
+              ? "সব কোর্সে ব্যবহারযোগ্য বিষয় পরিচালনা করুন।"
+              : "Manage the global subjects available to every course."}
+          </p>
+        </div>
+        <Button onClick={openCreate}>
+          <Plus data-icon="inline-start" />
+          {bn ? "বিষয় যোগ করুন" : "Add subject"}
+        </Button>
+      </div>
+      <Label className="relative">
+        <span className="sr-only">{bn ? "বিষয় খুঁজুন" : "Search subjects"}</span>
+        <Search className="pointer-events-none absolute start-3 top-3 size-4 text-[var(--ink-mute)]" />
+        <Input
+          className="ps-9"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={bn ? "ইংরেজি নাম বা কোড" : "English name or code"}
+        />
+      </Label>
+      {filteredSubjects.length ? (
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{bn ? "বিষয়ের নাম" : "Subject name"}</TableHead>
+                <TableHead>{bn ? "কোড" : "Code"}</TableHead>
+                <TableHead className="text-end">
+                  <span className="sr-only">{bn ? "কাজ" : "Actions"}</span>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredSubjects.map((subject) => (
+                <TableRow key={subject.subjectId}>
+                  <TableCell className="font-medium">{subject.nameEn}</TableCell>
+                  <TableCell className="font-mono text-sm">{subject.code}</TableCell>
+                  <TableCell>
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(subject)} aria-label={`${bn ? "সম্পাদনা" : "Edit"} ${subject.nameEn}`}>
+                        <Pencil />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        disabled={subject.isConnected}
+                        title={subject.isConnected ? (bn ? "কোর্সের সাথে সংযুক্ত বিষয় মুছতে পারবেন না" : "Connected subjects cannot be deleted") : undefined}
+                        onClick={() => setDeleteTarget(subject)}
+                        aria-label={`${bn ? "মুছুন" : "Delete"} ${subject.nameEn}`}
+                      >
+                        <Trash2 />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      ) : (
+        <div className="grid place-items-center gap-2 py-10 text-center">
+          <BookOpen className="size-8 text-[var(--ink-faint)]" />
+          <p className="font-medium">{bn ? "কোনো বিষয় পাওয়া যায়নি" : "No subjects found"}</p>
+        </div>
+      )}
+
+      <ResponsiveDetailDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        mobileEdgeToEdge
+        closeLabel={bn ? "বন্ধ করুন" : "Close"}
+        title={editing ? (bn ? "বিষয় সম্পাদনা" : "Edit subject") : (bn ? "বিষয় যোগ করুন" : "Add subject")}
+        description={bn ? "ইংরেজি নাম ও একটি স্বতন্ত্র কোড দিন।" : "Enter an English name and a unique code."}
+      >
+        <form className="flex min-h-full flex-col gap-5" onSubmit={submit}>
+          <FieldGroup>
+            <Field data-invalid={Boolean(error)}>
+              <FieldLabel htmlFor="subject-name-en">{bn ? "ইংরেজি নাম" : "English name"}</FieldLabel>
+              <Input id="subject-name-en" value={nameEn} onChange={(event) => setNameEn(event.target.value)} required aria-invalid={Boolean(error)} autoFocus />
+            </Field>
+            <Field data-invalid={Boolean(error)}>
+              <FieldLabel htmlFor="subject-code">{bn ? "বিষয় কোড" : "Subject code"}</FieldLabel>
+              <Input id="subject-code" value={code} onChange={(event) => setCode(event.target.value)} required aria-invalid={Boolean(error)} />
+            </Field>
+            {error ? <FieldError>{error}</FieldError> : null}
+          </FieldGroup>
+          <div className="sticky bottom-0 mt-auto flex justify-end gap-2 border-t border-[var(--border)] bg-[var(--canvas)] py-4">
+            <Button type="button" variant="secondary" onClick={() => setDrawerOpen(false)}>{bn ? "বাতিল" : "Cancel"}</Button>
+            <Button type="submit" disabled={busy}>{busy ? (bn ? "সংরক্ষণ হচ্ছে…" : "Saving…") : (bn ? "সংরক্ষণ করুন" : "Save subject")}</Button>
+          </div>
+        </form>
+      </ResponsiveDetailDrawer>
+
+      <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{bn ? "বিষয় স্থায়ীভাবে মুছবেন?" : "Permanently delete subject?"}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {bn
+                ? `${deleteTarget?.nameEn ?? ""} আর পুনরুদ্ধার করা যাবে না।`
+                : `${deleteTarget?.nameEn ?? ""} cannot be recovered after deletion.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{bn ? "বাতিল" : "Cancel"}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!deleteTarget) return;
+                try {
+                  await removeSubject({ subjectId: deleteTarget.subjectId });
+                  onFeedback(bn ? "বিষয় স্থায়ীভাবে মুছে ফেলা হয়েছে।" : "Subject permanently deleted.");
+                } catch (caught) {
+                  onFeedback(caught instanceof Error ? caught.message : String(caught));
+                } finally {
+                  setDeleteTarget(null);
+                }
+              }}
+            >
+              {bn ? "স্থায়ীভাবে মুছুন" : "Delete permanently"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </section>
+  );
+}
+
 export function CoursesWorkspace({ locale }: { locale: Locale }) {
   const bn = locale === "bn";
   const [status, setStatus] = useState<"active" | "archived">("active");
@@ -1058,6 +1288,7 @@ export function CoursesWorkspace({ locale }: { locale: Locale }) {
           </Button>
         )}
       </section>
+      <SubjectCatalog locale={locale} onFeedback={setFeedback} />
       <CourseCreateDialog
         open={createOpen}
         onOpenChange={setCreateOpen}

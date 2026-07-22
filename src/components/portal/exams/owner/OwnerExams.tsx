@@ -632,7 +632,7 @@ export function OwnerExamCreatePage({ locale }: { locale: Locale }) {
                         <CardTitle className="text-base">
                           <label htmlFor={`subject-${row.subject._id}`}>
                             {locale === "bn"
-                              ? row.subject.nameBn
+                              ? row.subject.nameEn
                               : row.subject.nameEn}
                           </label>
                         </CardTitle>
@@ -1055,7 +1055,7 @@ export function OwnerExamDetailPage({
                   >
                     <span>
                       {locale === "bn"
-                        ? subjectRecord?.nameBn
+                    ? subjectRecord?.nameEn
                         : subjectRecord?.nameEn}
                     </span>
                     <span className="text-sm text-muted-foreground">

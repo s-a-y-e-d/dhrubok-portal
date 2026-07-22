@@ -185,7 +185,7 @@ export const getTeacherDetails = query({
           courseId: course._id,
           courseNameBn: course.nameBn,
           courseNameEn: course.nameEn,
-          subjectNameBn: subject.nameBn,
+          subjectNameBn: subject.nameEn,
           subjectNameEn: subject.nameEn,
         });
     }
@@ -204,7 +204,7 @@ export const getTeacherDetails = query({
           batchNameEn: batch.nameEn,
           courseNameBn: course.nameBn,
           courseNameEn: course.nameEn,
-          subjectNameBn: subject?.nameBn,
+          subjectNameBn: subject?.nameEn,
           subjectNameEn: subject?.nameEn,
         });
     }

@@ -179,7 +179,7 @@ export const creationOptions = query({
     const subjects = [];
     for (const link of links) {
       const subject = await ctx.db.get("subjects", link.subjectId);
-      if (!subject || subject.status !== "active") continue;
+      if (!subject) continue;
       const assigned = batchAssignments.filter(
         (row) => row.subjectId === subject._id,
       );

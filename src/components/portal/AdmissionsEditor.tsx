@@ -118,12 +118,13 @@ export function AdmissionsEditor({ locale }: { locale: "bn" | "en" }) {
     ok: boolean;
     text: string;
   } | null>(null);
+  const activeCourseId = courseId || detail?.requestedCourseId;
   const batches = useMemo(
     () =>
       scopes?.batches.filter(
-        (batch) => !courseId || batch.courseId === courseId,
+        (batch) => !activeCourseId || batch.courseId === activeCourseId,
       ) ?? [],
-    [scopes, courseId],
+    [scopes, activeCourseId],
   );
   const courseNames = useMemo(
     () =>
@@ -188,9 +189,13 @@ export function AdmissionsEditor({ locale }: { locale: "bn" | "en" }) {
     if (!detail) return;
     const data = new FormData(event.currentTarget);
     const confirmedCourseId = (courseId ||
-      detail.requestedCourseId) as Id<"courses">;
+      detail.requestedCourseId) as Id<"courses"> | undefined;
     const confirmedBatchId = (batchId ||
-      detail.requestedBatchId) as Id<"batches">;
+      detail.requestedBatchId) as Id<"batches"> | undefined;
+    if (!confirmedCourseId || !confirmedBatchId) {
+      setFeedback({ ok: false, text: bn ? "কোর্স ও ব্যাচ নির্বাচন করুন।" : "Select a course and batch." });
+      return;
+    }
     const admissionFeeMinor = Math.round(
       Number(data.get("initialCharge") || 0) * 100,
     );
@@ -350,12 +355,14 @@ export function AdmissionsEditor({ locale }: { locale: "bn" | "en" }) {
                         <TableCell>
                           <div className="flex min-w-36 flex-col gap-1">
                             <span>
-                              {courseNames.get(application.requestedCourseId) ??
-                                "—"}
+                              {application.requestedCourseId
+                                ? courseNames.get(application.requestedCourseId) ?? "—"
+                                : "—"}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              {batchNames.get(application.requestedBatchId) ??
-                                "—"}
+                              {application.requestedBatchId
+                                ? batchNames.get(application.requestedBatchId) ?? "—"
+                                : "—"}
                             </span>
                           </div>
                         </TableCell>
@@ -427,9 +434,13 @@ export function AdmissionsEditor({ locale }: { locale: "bn" | "en" }) {
                         <span className="block text-xs text-muted-foreground">
                           {bn ? "পছন্দ" : "Requested"}
                         </span>
-                        {courseNames.get(application.requestedCourseId) ?? "—"}
+                        {application.requestedCourseId
+                          ? courseNames.get(application.requestedCourseId) ?? "—"
+                          : "—"}
                         <span className="block text-xs text-muted-foreground">
-                          {batchNames.get(application.requestedBatchId) ?? "—"}
+                          {application.requestedBatchId
+                            ? batchNames.get(application.requestedBatchId) ?? "—"
+                            : "—"}
                         </span>
                       </span>
                     </span>
@@ -555,22 +566,26 @@ export function AdmissionsEditor({ locale }: { locale: "bn" | "en" }) {
                         {detail.motherName || "—"} · {detail.motherPhone || "—"}
                       </dd>
                     </div>
-                    <div>
-                      <dt className="text-xs text-muted-foreground">
-                        {bn ? "পছন্দের কোর্স" : "Requested course"}
-                      </dt>
-                      <dd className="mt-1 text-sm font-medium">
-                        {courseNames.get(detail.requestedCourseId) ?? "—"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-muted-foreground">
-                        {bn ? "পছন্দের ব্যাচ" : "Requested batch"}
-                      </dt>
-                      <dd className="mt-1 text-sm font-medium">
-                        {batchNames.get(detail.requestedBatchId) ?? "—"}
-                      </dd>
-                    </div>
+                    {detail.requestedCourseId ? (
+                      <div>
+                        <dt className="text-xs text-muted-foreground">
+                          {bn ? "পছন্দের কোর্স" : "Requested course"}
+                        </dt>
+                        <dd className="mt-1 text-sm font-medium">
+                          {courseNames.get(detail.requestedCourseId) ?? "—"}
+                        </dd>
+                      </div>
+                    ) : null}
+                    {detail.requestedBatchId ? (
+                      <div>
+                        <dt className="text-xs text-muted-foreground">
+                          {bn ? "পছন্দের ব্যাচ" : "Requested batch"}
+                        </dt>
+                        <dd className="mt-1 text-sm font-medium">
+                          {batchNames.get(detail.requestedBatchId) ?? "—"}
+                        </dd>
+                      </div>
+                    ) : null}
                   </dl>
                   {detail.applicantNote ? (
                     <p className="rounded-lg border p-4 text-sm">
@@ -676,14 +691,14 @@ export function AdmissionsEditor({ locale }: { locale: "bn" | "en" }) {
                         {bn ? "নিশ্চিত কোর্স" : "Confirmed course"}
                       </FieldLabel>
                       <Select
-                        value={courseId || detail.requestedCourseId}
+                        value={courseId || detail.requestedCourseId || ""}
                         onValueChange={(value) => {
                           setCourseId(value as Id<"courses">);
                           setBatchId("");
                         }}
                       >
                         <SelectTrigger id="review-course">
-                          <SelectValue />
+                          <SelectValue placeholder={bn ? "কোর্স নির্বাচন করুন" : "Select a course"} />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
@@ -704,13 +719,13 @@ export function AdmissionsEditor({ locale }: { locale: "bn" | "en" }) {
                         {bn ? "নিশ্চিত ব্যাচ" : "Confirmed batch"}
                       </FieldLabel>
                       <Select
-                        value={batchId || detail.requestedBatchId}
+                        value={batchId || detail.requestedBatchId || ""}
                         onValueChange={(value) =>
                           setBatchId(value as Id<"batches">)
                         }
                       >
                         <SelectTrigger id="review-batch">
-                          <SelectValue />
+                          <SelectValue placeholder={bn ? "ব্যাচ নির্বাচন করুন" : "Select a batch"} />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>

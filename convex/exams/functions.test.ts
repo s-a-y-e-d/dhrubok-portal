@@ -77,9 +77,7 @@ async function fixture(t: ReturnType<typeof convexTest>) {
     });
     const subjectId = await ctx.db.insert("subjects", {
       code: "MATH",
-      nameBn: "Math",
       nameEn: "Math",
-      status: "active",
       createdAt: now,
       updatedAt: now,
     });

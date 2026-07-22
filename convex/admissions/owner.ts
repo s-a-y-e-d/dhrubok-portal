@@ -45,8 +45,8 @@ const inboxItemValidator = v.object({
   studentEmail: v.string(),
   guardianName: v.string(),
   guardianPhone: v.string(),
-  requestedCourseId: v.id("courses"),
-  requestedBatchId: v.id("batches"),
+  requestedCourseId: v.optional(v.id("courses")),
+  requestedBatchId: v.optional(v.id("batches")),
   status: applicationStatusValidator,
 });
 
@@ -80,8 +80,8 @@ const applicationDetailValidator = v.object({
   motherName: v.union(v.string(), v.null()),
   motherPhone: v.union(v.string(), v.null()),
   preferredSmsLocale: v.union(v.literal("bn"), v.literal("en")),
-  requestedCourseId: v.id("courses"),
-  requestedBatchId: v.id("batches"),
+  requestedCourseId: v.union(v.id("courses"), v.null()),
+  requestedBatchId: v.union(v.id("batches"), v.null()),
   applicantNote: v.union(v.string(), v.null()),
   status: applicationStatusValidator,
   reviewedByAccountId: v.union(v.id("portalAccounts"), v.null()),
@@ -303,8 +303,8 @@ export const getApplication = query({
       motherName: application.motherName ?? null,
       motherPhone: application.motherPhone ?? null,
       preferredSmsLocale: application.preferredSmsLocale,
-      requestedCourseId: application.requestedCourseId,
-      requestedBatchId: application.requestedBatchId,
+      requestedCourseId: application.requestedCourseId ?? null,
+      requestedBatchId: application.requestedBatchId ?? null,
       applicantNote: application.applicantNote ?? null,
       status: application.status,
       reviewedByAccountId: application.reviewedByAccountId ?? null,
@@ -340,11 +340,11 @@ export const setReviewState = mutation({
     await writeAudit(ctx, {
       actorAccountId: account._id,
       actorRole: "owner",
-      action: "admission.review_state_changed",
+      action: "admission.review_status_changed",
       entityType: "admissionApplication",
       entityId: application._id,
-      summary: "Admission application review state changed",
-      metadata: { status: args.status },
+      summary: `Application marked ${args.status}`,
+      metadata: { previousStatus: application.status, nextStatus: args.status },
     });
     return null;
   },
@@ -387,8 +387,8 @@ export const adjustRequestedSelection = mutation({
       entityId: application._id,
       summary: "Requested course and batch changed during review",
       metadata: {
-        previousCourseId: application.requestedCourseId,
-        previousBatchId: application.requestedBatchId,
+        previousCourseId: application.requestedCourseId ?? null,
+        previousBatchId: application.requestedBatchId ?? null,
         requestedCourseId: args.requestedCourseId,
         requestedBatchId: args.requestedBatchId,
       },

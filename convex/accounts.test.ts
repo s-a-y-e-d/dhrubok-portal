@@ -86,7 +86,7 @@ describe("portal account claiming", () => {
     const t = convexTest(schema, modules);
     const accountId = await seedOwner(t, { email: "owner@example.com", tokenIdentifier: "clerk|owner", status: "active" });
     const authenticated = t.withIdentity({ tokenIdentifier: "clerk|owner", email: "owner@example.com", emailVerified: true });
-    await expect(authenticated.mutation(api.accounts.suspendOwner, { accountId })).rejects.toThrow("last active owner");
+    await expect(authenticated.mutation(api.accounts.suspendOwner, { accountId })).rejects.toMatchObject({ data: { code: "LAST_ACTIVE_OWNER" } });
   });
 
   it("allows one owner to suspend another while preserving an active owner", async () => {

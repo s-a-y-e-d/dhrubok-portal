@@ -18,6 +18,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 
 const MOBILE_QUERY = "(max-width: 767px)";
 
@@ -38,6 +39,7 @@ type ResponsiveDetailDrawerProps = {
   description?: ReactNode;
   closeLabel: string;
   children: ReactNode;
+  mobileEdgeToEdge?: boolean;
 };
 
 export function ResponsiveDetailDrawer({
@@ -47,6 +49,7 @@ export function ResponsiveDetailDrawer({
   description,
   closeLabel,
   children,
+  mobileEdgeToEdge = false,
 }: ResponsiveDetailDrawerProps) {
   const isMobile = useSyncExternalStore(
     subscribeToMobileQuery,
@@ -61,7 +64,13 @@ export function ResponsiveDetailDrawer({
         onOpenChange={onOpenChange}
         shouldScaleBackground={false}
       >
-        <DrawerContent className="max-h-[90dvh] border-[var(--border)] bg-[var(--canvas)] text-[var(--ink)] shadow-[var(--shadow-3)]">
+        <DrawerContent
+          className={cn(
+            "max-h-[90dvh] border-[var(--border)] bg-[var(--canvas)] text-[var(--ink)] shadow-[var(--shadow-3)]",
+            mobileEdgeToEdge &&
+              "!inset-x-0 !w-screen !max-w-none rounded-t-none",
+          )}
+        >
           <DrawerHeader className="relative border-b border-[var(--border)] pe-16 text-start">
             <DrawerTitle className="text-xl leading-7">{title}</DrawerTitle>
             {description ? (

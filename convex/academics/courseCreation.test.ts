@@ -58,9 +58,7 @@ async function setup() {
     });
     const subjectId = await ctx.db.insert("subjects", {
       code: "MATH",
-      nameBn: "গণিত",
       nameEn: "Mathematics",
-      status: "active",
       createdAt: now,
       updatedAt: now,
     });

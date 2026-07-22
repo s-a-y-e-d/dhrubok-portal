@@ -181,7 +181,7 @@ async function project(ctx: DbCtx, row: Doc<"classSessions">) {
     teacherId: teacher._id,
     teacherName: teacher.displayName,
     subjectId: subject?._id ?? null,
-    subjectNameBn: subject?.nameBn ?? null,
+    subjectNameBn: subject?.nameEn ?? null,
     subjectNameEn: subject?.nameEn ?? null,
     sessionDate: row.sessionDate,
     startsAt: row.startsAt,
@@ -314,7 +314,7 @@ export const getOptions = query({
     const [courses, batches, teachers, subjects] = await Promise.all([
       ctx.db
         .query("courses")
-        .withIndex("by_status", (q) => q.eq("status", "active"))
+        .withIndex("by_code")
         .take(200),
       ctx.db
         .query("batches")
@@ -326,7 +326,7 @@ export const getOptions = query({
         .take(300),
       ctx.db
         .query("subjects")
-        .withIndex("by_status", (q) => q.eq("status", "active"))
+        .withIndex("by_code")
         .take(300),
     ]);
     const assignments = await ctx.db
@@ -350,7 +350,7 @@ export const getOptions = query({
       teachers: teachers.map((row) => ({ id: row._id, name: row.displayName })),
       subjects: subjects.map((row) => ({
         id: row._id,
-        nameBn: row.nameBn,
+        nameBn: row.nameEn,
         nameEn: row.nameEn,
       })),
       assignments: assignments.map((row) => ({

@@ -14,7 +14,7 @@ const pageFields = {
 
 export const admissionApplications = query({
   args: { status: v.union(v.literal("new"), v.literal("under_review"), v.literal("accepted"), v.literal("rejected"), v.literal("withdrawn")), paginationOpts: paginationOptsValidator },
-  returns: v.object({ page: v.array(v.object({ applicationId: v.id("admissionApplications"), applicationNumber: v.string(), studentDisplayName: v.string(), normalizedStudentEmail: v.string(), guardianPhone: v.string(), requestedCourseId: v.id("courses"), requestedBatchId: v.id("batches"), status: v.string(), submittedAt: v.number() })), ...pageFields }),
+  returns: v.object({ page: v.array(v.object({ applicationId: v.id("admissionApplications"), applicationNumber: v.string(), studentDisplayName: v.string(), normalizedStudentEmail: v.string(), guardianPhone: v.string(), requestedCourseId: v.optional(v.id("courses")), requestedBatchId: v.optional(v.id("batches")), status: v.string(), submittedAt: v.number() })), ...pageFields }),
   handler: async (ctx, args) => {
     await requireOwner(ctx);
     const page = await ctx.db.query("admissionApplications").withIndex("by_status_and_submittedAt", (q) => q.eq("status", args.status)).order("desc").paginate(args.paginationOpts);

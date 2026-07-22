@@ -48,7 +48,7 @@ export async function computeCourseReadiness(ctx: QueryCtx | MutationCtx, course
     ...await ctx.db.query("batches").withIndex("by_courseId_and_status", q => q.eq("courseId", courseId).eq("status", "active")).take(200),
   ];
   const links = await ctx.db.query("courseSubjects").withIndex("by_courseId_and_sortOrder", q => q.eq("courseId", courseId)).take(200);
-  const subjects = (await Promise.all(links.map(link => ctx.db.get("subjects", link.subjectId)))).filter(subject => subject?.status === "active");
+  const subjects = (await Promise.all(links.map(link => ctx.db.get("subjects", link.subjectId)))).filter(subject => subject !== null);
 
   if (!batches.length) issues.push({ code: "NO_QUALIFYING_BATCH", courseId, labelBn: "কমপক্ষে একটি পরিকল্পিত বা সক্রিয় ব্যাচ যোগ করুন", labelEn: "Add at least one planned or active batch" });
   if (!subjects.length) issues.push({ code: "NO_COURSE_SUBJECT", courseId, labelBn: "কমপক্ষে একটি সক্রিয় বিষয় যোগ করুন", labelEn: "Add at least one active subject" });
@@ -61,7 +61,7 @@ export async function computeCourseReadiness(ctx: QueryCtx | MutationCtx, course
       ctx.db.query("feePlans").withIndex("by_courseId_and_status", q => q.eq("courseId", courseId).eq("status", "active")).take(10),
       ctx.db.query("enrolments").withIndex("by_batchId_and_status", q => q.eq("batchId", batch._id).eq("status", "active")).take(500),
     ]);
-    for (const subject of subjects) if (!assignments.some(row => row.subjectId === subject!._id)) issues.push({ code: "BATCH_SUBJECT_TEACHER_MISSING", courseId, batchId: batch._id, subjectId: subject!._id, labelBn: `${batch.nameBn} · ${subject!.nameBn}`, labelEn: `${batch.nameEn} · ${subject!.nameEn}` });
+    for (const subject of subjects) if (!assignments.some(row => row.subjectId === subject!._id)) issues.push({ code: "BATCH_SUBJECT_TEACHER_MISSING", courseId, batchId: batch._id, subjectId: subject!._id, labelBn: `${batch.nameBn} · ${subject!.nameEn}`, labelEn: `${batch.nameEn} · ${subject!.nameEn}` });
     if (!routines.length) issues.push({ code: "BATCH_ROUTINE_MISSING", courseId, batchId: batch._id, labelBn: `${batch.nameBn}-এ রুটিন যোগ করুন`, labelEn: `Add a routine to ${batch.nameEn}` });
     const applicablePlans = batchPlans.length ? batchPlans : coursePlans;
     if (!applicablePlans.length) issues.push({ code: "BATCH_FEE_PLAN_MISSING", courseId, batchId: batch._id, labelBn: `${batch.nameBn}-এর ফি পরিকল্পনা নেই`, labelEn: `${batch.nameEn} has no fee plan` });

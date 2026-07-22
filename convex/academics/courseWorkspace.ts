@@ -77,7 +77,7 @@ export const getCourseDetails = query({
     for (const row of defaults) {
       const [subject, teacher] = await Promise.all([ctx.db.get("subjects", row.subjectId), ctx.db.get("teachers", row.teacherId)]);
       if (!subject || !teacher) continue;
-      defaultRows.push({ defaultId: row._id, subjectId: subject._id, subjectCode: subject.code, subjectNameBn: subject.nameBn, subjectNameEn: subject.nameEn, teacherId: teacher._id, teacherName: teacher.displayName });
+      defaultRows.push({ defaultId: row._id, subjectId: subject._id, subjectCode: subject.code, subjectNameBn: subject.nameEn, subjectNameEn: subject.nameEn, teacherId: teacher._id, teacherName: teacher.displayName });
     }
     const statuses = ["planned", "active", "completed", "archived"] as const;
     const batches = (await Promise.all(statuses.map((status) => ctx.db.query("batches").withIndex("by_courseId_and_status", (q) => q.eq("courseId", courseId).eq("status", status)).take(200)))).flat();

@@ -14,9 +14,9 @@ export const contentScopes = query({
     const [courses, batches, subjects] = await Promise.all([
       ctx.db.query("courses").withIndex("by_status", (q) => q.eq("status", "active")).take(200),
       ctx.db.query("batches").withIndex("by_status", (q) => q.eq("status", "active")).take(500),
-      ctx.db.query("subjects").withIndex("by_status", (q) => q.eq("status", "active")).take(200),
+      ctx.db.query("subjects").withIndex("by_code").take(200),
     ]);
-    return { courses: courses.map((course) => ({ courseId: course._id, nameBn: course.nameBn, nameEn: course.nameEn })), batches: batches.map((batch) => ({ batchId: batch._id, courseId: batch.courseId, nameBn: batch.nameBn, nameEn: batch.nameEn })), subjects: subjects.map((subject) => ({ subjectId: subject._id, nameBn: subject.nameBn, nameEn: subject.nameEn })) };
+    return { courses: courses.map((course) => ({ courseId: course._id, nameBn: course.nameBn, nameEn: course.nameEn })), batches: batches.map((batch) => ({ batchId: batch._id, courseId: batch.courseId, nameBn: batch.nameBn, nameEn: batch.nameEn })), subjects: subjects.map((subject) => ({ subjectId: subject._id, nameBn: subject.nameEn, nameEn: subject.nameEn })) };
   },
 });
 
@@ -33,13 +33,13 @@ export const ownerWorkspace = query({
     const [courses, batches, subjects, teachers] = await Promise.all([
       ctx.db.query("courses").withIndex("by_status", (q) => q.eq("status", "active")).take(200),
       ctx.db.query("batches").withIndex("by_status", (q) => q.eq("status", "active")).take(500),
-      ctx.db.query("subjects").withIndex("by_status", (q) => q.eq("status", "active")).take(200),
+      ctx.db.query("subjects").withIndex("by_code").take(200),
       ctx.db.query("teachers").withIndex("by_status", (q) => q.eq("status", "active")).take(200),
     ]);
     return {
       courses: courses.map((row) => ({ courseId: row._id, nameBn: row.nameBn, nameEn: row.nameEn })),
       batches: batches.map((row) => ({ batchId: row._id, courseId: row.courseId, nameBn: row.nameBn, nameEn: row.nameEn })),
-      subjects: subjects.map((row) => ({ subjectId: row._id, code: row.code, nameBn: row.nameBn, nameEn: row.nameEn })),
+      subjects: subjects.map((row) => ({ subjectId: row._id, code: row.code, nameBn: row.nameEn, nameEn: row.nameEn })),
       teachers: teachers.map((row) => ({ teacherId: row._id, displayName: row.displayName })),
     };
   },

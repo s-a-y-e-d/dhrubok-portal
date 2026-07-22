@@ -237,7 +237,7 @@ export function OwnerMarksPanel({
                   {subjects.map(({ subject, subjectRecord }) => (
                     <SelectItem key={subject._id} value={subject._id}>
                       {locale === "bn"
-                        ? subjectRecord?.nameBn
+                        ? subjectRecord?.nameEn
                         : subjectRecord?.nameEn}
                     </SelectItem>
                   ))}

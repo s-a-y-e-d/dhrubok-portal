@@ -154,7 +154,7 @@ export const createWithFirstBatch = mutation({
     if (teachers.some((teacher) => !teacher || teacher.status !== "active")) throw new Error("Every selected teacher must be active");
     const subjectIds = [...subjectToTeacher.keys()];
     const subjects = await Promise.all(subjectIds.map((id) => ctx.db.get("subjects", id as never)));
-    if (subjects.some((subject) => !subject || subject.status !== "active")) throw new Error("Every selected subject must be active");
+    if (subjects.some((subject) => !subject)) throw new Error("Every selected subject must exist");
 
     for (const row of args.routine) {
       if (!teacherIds.has(row.teacherId)) throw new Error("Routine teacher must be selected in the teacher step");

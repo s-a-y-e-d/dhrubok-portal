@@ -133,9 +133,7 @@ async function seedMultiBatch(t: ReturnType<typeof convexTest>) {
     });
     const subjectId = await ctx.db.insert("subjects", {
       code: "ENG",
-      nameBn: "ইংরেজি",
       nameEn: "English",
-      status: "active",
       createdAt: now,
       updatedAt: now,
     });
@@ -291,9 +289,7 @@ it("runs the frozen subject-level workflow through immutable publication", async
     });
     const subjectId = await ctx.db.insert("subjects", {
       code: "M",
-      nameBn: "গণিত",
       nameEn: "Math",
-      status: "active",
       createdAt: now,
       updatedAt: now,
     });
@@ -845,9 +841,7 @@ it("initializes cohorts over one thousand subject rows in bounded jobs", async (
       for (let subjectIndex = 1; subjectIndex <= 2; subjectIndex++) {
         const subjectId = await ctx.db.insert("subjects", {
           code: `EX${subjectIndex}`,
-          nameBn: `বিষয় ${subjectIndex}`,
           nameEn: `Subject ${subjectIndex}`,
-          status: "active",
           createdAt: now,
           updatedAt: now,
         });

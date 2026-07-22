@@ -10,8 +10,8 @@ export const assignmentStatus = v.union(v.literal("active"), v.literal("ended"))
 export const scheduleStatus = v.union(v.literal("active"), v.literal("cancelled"));
 
 export const subjectDoc = v.object({
-  _id: v.id("subjects"), _creationTime: v.number(), code: v.string(), nameBn: v.string(), nameEn: v.string(),
-  status: v.union(v.literal("active"), v.literal("archived")), createdAt: v.number(), updatedAt: v.number(),
+  _id: v.id("subjects"), _creationTime: v.number(), code: v.string(), nameEn: v.string(),
+  createdAt: v.number(), updatedAt: v.number(),
 });
 export const courseDoc = v.object({
   _id: v.id("courses"), _creationTime: v.number(), code: v.string(), slug: v.string(),
@@ -95,6 +95,6 @@ export function assertNonNegativeInteger(value: number, label: string) {
   if (!Number.isSafeInteger(value) || value < 0) throw new Error(`${label} must be a non-negative integer`);
 }
 
-export function isArchived(doc: Doc<"subjects"> | Doc<"courses"> | Doc<"teachers"> | Doc<"batches">) {
+export function isArchived(doc: Doc<"courses"> | Doc<"teachers"> | Doc<"batches">) {
   return doc.status === "archived";
 }

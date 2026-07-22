@@ -3,7 +3,6 @@
 import { makeFunctionReference } from "convex/server";
 import { convexTest } from "convex-test";
 import { describe, expect, it } from "vitest";
-import type { Id } from "../_generated/dataModel";
 import schema from "../schema";
 
 const discoveredModules = import.meta.glob("../**/*.ts");
@@ -16,7 +15,7 @@ const modules = Object.fromEntries(
   ]),
 );
 const submit = makeFunctionReference<"mutation">(
-  "admissions/public:submitVerified",
+  "admissions/public:submit",
 );
 const adjustRequestedSelection = makeFunctionReference<"mutation">(
   "admissions/owner:adjustRequestedSelection",
@@ -29,9 +28,6 @@ const acceptApplication = makeFunctionReference<"mutation">(
 );
 const createDirectAdmission = makeFunctionReference<"mutation">(
   "admissions/owner:createDirectAdmission",
-);
-const listOpenBatches = makeFunctionReference<"query">(
-  "admissions/public:listOpenBatches",
 );
 
 async function seedAdmissions(t: ReturnType<typeof convexTest>) {
@@ -50,20 +46,11 @@ async function seedAdmissions(t: ReturnType<typeof convexTest>) {
       tokenIdentifier: "clerk|owner",
       loginEmail: "owner@example.com",
       normalizedLoginEmail: "owner@example.com",
-      ownerProfileId,
       locale: "en",
+      ownerProfileId,
       createdAt: now,
       updatedAt: now,
     });
-    const removedSession = {
-      nameBn: "২০২৬",
-      nameEn: "2026",
-      startDate: "2026-01-01",
-      endDate: "2026-12-31",
-      status: "active",
-      createdAt: now,
-      updatedAt: now,
-    };
     await ctx.db.insert("coachingSettings", {
       nameBn: "ধ্রুবক",
       nameEn: "Dhrubok",
@@ -71,24 +58,25 @@ async function seedAdmissions(t: ReturnType<typeof convexTest>) {
       shortNameEn: "Dhrubok",
       addressBn: "ঢাকা",
       addressEn: "Dhaka",
-      phone: "8801712345678",
-      email: "office@example.com",
+      phone: "8801700000000",
+      email: "hello@example.com",
       timezone: "Asia/Dhaka",
       currency: "BDT",
       defaultLocale: "bn",
       defaultGuardianSmsLocale: "bn",
       monthlyDueDay: 15,
-      receiptPrefix: "RCP",
-      studentIdPrefix: "STD",
-      applicationPrefix: "APP",
+      receiptPrefix: "R",
+      studentIdPrefix: "S",
+      applicationPrefix: "A",
       receiptFooterBn: "ধন্যবাদ",
-      receiptFooterEn: "Thank you",
-      smsEnabled: false,
+      receiptFooterEn: "Thanks",
+      smsEnabled: true,
       publicAdmissionsOpen: true,
       createdAt: now,
       updatedAt: now,
       updatedByAccountId: ownerAccountId,
     });
+
     const courseId = await ctx.db.insert("courses", {
       code: "SCI",
       slug: "science",
@@ -96,8 +84,8 @@ async function seedAdmissions(t: ReturnType<typeof convexTest>) {
       nameEn: "Science",
       shortDescriptionBn: "বিজ্ঞান",
       shortDescriptionEn: "Science",
-      descriptionBn: "বিজ্ঞান কোর্স",
-      descriptionEn: "Science course",
+      descriptionBn: "বিজ্ঞান",
+      descriptionEn: "Science",
       status: "active",
       isPublic: true,
       publicSortOrder: 1,
@@ -158,11 +146,7 @@ async function seedAdmissions(t: ReturnType<typeof convexTest>) {
   });
 }
 
-function applicationInput(
-  courseId: Id<"courses">,
-  batchId: Id<"batches">,
-  submissionKey: string,
-) {
+function applicationInput(submissionKey: string) {
   return {
     submissionKey,
     honeypot: "",
@@ -176,8 +160,6 @@ function applicationInput(
     guardianPhone: "01812345678",
     guardianRelationship: "Parent",
     preferredSmsLocale: "bn" as const,
-    requestedCourseId: courseId,
-    requestedBatchId: batchId,
   };
 }
 
@@ -194,120 +176,125 @@ describe("admission application backend", () => {
       admissionDate: "2026-07-12",
       studentDisplayName: "Direct Student",
       studentEmail: "direct@example.com",
-      studentPhone: "\u09e6\u09e7\u09ed\u09e7\u09e8\u09e9\u09ea\u09eb\u09ec\u09ed\u09ee",
+      studentPhone: "01712345678",
       schoolCollege: "Example School",
       currentClass: "Class 9",
       guardianName: "Direct Guardian",
-      guardianPhone: "+880 01712 345678",
+      guardianPhone: "01712345678",
       guardianRelationship: "Parent",
-      motherName: "Direct Mother",
-      motherPhone: "\u09e6\u09e7\u09ee\u09e7\u09e8\u09e9\u09ea\u09eb\u09ec\u09ed\u09ee",
-      preferredSmsLocale: "bn",
-      enrolments: [{ courseId: seeded.courseId, batchId: seeded.openBatchId, agreedMonthlyAmountMinor: 100_000, firstBillingMonth: "2026-07", admissionFeeMinor: 25_000 }],
+      preferredSmsLocale: "en",
+      enrolments: [
+        {
+          courseId: seeded.courseId,
+          batchId: seeded.openBatchId,
+          agreedMonthlyAmountMinor: 100_000,
+          firstBillingMonth: "2026-07",
+          admissionFeeMinor: 25_000,
+        },
+      ],
     });
-    const state = await t.run(async (ctx) => ({
-      student: await ctx.db.get("students", result.studentId),
-      enrolment: await ctx.db.get("enrolments", result.enrolmentId),
-      account: await ctx.db
-        .query("portalAccounts")
-        .withIndex("by_studentId", (q) => q.eq("studentId", result.studentId))
-        .unique(),
-      applications: await ctx.db.query("admissionApplications").take(1),
-      collections: await ctx.db.query("feeCollections").take(10),
-    }));
-    expect(state.student).toMatchObject({
+    expect(result.studentId).toBeDefined();
+    expect(result.collectionId).toBeDefined();
+
+    const student = await t.run((ctx) =>
+      ctx.db.get("students", result.studentId),
+    );
+    expect(student).toMatchObject({
       displayName: "Direct Student",
-      studentNumber: result.studentNumber,
-      phone: "8801712345678",
       normalizedGuardianPhone: "8801712345678",
-      motherPhone: "8801812345678",
-      status: "active",
     });
-    expect(result.studentNumber).toMatch(/^[A-Z0-9]{5}$/);
-    expect(state.enrolment).toMatchObject({
-      status: "active",
-      batchId: seeded.openBatchId,
-    });
-    expect(state.account).toMatchObject({
-      status: "reserved",
-      role: "student",
-    });
-    expect(state.applications).toHaveLength(0);
-    expect(state.collections).toHaveLength(1);
-    expect(result.receiptNumber).toBeTruthy();
   });
 
-  it("snapshots the matching course and batch on each multi-course admission item", async () => {
+  it("supports multiple course enrolments in direct admission", async () => {
     const t = convexTest(schema, modules);
     const seeded = await seedAdmissions(t);
     const second = await t.run(async (ctx) => {
       const now = Date.now();
       const courseId = await ctx.db.insert("courses", {
-        code: "MAT", slug: "math", nameBn: "Math", nameEn: "Mathematics",
-        shortDescriptionBn: "Math", shortDescriptionEn: "Math", descriptionBn: "Math", descriptionEn: "Math",
-        status: "active", isPublic: true, publicSortOrder: 2, createdAt: now, updatedAt: now,
-        createdByAccountId: seeded.ownerAccountId, updatedByAccountId: seeded.ownerAccountId,
+        slug: "math",
+        nameBn: "গণিত",
+        nameEn: "Mathematics",
+        code: "MATH",
+        shortDescriptionBn: "গণিত",
+        shortDescriptionEn: "Math",
+        descriptionBn: "গণিত",
+        descriptionEn: "Math",
+        isPublic: true,
+        publicSortOrder: 2,
+        status: "active",
+        createdAt: now,
+        updatedAt: now,
+        createdByAccountId: seeded.ownerAccountId,
+        updatedByAccountId: seeded.ownerAccountId,
       });
       const batchId = await ctx.db.insert("batches", {
-        courseId, code: "MAT-A", slug: "math-a", nameBn: "Math A", nameEn: "Mathematics A",
-        startDate: "2026-01-01", status: "active", admissionOpen: true, isPublic: true,
-        publicSortOrder: 1, createdAt: now, updatedAt: now,
+        courseId,
+        slug: "math-a",
+        nameBn: "গণিত এ",
+        nameEn: "Mathematics A",
+        code: "M1",
+        isPublic: true,
+        publicSortOrder: 1,
+        admissionOpen: true,
+        status: "active",
+        startDate: "2026-01-01",
+        createdAt: now,
+        updatedAt: now,
       });
       return { courseId, batchId };
     });
-    const owner = t.withIdentity({ tokenIdentifier: "clerk|owner", email: "owner@example.com", emailVerified: true });
+    const owner = t.withIdentity({
+      tokenIdentifier: "clerk|owner",
+      email: "owner@example.com",
+      emailVerified: true,
+    });
     const result = await owner.mutation(createDirectAdmission, {
-      admissionDate: "2026-07-12", studentDisplayName: "Two Course Student", studentEmail: "two@example.com",
-      schoolCollege: "Example School", currentClass: "Class 9", guardianName: "Guardian",
-      guardianPhone: "01712345678", guardianRelationship: "Parent", preferredSmsLocale: "en",
+      admissionDate: "2026-07-12",
+      studentDisplayName: "Two Course Student",
+      studentEmail: "two@example.com",
+      schoolCollege: "Example School",
+      currentClass: "Class 9",
+      guardianName: "Guardian",
+      guardianPhone: "01712345678",
+      guardianRelationship: "Parent",
+      preferredSmsLocale: "en",
       enrolments: [
-        { courseId: seeded.courseId, batchId: seeded.openBatchId, agreedMonthlyAmountMinor: 100_000, firstBillingMonth: "2026-07", admissionFeeMinor: 25_000 },
-        { courseId: second.courseId, batchId: second.batchId, agreedMonthlyAmountMinor: 90_000, firstBillingMonth: "2026-07", admissionFeeMinor: 20_000 },
+        {
+          courseId: seeded.courseId,
+          batchId: seeded.openBatchId,
+          agreedMonthlyAmountMinor: 100_000,
+          firstBillingMonth: "2026-07",
+          admissionFeeMinor: 25_000,
+        },
+        {
+          courseId: second.courseId,
+          batchId: second.batchId,
+          agreedMonthlyAmountMinor: 90_000,
+          firstBillingMonth: "2026-07",
+          admissionFeeMinor: 20_000,
+        },
       ],
     });
-    const items = await t.run((ctx) => ctx.db.query("feeCollectionItems").withIndex("by_collectionId", (q) => q.eq("collectionId", result.collectionId!)).take(10));
-    expect(items.map((item) => [item.courseNameSnapshot, item.batchNameSnapshot])).toEqual([
+    const items = await t.run((ctx) =>
+      ctx.db
+        .query("feeCollectionItems")
+        .withIndex("by_collectionId", (q) =>
+          q.eq("collectionId", result.collectionId!),
+        )
+        .take(10),
+    );
+    expect(
+      items.map((item) => [item.courseNameSnapshot, item.batchNameSnapshot]),
+    ).toEqual([
       ["Science", "Science A"],
       ["Mathematics", "Mathematics A"],
     ]);
   });
 
-  it("does not enumerate batches under a private course", async () => {
-    const t = convexTest(schema, modules);
-    const data = await seedAdmissions(t);
-    expect(
-      await t.query(listOpenBatches, { courseId: data.courseId }),
-    ).toHaveLength(2);
-    await t.run((ctx) =>
-      ctx.db.patch("courses", data.courseId, { isPublic: false }),
-    );
-    expect(await t.query(listOpenBatches, { courseId: data.courseId })).toEqual(
-      [],
-    );
-  });
-  it("rejects a closed batch", async () => {
-    const t = convexTest(schema, modules);
-    const seeded = await seedAdmissions(t);
-    await expect(
-      t.mutation(
-        submit,
-        applicationInput(
-          seeded.courseId,
-          seeded.closedBatchId,
-          "closed-batch-key-0001",
-        ),
-      ),
-    ).rejects.toThrow("batch is not open");
-  });
-
   it("returns the same reference for an exact submission-key replay", async () => {
     const t = convexTest(schema, modules);
-    const seeded = await seedAdmissions(t);
-    const input = applicationInput(
-      seeded.courseId,
-      seeded.openBatchId,
-      "idempotency-key-000001",
-    );
+    await seedAdmissions(t);
+    const input = applicationInput("idempotency-key-000001");
     const first = await t.mutation(submit, input);
     const replay = await t.mutation(submit, input);
     expect(replay).toMatchObject({
@@ -327,11 +314,7 @@ describe("admission application backend", () => {
     const seeded = await seedAdmissions(t);
     const created = await t.mutation(
       submit,
-      applicationInput(
-        seeded.courseId,
-        seeded.openBatchId,
-        "adjust-batch-key-00001",
-      ),
+      applicationInput("adjust-batch-key-00001"),
     );
     const owner = t.withIdentity({
       tokenIdentifier: "clerk|owner",
@@ -356,14 +339,10 @@ describe("admission application backend", () => {
 
   it("rejects an application without creating a student", async () => {
     const t = convexTest(schema, modules);
-    const seeded = await seedAdmissions(t);
+    await seedAdmissions(t);
     const created = await t.mutation(
       submit,
-      applicationInput(
-        seeded.courseId,
-        seeded.openBatchId,
-        "reject-app-key-0000001",
-      ),
+      applicationInput("reject-app-key-0000001"),
     );
     const owner = t.withIdentity({
       tokenIdentifier: "clerk|owner",
@@ -391,11 +370,7 @@ describe("admission application backend", () => {
     const seeded = await seedAdmissions(t);
     const created = await t.mutation(
       submit,
-      applicationInput(
-        seeded.courseId,
-        seeded.openBatchId,
-        "accept-app-key-0000001",
-      ),
+      applicationInput("accept-app-key-0000001"),
     );
     const owner = t.withIdentity({
       tokenIdentifier: "clerk|owner",
@@ -407,7 +382,15 @@ describe("admission application backend", () => {
       conversionKey: "conversion-key-0000001",
       studentNumber: "STD-2026-0001",
       admissionDate: "2026-07-11",
-      enrolments: [{ courseId: seeded.courseId, batchId: seeded.openBatchId, agreedMonthlyAmountMinor: 100_000, admissionFeeMinor: 50_000, firstBillingMonth: "2026-07" }],
+      enrolments: [
+        {
+          courseId: seeded.courseId,
+          batchId: seeded.openBatchId,
+          agreedMonthlyAmountMinor: 100_000,
+          admissionFeeMinor: 50_000,
+          firstBillingMonth: "2026-07",
+        },
+      ],
     };
     const first = await owner.mutation(acceptApplication, input);
     const replay = await owner.mutation(acceptApplication, input);

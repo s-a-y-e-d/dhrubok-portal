@@ -1,7 +1,6 @@
 "use client";
 
 import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,65 +30,24 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
-import { useAction, useQuery } from "convex/react";
-import { CheckCircle2, CircleAlert, GraduationCap, ShieldCheck, Users } from "lucide-react";
-import Script from "next/script";
+import { useMutation, useQuery } from "convex/react";
+import { CheckCircle2, CircleAlert, GraduationCap, Users, FileText } from "lucide-react";
 import { useRef, useState, type FormEvent } from "react";
-
-declare global {
-  interface Window {
-    turnstile?: {
-      render: (element: HTMLElement, options: Record<string, unknown>) => string;
-      reset: (id: string) => void;
-    };
-  }
-}
 
 export function AdmissionForm({ locale }: { locale: "bn" | "en" }) {
   const bn = locale === "bn";
-  const courses = useQuery(api.admissions.public.listOpenCourses);
   const preparation = useQuery(api.admissions.public.getPreparation);
-  const [courseId, setCourseId] = useState<Id<"courses"> | "">("");
-  const [batchId, setBatchId] = useState<Id<"batches"> | "">("");
-  const batches = useQuery(
-    api.admissions.public.listOpenBatches,
-    courseId ? { courseId } : "skip",
-  );
-  const submit = useAction(api.admissions.actions.submit);
-  const [token, setToken] = useState("");
+  const submit = useMutation(api.admissions.public.submit);
   const [message, setMessage] = useState<{
     kind: "success" | "error";
     text: string;
   } | null>(null);
   const [busy, setBusy] = useState(false);
   const submissionKey = useRef(crypto.randomUUID());
-  const turnstileBox = useRef<HTMLDivElement>(null);
-  const widgetId = useRef<string | null>(null);
-  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
-
-  const renderTurnstile = () => {
-    if (!siteKey || !window.turnstile || !turnstileBox.current || widgetId.current) return;
-    widgetId.current = window.turnstile.render(turnstileBox.current, {
-      sitekey: siteKey,
-      action: "admission_submit",
-      callback: (value: string) => setToken(value),
-      "expired-callback": () => setToken(""),
-      "error-callback": () => setToken(""),
-    });
-  };
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage(null);
-    if (!courseId || !batchId || !token) {
-      setMessage({
-        kind: "error",
-        text: bn
-          ? "কোর্স, ব্যাচ ও নিরাপত্তা যাচাই সম্পন্ন করুন।"
-          : "Complete course, batch, and security verification.",
-      });
-      return;
-    }
 
     const form = event.currentTarget;
     const data = new FormData(form);
@@ -97,7 +55,6 @@ export function AdmissionForm({ locale }: { locale: "bn" | "en" }) {
     try {
       const result = await submit({
         submissionKey: submissionKey.current,
-        turnstileToken: token,
         honeypot: String(data.get("website") || ""),
         locale,
         studentDisplayName: String(data.get("studentDisplayName") || ""),
@@ -109,10 +66,8 @@ export function AdmissionForm({ locale }: { locale: "bn" | "en" }) {
         guardianPhone: String(data.get("guardianPhone") || ""),
         guardianRelationship: "father",
         preferredSmsLocale: String(data.get("preferredSmsLocale")) === "en" ? "en" : "bn",
-        requestedCourseId: courseId,
         motherName: String(data.get("motherName") || ""),
         motherPhone: String(data.get("motherPhone") || ""),
-        requestedBatchId: batchId,
         applicantNote: String(data.get("applicantNote") || "") || undefined,
       });
       setMessage({
@@ -121,10 +76,6 @@ export function AdmissionForm({ locale }: { locale: "bn" | "en" }) {
       });
       submissionKey.current = crypto.randomUUID();
       form.reset();
-      setCourseId("");
-      setBatchId("");
-      setToken("");
-      if (widgetId.current && window.turnstile) window.turnstile.reset(widgetId.current);
     } catch (cause) {
       setMessage({
         kind: "error",
@@ -155,238 +106,160 @@ export function AdmissionForm({ locale }: { locale: "bn" | "en" }) {
   }
 
   return (
-    <>
-      <Script
-        src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
-        strategy="afterInteractive"
-        onLoad={renderTurnstile}
-        onReady={renderTurnstile}
-      />
-      <form className="flex flex-col gap-6" onSubmit={onSubmit}>
-        <Card>
-          <CardHeader>
-            <div className="flex items-start gap-3">
-              <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-muted" aria-hidden="true">
-                <GraduationCap className="size-5" />
-              </div>
-              <div className="flex flex-col gap-1">
-                <CardTitle>{bn ? "শিক্ষার্থীর তথ্য" : "Student information"}</CardTitle>
-                <CardDescription>
-                  {bn
-                    ? "যে Google ইমেইল দিয়ে শিক্ষার্থী পরে পোর্টালে প্রবেশ করবে সেটি দিন।"
-                    : "Use the Google email the student will later use to access the portal."}
-                </CardDescription>
-              </div>
+    <form className="flex flex-col gap-6" onSubmit={onSubmit}>
+      <Card>
+        <CardHeader>
+          <div className="flex items-start gap-3">
+            <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-muted" aria-hidden="true">
+              <GraduationCap className="size-5" />
             </div>
-          </CardHeader>
-          <CardContent>
-            <FieldGroup className="grid gap-5 md:grid-cols-2">
-              <Field>
-                <FieldLabel htmlFor="studentDisplayName">{bn ? "শিক্ষার্থীর নাম" : "Student name"}</FieldLabel>
-                <Input id="studentDisplayName" name="studentDisplayName" required maxLength={120} autoComplete="name" />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="studentEmail">{bn ? "Google ইমেইল" : "Google email"}</FieldLabel>
-                <Input id="studentEmail" name="studentEmail" type="email" required maxLength={254} autoComplete="email" />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="studentPhone">{bn ? "শিক্ষার্থীর ফোন" : "Student phone"}</FieldLabel>
-                <Input id="studentPhone" name="studentPhone" inputMode="tel" autoComplete="tel" />
-                <FieldDescription>{bn ? "ঐচ্ছিক" : "Optional"}</FieldDescription>
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="schoolCollege">{bn ? "স্কুল বা কলেজ" : "School or college"}</FieldLabel>
-                <Input id="schoolCollege" name="schoolCollege" required maxLength={160} />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="currentClass">{bn ? "বর্তমান শ্রেণি" : "Current class"}</FieldLabel>
-                <Input id="currentClass" name="currentClass" required maxLength={80} />
-              </Field>
-            </FieldGroup>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-start gap-3">
-              <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-muted" aria-hidden="true">
-                <Users className="size-5" />
-              </div>
-              <div className="flex flex-col gap-1">
-                <CardTitle>{bn ? "অভিভাবকের তথ্য" : "Guardian information"}</CardTitle>
-                <CardDescription>
-                  {bn
-                    ? "ভর্তি, ফি, ফলাফল ও উপস্থিতি সংক্রান্ত যোগাযোগের জন্য।"
-                    : "Used for admission, fee, result, and attendance communication."}
-                </CardDescription>
-              </div>
+            <div className="flex flex-col gap-1">
+              <CardTitle>{bn ? "শিক্ষার্থীর তথ্য" : "Student information"}</CardTitle>
+              <CardDescription>
+                {bn
+                  ? "যে Google ইমেইল দিয়ে শিক্ষার্থী পরে পোর্টালে প্রবেশ করবে সেটি দিন।"
+                  : "Use the Google email the student will later use to access the portal."}
+              </CardDescription>
             </div>
-          </CardHeader>
-          <CardContent>
-            <FieldGroup className="grid gap-5 md:grid-cols-2">
-              <Field>
-                <FieldLabel htmlFor="guardianName">{bn ? "বাবার নাম" : "Father's name"}</FieldLabel>
-                <Input id="guardianName" name="guardianName" required maxLength={120} />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="guardianPhone">{bn ? "বাবার মোবাইল নম্বর" : "Father's mobile number"}</FieldLabel>
-                <Input id="guardianPhone" name="guardianPhone" required inputMode="tel" autoComplete="tel" />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="motherName">{bn ? "মায়ের নাম" : "Mother's name"}</FieldLabel>
-                <Input id="motherName" name="motherName" required maxLength={120} />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="motherPhone">{bn ? "মায়ের মোবাইল নম্বর" : "Mother's mobile number"}</FieldLabel>
-                <Input id="motherPhone" name="motherPhone" required inputMode="tel" autoComplete="tel" />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="sms-language">{bn ? "SMS-এর ভাষা" : "SMS language"}</FieldLabel>
-                <Select name="preferredSmsLocale" defaultValue={locale} required>
-                  <SelectTrigger id="sms-language">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="bn">বাংলা</SelectItem>
-                      <SelectItem value="en">English</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </Field>
-            </FieldGroup>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-start gap-3">
-              <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-muted" aria-hidden="true">
-                <CheckCircle2 className="size-5" />
-              </div>
-              <div className="flex flex-col gap-1">
-                <CardTitle>{bn ? "কোর্স ও ব্যাচ নির্বাচন" : "Course and batch selection"}</CardTitle>
-                <CardDescription>
-                  {bn
-                    ? "আপনার পছন্দ জানান। পর্যালোচনার সময় কর্তৃপক্ষ প্রয়োজনে এটি পরিবর্তন করতে পারে।"
-                    : "Share your preference. It may be adjusted by the centre during review."}
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <FieldGroup>
-              <div className="grid gap-5 md:grid-cols-2">
-                <Field>
-                  <FieldLabel htmlFor="course">{bn ? "কোর্স" : "Course"}</FieldLabel>
-                  <Select
-                    required
-                    value={courseId}
-                    onValueChange={(value) => {
-                      setCourseId(value as Id<"courses">);
-                      setBatchId("");
-                    }}
-                  >
-                    <SelectTrigger id="course">
-                      <SelectValue placeholder={bn ? "কোর্স নির্বাচন করুন" : "Select a course"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {courses?.map((course) => (
-                          <SelectItem value={course.courseId} key={course.courseId}>
-                            {bn ? course.nameBn : course.nameEn}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </Field>
-                <Field data-disabled={!courseId}>
-                  <FieldLabel htmlFor="batch">{bn ? "ব্যাচ" : "Batch"}</FieldLabel>
-                  <Select
-                    name="batchId"
-                    required
-                    disabled={!courseId}
-                    value={batchId}
-                    onValueChange={(value) => setBatchId(value as Id<"batches">)}
-                  >
-                    <SelectTrigger id="batch">
-                      <SelectValue placeholder={bn ? "ব্যাচ নির্বাচন করুন" : "Select a batch"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {batches?.map((batch) => (
-                          <SelectItem value={batch.batchId} key={batch.batchId}>
-                            {bn ? batch.nameBn : batch.nameEn}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                  {!courseId ? (
-                    <FieldDescription>{bn ? "আগে একটি কোর্স নির্বাচন করুন।" : "Select a course first."}</FieldDescription>
-                  ) : null}
-                </Field>
-              </div>
-              <Field>
-                <FieldLabel htmlFor="applicantNote">{bn ? "অতিরিক্ত তথ্য" : "Additional note"}</FieldLabel>
-                <Textarea id="applicantNote" name="applicantNote" maxLength={1000} rows={4} />
-                <FieldDescription>{bn ? "ঐচ্ছিক — বিশেষ অনুরোধ বা প্রাসঙ্গিক তথ্য লিখুন।" : "Optional — add any special request or relevant information."}</FieldDescription>
-              </Field>
-            </FieldGroup>
-          </CardContent>
-          <Separator />
-          <CardFooter className="flex-col items-stretch gap-5 pt-6">
-            <input name="guardianRelationship" type="hidden" value="father" />
-            <label className="honeypot" aria-hidden="true">
-              Website
-              <input name="website" tabIndex={-1} autoComplete="off" />
-            </label>
-            <Field orientation="horizontal" className="items-start">
-              <Checkbox id="consent" required />
-              <div className="flex flex-col gap-1">
-                <FieldLabel htmlFor="consent">
-                  {bn
-                    ? "আমি প্রদত্ত তথ্য প্রক্রিয়াকরণ এবং ভর্তি-সংক্রান্ত যোগাযোগে সম্মতি দিচ্ছি।"
-                    : "I consent to processing this information and admission-related communication."}
-                </FieldLabel>
-                <FieldDescription>{bn ? "আবেদন পাঠাতে এই সম্মতি প্রয়োজন।" : "This consent is required to submit the application."}</FieldDescription>
-              </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <FieldGroup className="grid gap-5 md:grid-cols-2">
+            <Field>
+              <FieldLabel htmlFor="studentDisplayName">{bn ? "শিক্ষার্থীর নাম" : "Student name"}</FieldLabel>
+              <Input id="studentDisplayName" name="studentDisplayName" required maxLength={120} autoComplete="name" />
             </Field>
+            <Field>
+              <FieldLabel htmlFor="studentEmail">{bn ? "Google ইমেইল" : "Google email"}</FieldLabel>
+              <Input id="studentEmail" name="studentEmail" type="email" required maxLength={254} autoComplete="email" />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="studentPhone">{bn ? "শিক্ষার্থীর ফোন" : "Student phone"}</FieldLabel>
+              <Input id="studentPhone" name="studentPhone" inputMode="tel" autoComplete="tel" />
+              <FieldDescription>{bn ? "ঐচ্ছিক" : "Optional"}</FieldDescription>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="schoolCollege">{bn ? "স্কুল বা কলেজ" : "School or college"}</FieldLabel>
+              <Input id="schoolCollege" name="schoolCollege" required maxLength={160} />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="currentClass">{bn ? "বর্তমান শ্রেণি" : "Current class"}</FieldLabel>
+              <Input id="currentClass" name="currentClass" required maxLength={80} />
+            </Field>
+          </FieldGroup>
+        </CardContent>
+      </Card>
 
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <ShieldCheck className="size-4" aria-hidden="true" />
-                <span>{bn ? "নিরাপত্তা যাচাই" : "Security verification"}</span>
-              </div>
-              {siteKey ? (
-                <div ref={turnstileBox} className="turnstile-box" />
-              ) : (
-                <Alert variant="destructive">
-                  <CircleAlert />
-                  <AlertTitle>{bn ? "নিরাপত্তা যাচাই অনুপলব্ধ" : "Security verification unavailable"}</AlertTitle>
-                  <AlertDescription>
-                    {bn ? "নিরাপত্তা যাচাই কনফিগার করা নেই।" : "Security verification is not configured."}
-                  </AlertDescription>
-                </Alert>
-              )}
+      <Card>
+        <CardHeader>
+          <div className="flex items-start gap-3">
+            <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-muted" aria-hidden="true">
+              <Users className="size-5" />
             </div>
+            <div className="flex flex-col gap-1">
+              <CardTitle>{bn ? "অভিভাবকের তথ্য" : "Guardian information"}</CardTitle>
+              <CardDescription>
+                {bn
+                  ? "ভর্তি, ফি, ফলাফল ও উপস্থিতি সংক্রান্ত যোগাযোগের জন্য।"
+                  : "Used for admission, fee, result, and attendance communication."}
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <FieldGroup className="grid gap-5 md:grid-cols-2">
+            <Field>
+              <FieldLabel htmlFor="guardianName">{bn ? "বাবার নাম" : "Father's name"}</FieldLabel>
+              <Input id="guardianName" name="guardianName" required maxLength={120} />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="guardianPhone">{bn ? "বাবার মোবাইল নম্বর" : "Father's mobile number"}</FieldLabel>
+              <Input id="guardianPhone" name="guardianPhone" required inputMode="tel" autoComplete="tel" />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="motherName">{bn ? "মায়ের নাম" : "Mother's name"}</FieldLabel>
+              <Input id="motherName" name="motherName" required maxLength={120} />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="motherPhone">{bn ? "মায়ের মোবাইল নম্বর" : "Mother's mobile number"}</FieldLabel>
+              <Input id="motherPhone" name="motherPhone" required inputMode="tel" autoComplete="tel" />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="sms-language">{bn ? "SMS-এর ভাষা" : "SMS language"}</FieldLabel>
+              <Select name="preferredSmsLocale" defaultValue={locale} required>
+                <SelectTrigger id="sms-language">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="bn">বাংলা</SelectItem>
+                    <SelectItem value="en">English</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+          </FieldGroup>
+        </CardContent>
+      </Card>
 
-            {message ? (
-              <Alert variant={message.kind === "error" ? "destructive" : "default"} role={message.kind === "error" ? "alert" : "status"}>
-                {message.kind === "error" ? <CircleAlert /> : <CheckCircle2 />}
-                <AlertTitle>{message.kind === "error" ? (bn ? "আবেদন পাঠানো যায়নি" : "Application not submitted") : (bn ? "আবেদন সফল" : "Application submitted")}</AlertTitle>
-                <AlertDescription>{message.text}</AlertDescription>
-              </Alert>
-            ) : null}
+      <Card>
+        <CardHeader>
+          <div className="flex items-start gap-3">
+            <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-muted" aria-hidden="true">
+              <FileText className="size-5" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <CardTitle>{bn ? "অতিরিক্ত তথ্য ও জমা" : "Additional Information & Submit"}</CardTitle>
+              <CardDescription>
+                {bn
+                  ? "আপনার যদি কোনো বিশেষ মন্তব্য থাকে তা উল্লেখ করুন।"
+                  : "Add any additional note or special instructions."}
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="applicantNote">{bn ? "অতিরিক্ত তথ্য" : "Additional note"}</FieldLabel>
+              <Textarea id="applicantNote" name="applicantNote" maxLength={1000} rows={4} />
+              <FieldDescription>{bn ? "ঐচ্ছিক — বিশেষ অনুরোধ বা প্রাসঙ্গিক তথ্য লিখুন।" : "Optional — add any special request or relevant information."}</FieldDescription>
+            </Field>
+          </FieldGroup>
+        </CardContent>
+        <Separator />
+        <CardFooter className="flex-col items-stretch gap-5 pt-6">
+          <input name="guardianRelationship" type="hidden" value="father" />
+          <label className="honeypot" aria-hidden="true">
+            Website
+            <input name="website" tabIndex={-1} autoComplete="off" />
+          </label>
+          <Field orientation="horizontal" className="items-start">
+            <Checkbox id="consent" required />
+            <div className="flex flex-col gap-1">
+              <FieldLabel htmlFor="consent">
+                {bn
+                  ? "আমি প্রদত্ত তথ্য প্রক্রিয়াকরণ এবং ভর্তি-সংক্রান্ত যোগাযোগে সম্মতি দিচ্ছি।"
+                  : "I consent to processing this information and admission-related communication."}
+              </FieldLabel>
+              <FieldDescription>{bn ? "আবেদন পাঠাতে এই সম্মতি প্রয়োজন।" : "This consent is required to submit the application."}</FieldDescription>
+            </div>
+          </Field>
 
-            <Button className="w-full sm:w-auto sm:self-end" type="submit" disabled={busy || !token || !courseId || !batchId}>
-              {busy ? <Spinner data-icon="inline-start" /> : null}
-              {busy ? (bn ? "পাঠানো হচ্ছে…" : "Submitting…") : (bn ? "আবেদন পাঠান" : "Submit application")}
-            </Button>
-          </CardFooter>
-        </Card>
-      </form>
-    </>
+          {message ? (
+            <Alert variant={message.kind === "error" ? "destructive" : "default"} role={message.kind === "error" ? "alert" : "status"}>
+              {message.kind === "error" ? <CircleAlert /> : <CheckCircle2 />}
+              <AlertTitle>{message.kind === "error" ? (bn ? "আবেদন পাঠানো যায়নি" : "Application not submitted") : (bn ? "আবেদন সফল" : "Application submitted")}</AlertTitle>
+              <AlertDescription>{message.text}</AlertDescription>
+            </Alert>
+          ) : null}
+
+          <Button className="w-full sm:w-auto sm:self-end" type="submit" disabled={busy}>
+            {busy ? <Spinner data-icon="inline-start" /> : null}
+            {busy ? (bn ? "পাঠানো হচ্ছে…" : "Submitting…") : (bn ? "আবেদন পাঠান" : "Submit application")}
+          </Button>
+        </CardFooter>
+      </Card>
+    </form>
   );
 }

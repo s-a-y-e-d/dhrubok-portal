@@ -129,14 +129,10 @@ export default defineSchema({
 
   subjects: defineTable({
     code: v.string(),
-    nameBn: v.string(),
     nameEn: v.string(),
-    status: v.union(v.literal("active"), v.literal("archived")),
     createdAt: v.number(),
     updatedAt: v.number(),
-  })
-    .index("by_code", ["code"])
-    .index("by_status", ["status"]),
+  }).index("by_code", ["code"]),
 
   courseOperationalSnapshots: defineTable({
     courseId: v.id("courses"),
@@ -350,8 +346,8 @@ export default defineSchema({
     motherName: v.optional(v.string()),
     motherPhone: v.optional(v.string()),
     preferredSmsLocale: localeValidator,
-    requestedCourseId: v.id("courses"),
-    requestedBatchId: v.id("batches"),
+    requestedCourseId: v.optional(v.id("courses")),
+    requestedBatchId: v.optional(v.id("batches")),
     applicantNote: v.optional(v.string()),
     photoStorageId: v.optional(v.id("_storage")),
     status: v.union(

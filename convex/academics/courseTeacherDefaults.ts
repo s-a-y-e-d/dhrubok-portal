@@ -26,7 +26,7 @@ export const replace = mutation({
       if (subjects.has(item.subjectId)) throw new Error("A subject may only have one default teacher");
       subjects.add(item.subjectId);
       const [subject, teacher] = await Promise.all([ctx.db.get("subjects", item.subjectId), ctx.db.get("teachers", item.teacherId)]);
-      if (!subject || subject.status !== "active" || !teacher || teacher.status !== "active") throw new Error("Defaults require active teachers and subjects");
+      if (!subject || !teacher || teacher.status !== "active") throw new Error("Defaults require existing subjects and active teachers");
     }
     const now = Date.now();
     const existing = await ctx.db.query("courseTeacherDefaults").withIndex("by_courseId_and_status", (q) => q.eq("courseId", courseId).eq("status", "active")).take(200);

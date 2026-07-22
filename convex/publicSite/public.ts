@@ -131,8 +131,8 @@ export const getCourse = query({
     const joins = await ctx.db.query("courseSubjects").withIndex("by_courseId_and_sortOrder", (q) => q.eq("courseId", course._id)).take(50);
     const subjects = (await Promise.all(joins.map(async (join) => {
       const subject = await ctx.db.get("subjects", join.subjectId);
-      return subject && subject.status === "active"
-        ? { id: subject._id, name: localize(subject.nameBn, subject.nameEn, args.locale), sortOrder: join.sortOrder }
+      return subject
+        ? { id: subject._id, name: localize(subject.nameEn, subject.nameEn, args.locale), sortOrder: join.sortOrder }
         : null;
     }))).filter((subject) => subject !== null);
     const batches = (await ctx.db.query("batches").withIndex("by_courseId_and_status", (q) => q.eq("courseId", course._id).eq("status", "active")).take(50))
