@@ -32,6 +32,7 @@ import {
 } from "./exams/owner/OwnerExams";
 import { StudentExamResults } from "./exams/StudentExamResults";
 import { ContentEditor } from "./ContentEditor";
+import { BulkSmsEditor } from "./BulkSmsEditor";
 import { ReportsEditor } from "./ReportsEditor";
 import {
   StudentProfile,
@@ -1558,7 +1559,7 @@ export function RoleSection({
       return <OwnerAdmissions locale={locale} />;
     if (activeSection === "messages") return <OwnerMessages locale={locale} />;
     if (activeSection === "notices")
-      return <ContentEditor locale={locale} role="owner" />;
+      return <BulkSmsEditor locale={locale} />;
     if (activeSection === "courses")
       return <CoursesWorkspace locale={locale} />;
     if (activeSection === "batches")

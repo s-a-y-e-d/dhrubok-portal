@@ -45,4 +45,5 @@ export type SmsTemplateKey = keyof typeof SMS_TEMPLATE_DEFAULTS;
 export const ENABLED_SMS_EVENT_TYPES = new Set<SmsTemplateKey>([
   "admission_received", "admission_accepted", "attendance_late",
   "attendance_absent", "payment_posted", "result_published", "due_reminder",
+  "custom_notice",
 ]);

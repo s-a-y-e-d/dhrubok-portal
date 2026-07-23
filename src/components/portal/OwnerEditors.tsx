@@ -7,13 +7,34 @@ import { PortalPageState } from "./PortalPageState";
 import { WebsiteCmsEditor } from "./WebsiteCmsEditor";
 import {
   Save,
-  Mail,
   AlertTriangle,
-  Sliders,
-  ToggleLeft,
+  SlidersHorizontal,
+  ToggleRight,
   FileText,
+  CheckCircle2,
+  CircleAlert,
 } from "lucide-react";
 import type { FunctionReturnType } from "convex/server";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 
 const keys = [
   "hero",
@@ -29,14 +50,17 @@ export type CoachingSettings = NonNullable<
 >;
 
 function Feedback({ value }: { value: { ok: boolean; text: string } | null }) {
-  return value ? (
-    <p
-      className={`form-message ${value.ok ? "success" : "error"}`}
-      role={value.ok ? "status" : "alert"}
+  if (!value) return null;
+  const Icon = value.ok ? CheckCircle2 : CircleAlert;
+  return (
+    <Alert
+      variant={value.ok ? "default" : "destructive"}
+      className={value.ok ? "settings-feedback-success" : undefined}
     >
-      {value.text}
-    </p>
-  ) : null;
+      <Icon aria-hidden="true" />
+      <AlertDescription>{value.text}</AlertDescription>
+    </Alert>
+  );
 }
 
 export function OwnerSettingsEditor({
@@ -49,8 +73,7 @@ export function OwnerSettingsEditor({
   hideHeader?: boolean;
 }) {
   const update = useMutation(api.settings.updateOperations);
-  const seed = useMutation(api.messaging.templateFunctions.seedDefaults);
-  const [busy, setBusy] = useState(false);
+  const [busyAction, setBusyAction] = useState<"save" | null>(null);
   const [feedback, setFeedback] = useState<{
     ok: boolean;
     text: string;
@@ -111,7 +134,7 @@ export function OwnerSettingsEditor({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setBusy(true);
+    setBusyAction("save");
     setFeedback(null);
     try {
       await update({
@@ -136,7 +159,7 @@ export function OwnerSettingsEditor({
           cause instanceof Error ? cause.message : "Could not save settings",
       });
     } finally {
-      setBusy(false);
+      setBusyAction(null);
     }
   }
 
@@ -144,6 +167,9 @@ export function OwnerSettingsEditor({
     setIsDirty(true);
     setFeedback(null);
   };
+
+  const saveBusy = busyAction === "save";
+  const busy = busyAction !== null;
 
   return (
     <>
@@ -160,406 +186,154 @@ export function OwnerSettingsEditor({
       )}
 
       {showConcurrencyAlert && (
-        <div
-          className="operation-form compact-form alert-warning"
-          style={{
-            padding: "16px",
-            marginBottom: "16px",
-            borderLeft: "4px solid var(--warning)",
-            backgroundColor: "var(--canvas-soft)",
-            display: "flex",
-            flexDirection: "column",
-            gap: "12px",
-            borderRadius: "8px",
-          }}
-        >
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <AlertTriangle style={{ color: "var(--warning)", flexShrink: 0 }} />
-            <p
-              style={{
-                margin: 0,
-                fontWeight: 600,
-                fontSize: "14px",
-                color: "var(--ink)",
-              }}
-            >
+        <Alert className="settings-concurrency-alert">
+          <AlertTriangle aria-hidden="true" />
+          <AlertTitle>
               {bn
                 ? "অন্য একজন মালিক সেটিংস পরিবর্তন করেছেন!"
                 : "Settings were updated by another owner!"}
-            </p>
-          </div>
-          <p
-            style={{
-              margin: 0,
-              fontSize: "13px",
-              color: "var(--ink-secondary)",
-            }}
-          >
+          </AlertTitle>
+          <AlertDescription>
             {bn
               ? "সংরক্ষণ করার আগে পরিবর্তনটি যাচাই করুন। আপনার পরিবর্তনগুলো রাখলে পূর্ববর্তী পরিবর্তনটি ওভাররাইট হয়ে যাবে।"
               : "Review before saving. Keeping your edits and saving will overwrite the changes made elsewhere."}
-          </p>
-          <div style={{ display: "flex", gap: "8px" }}>
-            <button
-              className="button button-secondary"
+            <div className="settings-alert-actions">
+            <Button
+              variant="secondary"
+              size="sm"
               type="button"
-              style={{
-                padding: "4px 10px",
-                minHeight: "auto",
-                fontSize: "12px",
-              }}
               onClick={handleReload}
             >
               {bn ? "সর্বশেষ সেটিংস লোড করুন" : "Reload latest settings"}
-            </button>
-            <button
-              className="button button-tertiary"
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               type="button"
-              style={{
-                padding: "4px 10px",
-                minHeight: "auto",
-                fontSize: "12px",
-              }}
               onClick={handleKeepEdits}
             >
               {bn ? "আমার এডিটগুলো রাখুন" : "Keep my edits"}
-            </button>
-          </div>
-        </div>
+            </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
       )}
 
-      <form className="operation-form" onSubmit={submit}>
-        <fieldset>
-          <legend style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <Sliders size={16} />
-            {bn ? "ডিফল্ট" : "Defaults"}
-          </legend>
-          <div className="form-grid-thirds">
-            <label>
-              {bn ? "ইন্টারফেস ভাষা" : "Interface locale"}
-              <select
-                name="defaultLocale"
-                value={defaultLocale}
-                onChange={(e) => {
-                  setDefaultLocale(e.target.value as "bn" | "en");
-                  markDirty();
-                }}
-              >
-                <option value="bn">বাংলা</option>
-                <option value="en">English</option>
-              </select>
-              <span
-                style={{
-                  fontSize: "12px",
-                  color: "var(--ink-mute)",
-                  marginTop: "2px",
-                }}
-              >
-                {bn
-                  ? "কোচিং সেন্টারের পছন্দের ডিফল্ট ভাষা নির্ধারণ করে। এটি আপনার বর্তমান পেজের ভাষা পরিবর্তন করবে না।"
-                  : "Sets the coaching centre’s preferred default language for supported workflows. It does not change your current page language or existing account preferences."}
-              </span>
-            </label>
-            <label>
-              {bn ? "অভিভাবক SMS ভাষা" : "Guardian SMS locale"}
-              <select
-                name="defaultGuardianSmsLocale"
-                value={defaultGuardianSmsLocale}
-                onChange={(e) => {
-                  setDefaultGuardianSmsLocale(e.target.value as "bn" | "en");
-                  markDirty();
-                }}
-              >
-                <option value="bn">বাংলা</option>
-                <option value="en">English</option>
-              </select>
-            </label>
-          </div>
-        </fieldset>
+      <form className="settings-workspace" onSubmit={submit}>
+        <div className="settings-form-column settings-form-column-full">
+            <Card id="settings-defaults" className="settings-card">
+              <CardHeader className="settings-card-header">
+                <CardTitle className="settings-card-title">
+                  <SlidersHorizontal aria-hidden="true" />
+                  {bn ? "ডিফল্ট" : "Defaults"}
+                </CardTitle>
+                <CardDescription>
+                  {bn ? "কোচিং সেন্টারের নতুন এবং স্বয়ংক্রিয় ওয়ার্কফ্লোর জন্য ভাষার পছন্দ নির্ধারণ করুন।" : "Set the language defaults used by new and automated coaching workflows."}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="settings-card-content">
+                <FieldGroup className="settings-field-grid">
+                  <Field>
+                    <FieldLabel id="default-locale-label" htmlFor="default-locale-native">{bn ? "ইন্টারফেস ভাষা" : "Interface locale"}</FieldLabel>
+                    <select className="sr-only" id="default-locale-native" name="defaultLocale" tabIndex={-1} aria-hidden="true" value={defaultLocale} onChange={(event) => { setDefaultLocale(event.target.value as "bn" | "en"); markDirty(); }}>
+                      <option value="bn">বাংলা</option>
+                      <option value="en">English</option>
+                    </select>
+                    <Select value={defaultLocale} onValueChange={(value) => { setDefaultLocale(value as "bn" | "en"); markDirty(); }}>
+                      <SelectTrigger id="default-locale" aria-label={bn ? "ভাষা নির্বাচন" : "Select language"}><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectGroup><SelectItem value="bn">বাংলা</SelectItem><SelectItem value="en">English</SelectItem></SelectGroup></SelectContent>
+                    </Select>
+                    <FieldDescription>{bn ? "ডিফল্ট ভাষা নির্ধারণ করে; আপনার বর্তমান পেজ বা বিদ্যমান অ্যাকাউন্ট বদলাবে না।" : "Sets the centre’s preferred default language. It does not change your current page or existing account preferences."}</FieldDescription>
+                  </Field>
+                  <Field>
+                    <FieldLabel id="guardian-sms-locale-label" htmlFor="guardian-sms-locale-native">{bn ? "অভিভাবক SMS ভাষা" : "Guardian SMS locale"}</FieldLabel>
+                    <select className="sr-only" id="guardian-sms-locale-native" name="defaultGuardianSmsLocale" tabIndex={-1} aria-hidden="true" value={defaultGuardianSmsLocale} onChange={(event) => { setDefaultGuardianSmsLocale(event.target.value as "bn" | "en"); markDirty(); }}>
+                      <option value="bn">বাংলা</option>
+                      <option value="en">English</option>
+                    </select>
+                    <Select value={defaultGuardianSmsLocale} onValueChange={(value) => { setDefaultGuardianSmsLocale(value as "bn" | "en"); markDirty(); }}>
+                      <SelectTrigger id="guardian-sms-locale" aria-label={bn ? "অভিভাবক SMS ভাষা নির্বাচন" : "Select guardian SMS language"}><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectGroup><SelectItem value="bn">বাংলা</SelectItem><SelectItem value="en">English</SelectItem></SelectGroup></SelectContent>
+                    </Select>
+                    <FieldDescription>{bn ? "স্বয়ংক্রিয় অভিভাবক বার্তার প্রাথমিক ভাষা।" : "The default language for automatic guardian messages."}</FieldDescription>
+                  </Field>
+                </FieldGroup>
+              </CardContent>
+            </Card>
 
-        <fieldset>
-          <legend style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <ToggleLeft size={16} />
-            {bn ? "সুবিধা" : "Features"}
-          </legend>
-          <div
-            className="card-grid"
-            style={{
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: "16px",
-              marginTop: "8px",
-            }}
-          >
-            <label className="feature-option-card">
-              <input
-                name="publicAdmissionsOpen"
-                type="checkbox"
-                checked={publicAdmissionsOpen}
-                onChange={(e) => {
-                  setPublicAdmissionsOpen(e.target.checked);
-                  markDirty();
-                }}
-                style={{
-                  width: "18px",
-                  height: "18px",
-                  marginTop: "2px",
-                  flexShrink: 0,
-                }}
-              />
-              <div>
-                <strong
-                  style={{
-                    display: "block",
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    color: "var(--ink)",
-                  }}
-                >
-                  {bn ? "পাবলিক ভর্তি আবেদন" : "Public Admissions"}
-                </strong>
-                <span
-                  style={{
-                    display: "block",
-                    fontSize: "12px",
-                    color: "var(--ink-mute)",
-                    marginTop: "4px",
-                    lineHeight: "1.4",
-                  }}
-                >
-                  {bn
-                    ? "পাবলিক ভর্তি আবেদন চালু করুন যেন আগ্রহী শিক্ষার্থীরা ওয়েবসাইট থেকে আবেদন করতে পারে।"
-                    : "Enable public online application submissions for prospective students on the public website."}
-                </span>
-              </div>
-            </label>
+            <Card id="settings-features" className="settings-card">
+              <CardHeader className="settings-card-header">
+                <CardTitle className="settings-card-title">
+                  <ToggleRight aria-hidden="true" />
+                  {bn ? "সুবিধা" : "Features"}
+                </CardTitle>
+                <CardDescription>
+                  {bn ? "পাবলিক ভর্তি এবং স্বয়ংক্রিয় অভিভাবক যোগাযোগ চালু বা বন্ধ করুন।" : "Control public admissions and automatic guardian communication."}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="settings-card-content settings-toggle-list">
+                <div className="settings-toggle-row">
+                  <div className="settings-toggle-copy">
+                    <div className="settings-toggle-heading"><span>{bn ? "পাবলিক ভর্তি আবেদন" : "Public Admissions"}</span></div>
+                    <p>{bn ? "ওয়েবসাইট থেকে আগ্রহী শিক্ষার্থীদের আবেদন করার সুযোগ দিন।" : "Allow prospective students to submit applications from the public website."}</p>
+                  </div>
+                  <Switch checked={publicAdmissionsOpen} onCheckedChange={(checked) => { setPublicAdmissionsOpen(checked); markDirty(); }} aria-label={bn ? "পাবলিক ভর্তি আবেদন চালু বা বন্ধ করুন" : "Toggle public admissions"} />
+                </div>
+                <Separator />
+                <div className="settings-toggle-row">
+                  <div className="settings-toggle-copy">
+                    <div className="settings-toggle-heading"><span>{bn ? "SMS ডেলিভারি" : "SMS Delivery"}</span></div>
+                    <p>{bn ? "ভর্তি, বিলম্ব/অনুপস্থিতি এবং পেমেন্টের জন্য অভিভাবকদের স্বয়ংক্রিয় SMS পাঠান।" : "Send automatic guardian SMS for admissions, late or absent attendance, and payments."}</p>
+                    <div className="settings-provider-status">
+                      <Badge variant={settings.smsConfigured ? "success" : "danger"}>{settings.smsConfigured ? (bn ? "API কী কনফিগার করা" : "API key configured") : (bn ? "API কী নেই" : "API key missing")}</Badge>
+                      <Badge variant={settings.smsSenderIdConfigured ? "success" : "danger"}>{settings.smsSenderIdConfigured ? (bn ? "সেন্ডার আইডি কনফিগার করা" : "Sender ID configured") : (bn ? "সেন্ডার আইডি নেই" : "Sender ID missing")}</Badge>
+                    </div>
+                    {!settings.smsConfigured || !settings.smsSenderIdConfigured ? <p className="settings-inline-warning">{bn ? "সতর্কতা: কনফিগারেশন সম্পূর্ণ না হলে SMS পাঠানো ব্যর্থ হবে।" : "SMS delivery will fail until both the provider API key and sender ID are configured."}</p> : null}
+                  </div>
+                  <Switch checked={smsEnabled} onCheckedChange={(checked) => { setSmsEnabled(checked); markDirty(); }} aria-label={bn ? "SMS ডেলিভারি চালু বা বন্ধ করুন" : "Toggle SMS delivery"} />
+                </div>
+              </CardContent>
+            </Card>
 
-            <label className="feature-option-card">
-              <input
-                name="smsEnabled"
-                type="checkbox"
-                checked={smsEnabled}
-                onChange={(e) => {
-                  setSmsEnabled(e.target.checked);
-                  markDirty();
-                }}
-                style={{
-                  width: "18px",
-                  height: "18px",
-                  marginTop: "2px",
-                  flexShrink: 0,
-                }}
-              />
-              <div>
-                <strong
-                  style={{
-                    display: "block",
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    color: "var(--ink)",
-                  }}
-                >
-                  {bn ? "SMS ডেলিভারি" : "SMS Delivery"}
-                </strong>
-                <span
-                  style={{
-                    display: "block",
-                    fontSize: "12px",
-                    color: "var(--ink-mute)",
-                    marginTop: "4px",
-                    lineHeight: "1.4",
-                  }}
-                >
-                  {bn
-                    ? "ভর্তি, অনুপস্থিতি/বিলম্ব এবং পেমেন্টের জন্য অভিভাবকদের স্বয়ংক্রিয় SMS পাঠান।"
-                    : "Send automatic guardian SMS for admissions, absence/late attendance, and payments."}
-                </span>
-                <div
-                  style={{
-                    marginTop: "10px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "6px",
-                  }}
-                >
-                  {settings.smsConfigured ? (
-                    <span
-                      className="status-pill active"
-                      style={{
-                        fontSize: "11px",
-                        padding: "1px 6px",
-                        alignSelf: "flex-start",
-                      }}
-                    >
-                      {bn
-                        ? "SMS গেটওয়ে কনফিগার করা আছে"
-                        : "SMS Gateway Configured"}
-                    </span>
-                  ) : (
-                    <span
-                      className="status-pill suspended"
-                      style={{
-                        fontSize: "11px",
-                        padding: "1px 6px",
-                        alignSelf: "flex-start",
-                      }}
-                    >
-                      {bn
-                        ? "SMS গেটওয়ে কনফিগার করা নেই"
-                        : "SMS Gateway Not Configured"}
-                    </span>
-                  )}
-                  {!settings.smsConfigured && (
-                    <span
-                      style={{
-                        display: "block",
-                        fontSize: "11px",
-                        color: "var(--danger)",
-                        fontWeight: 500,
-                        lineHeight: "1.3",
-                      }}
-                    >
-                      {bn
-                        ? "সতর্কতা: সার্ভার এনভায়রনমেন্ট ভেরিয়েবলে SMS প্রোভাইডার API কী পাওয়া যায়নি। চালুর পরেও SMS ডেলিভারি ব্যর্থ হবে।"
-                        : "Warning: SMS provider API key is missing in environment variables. SMS delivery will fail even if enabled."}
-                    </span>
-                  )}
-                  {settings.smsSenderIdConfigured ? (
-                    <span
-                      className="status-pill active"
-                      style={{
-                        fontSize: "11px",
-                        padding: "1px 6px",
-                        alignSelf: "flex-start",
-                      }}
-                    >
-                      {bn
-                        ? "সেন্ডার আইডি কনফিগার করা আছে"
-                        : "Sender ID Configured"}
-                    </span>
-                  ) : (
-                    <span
-                      style={{
-                        display: "block",
-                        fontSize: "11px",
-                        color: "var(--ink-mute)",
-                        lineHeight: "1.3",
-                      }}
-                    >
-                      {bn
-                        ? "সেন্ডার আইডি কনফিগার করা নেই; SMS পাঠানো ব্যর্থ হবে।"
-                        : "Sender ID is not configured; SMS sending will fail."}
-                    </span>
-                  )}
+            <Card id="settings-receipts" className="settings-card">
+              <CardHeader className="settings-card-header">
+                <CardTitle className="settings-card-title">
+                  <FileText aria-hidden="true" />
+                  {bn ? "রশিদের ফুটার" : "Receipt footer"}
+                </CardTitle>
+                <CardDescription>
+                  {bn ? "প্রিন্ট করা পেমেন্ট রশিদের নিচে দেখানো বার্তা লিখুন।" : "Write the message printed at the bottom of payment receipts."}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="settings-card-content">
+                <FieldGroup className="settings-field-grid">
+                  <Field>
+                    <FieldLabel htmlFor="receipt-footer-bn">বাংলা</FieldLabel>
+                    <Textarea id="receipt-footer-bn" name="receiptFooterBn" value={receiptFooterBn} onChange={(event) => { setReceiptFooterBn(event.target.value); markDirty(); }} rows={4} />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="receipt-footer-en">English</FieldLabel>
+                    <Textarea id="receipt-footer-en" name="receiptFooterEn" value={receiptFooterEn} onChange={(event) => { setReceiptFooterEn(event.target.value); markDirty(); }} rows={4} />
+                  </Field>
+                </FieldGroup>
+              </CardContent>
+            </Card>
+
+            <Feedback value={feedback} />
+
+            <div className="settings-save-bar" data-dirty={isDirty ? "true" : "false"}>
+              <div className="settings-save-status">
+                <span className="settings-save-status-icon" aria-hidden="true">{isDirty ? "•" : "✓"}</span>
+                <div>
+                  <strong>{isDirty ? (bn ? "অসংরক্ষিত পরিবর্তন" : "Unsaved changes") : (bn ? "সব পরিবর্তন সংরক্ষিত" : "All changes saved")}</strong>
+                  <span>{isDirty ? (bn ? "সংরক্ষণ করতে নিচের বোতামটি চাপুন।" : "Save when you’re ready to apply them.") : (bn ? "এই সেটিংস সর্বশেষ সংরক্ষিত অবস্থায় আছে।" : "These settings match the latest saved version.")}</span>
                 </div>
               </div>
-            </label>
+              <div className="settings-save-actions">
+                <Button type="submit" disabled={busy || !isDirty} loading={saveBusy}><Save data-icon="inline-start" />{bn ? "সংরক্ষণ করুন" : "Save settings"}</Button>
+              </div>
+            </div>
           </div>
-        </fieldset>
-
-        <fieldset>
-          <legend style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <FileText size={16} />
-            {bn ? "রশিদের ফুটার" : "Receipt footer"}
-          </legend>
-          <div className="form-grid">
-            <label>
-              বাংলা
-              <textarea
-                name="receiptFooterBn"
-                value={receiptFooterBn}
-                onChange={(e) => {
-                  setReceiptFooterBn(e.target.value);
-                  markDirty();
-                }}
-                rows={3}
-              />
-            </label>
-            <label>
-              English
-              <textarea
-                name="receiptFooterEn"
-                value={receiptFooterEn}
-                onChange={(e) => {
-                  setReceiptFooterEn(e.target.value);
-                  markDirty();
-                }}
-                rows={3}
-              />
-            </label>
-          </div>
-          <span
-            style={{
-              display: "block",
-              fontSize: "12px",
-              color: "var(--ink-mute)",
-              marginTop: "8px",
-            }}
-          >
-            {bn
-              ? "প্রতিটি প্রিন্ট করা রশিদের নিচে এই টেক্সটটি প্রদর্শিত হবে।"
-              : "This message is printed at the bottom of payment receipts."}
-          </span>
-        </fieldset>
-
-        <Feedback value={feedback} />
-
-        <div className="form-actions">
-          <button
-            className="button button-primary"
-            type="submit"
-            disabled={busy}
-          >
-            <Save
-              size={16}
-              style={{ marginRight: "6px", verticalAlign: "middle" }}
-            />
-            {busy
-              ? bn
-                ? "সংরক্ষণ করা হচ্ছে..."
-                : "Saving..."
-              : bn
-                ? "সংরক্ষণ করুন"
-                : "Save settings"}
-          </button>
-          <button
-            className="button button-secondary"
-            type="button"
-            disabled={busy}
-            onClick={async () => {
-              setBusy(true);
-              setFeedback(null);
-              try {
-                const count = await seed({});
-                setFeedback({
-                  ok: true,
-                  text: `${count} ${bn ? "টি SMS টেমপ্লেট যোগ হয়েছে।" : "SMS templates added."} (Seeding is idempotent; existing templates were kept)`,
-                });
-              } catch (cause) {
-                setFeedback({
-                  ok: false,
-                  text:
-                    cause instanceof Error
-                      ? cause.message
-                      : "Could not seed templates",
-                });
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            <Mail
-              size={16}
-              style={{ marginRight: "6px", verticalAlign: "middle" }}
-            />
-            {busy
-              ? bn
-                ? "টেমপ্লেট তৈরি হচ্ছে..."
-                : "Seeding..."
-              : bn
-                ? "ডিফল্ট SMS টেমপ্লেট তৈরি"
-                : "Seed SMS templates"}
-          </button>
-        </div>
       </form>
     </>
   );

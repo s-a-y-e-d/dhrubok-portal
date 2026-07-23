@@ -13,6 +13,8 @@ const publishNotice = makeFunctionReference<"mutation">("notices/functions:publi
 const listForStudent = makeFunctionReference<"query">("notices/functions:listForStudent");
 const markRead = makeFunctionReference<"mutation">("notices/functions:markRead");
 const listPublicNotices = makeFunctionReference<"query">("publicSite/public:listNotices");
+const previewBulkSms = makeFunctionReference<"query">("bulkSms/functions:previewRecipients");
+const queueBulkSms = makeFunctionReference<"mutation">("bulkSms/functions:queue");
 
 async function seed(t: ReturnType<typeof convexTest>) {
   return await t.run(async (ctx) => {
@@ -63,7 +65,7 @@ describe("notice audience and read state", () => {
     expect(publicRows[0].title.value).toBe("Public");
   });
 
-  it("requires confirmation but suppresses notice SMS while that event is disabled", async () => {
+  it("requires confirmation before it queues notice SMS", async () => {
     const t = convexTest(schema, modules);
     const data = await seed(t);
     const owner = t.withIdentity({ tokenIdentifier: "owner" });
@@ -74,6 +76,22 @@ describe("notice audience and read state", () => {
     await expect(owner.mutation(publishNotice, { noticeId, confirmSms: true, expectedSmsRecipientCount: 0 })).rejects.toThrow("stale or missing");
     await owner.mutation(publishNotice, { noticeId, confirmSms: true, expectedSmsRecipientCount: 1 });
     const messages = await t.run((ctx) => ctx.db.query("smsMessages").take(10));
-    expect(messages).toHaveLength(0);
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toMatchObject({ eventType: "custom_notice", status: "queued" });
+  });
+
+  it("previews the one-body bulk SMS cost and queues the preferred guardian contact", async () => {
+    const t = convexTest(schema, modules);
+    await seed(t);
+    const owner = t.withIdentity({ tokenIdentifier: "owner" });
+    const input = { audience: "all_students" as const, recipient: "guardian" as const, message: "Class starts at 4 PM." };
+    const preview = await owner.query(previewBulkSms, input);
+    expect(preview).toMatchObject({ enabled: true, studentCount: 1, recipientCount: 1, segmentCount: 1, estimatedCostMinor: 30, recipientLimitExceeded: false });
+    expect(preview.body).toBe("Class starts at 4 PM.");
+    await expect(owner.mutation(queueBulkSms, { ...input, expectedRecipientCount: preview.recipientCount, expectedConfirmationFingerprint: "stale" })).rejects.toThrow("preview is stale");
+    await owner.mutation(queueBulkSms, { ...input, expectedRecipientCount: preview.recipientCount, expectedConfirmationFingerprint: preview.confirmationFingerprint });
+    const messages = await t.run((ctx) => ctx.db.query("smsMessages").take(10));
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toMatchObject({ eventType: "custom_notice", relatedEntityType: "bulkSms", status: "queued" });
   });
 });

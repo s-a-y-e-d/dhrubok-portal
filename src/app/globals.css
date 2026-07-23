@@ -882,6 +882,223 @@ a {
   flex-wrap: wrap;
   gap: 10px;
 }
+
+/* Owner settings workspace: grouped cards and a persistent save bar. These
+   styles use the shared design tokens so the workspace works in both portal
+   themes. */
+.settings-workspace {
+  margin-top: 24px;
+  padding-bottom: 96px;
+}
+.settings-card {
+  overflow: hidden;
+  border-color: var(--border);
+  background: var(--canvas);
+}
+.settings-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.settings-card-title svg {
+  width: 18px;
+  height: 18px;
+  color: var(--brand-deep);
+}
+.settings-form-column {
+  display: grid;
+  min-width: 0;
+  gap: 16px;
+}
+.settings-form-column-full {
+  width: 100%;
+}
+.settings-card {
+  scroll-margin-top: 24px;
+}
+.settings-card > .settings-card-header {
+  border-bottom: 1px solid var(--border-muted);
+  padding-bottom: 16px;
+}
+.settings-card > .settings-card-content {
+  padding-top: 20px;
+}
+.settings-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.settings-field-grid [data-slot="field"] {
+  min-width: 0;
+}
+.settings-field-grid [data-slot="field-description"] {
+  line-height: 1.55;
+}
+.settings-toggle-list {
+  display: grid;
+  gap: 18px;
+}
+.settings-toggle-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+.settings-toggle-copy {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+.settings-toggle-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+.settings-toggle-copy > p {
+  max-width: 66ch;
+  margin: 0;
+  color: var(--ink-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.settings-provider-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.settings-provider-status [data-slot="badge"] {
+  font-size: 11px;
+}
+.settings-inline-warning {
+  color: var(--danger-deep) !important;
+  font-size: 12px !important;
+  font-weight: 500;
+}
+.settings-concurrency-alert {
+  margin-top: 24px;
+  border-color: color-mix(in srgb, var(--warning) 40%, var(--border));
+  background: var(--warning-muted);
+}
+.settings-concurrency-alert > svg {
+  color: var(--warning-deep);
+}
+.settings-alert-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.settings-feedback-success {
+  border-color: color-mix(in srgb, var(--success) 35%, var(--border));
+  background: var(--success-muted);
+  color: var(--success-deep);
+}
+.settings-feedback-success > svg {
+  color: var(--success);
+}
+.settings-save-bar {
+  position: sticky;
+  bottom: 16px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 72px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: 12px 16px;
+  background: color-mix(in srgb, var(--canvas) 94%, transparent);
+  box-shadow: var(--shadow-2);
+  backdrop-filter: blur(12px);
+}
+.settings-save-bar[data-dirty="true"] {
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--border-strong));
+}
+.settings-save-status,
+.settings-save-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.settings-save-status {
+  min-width: 0;
+}
+.settings-save-status-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--success-muted);
+  color: var(--success-deep);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1;
+}
+.settings-save-bar[data-dirty="true"] .settings-save-status-icon {
+  background: var(--warning-soft);
+  color: var(--warning-deep);
+}
+.settings-save-status > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+.settings-save-status strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.settings-save-status span:not(.settings-save-status-icon) {
+  overflow: hidden;
+  color: var(--ink-mute);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.settings-save-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@media (max-width: 640px) {
+  .settings-workspace {
+    margin-top: 16px;
+    padding-bottom: 120px;
+  }
+  .settings-field-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .settings-toggle-row {
+    align-items: center;
+    gap: 12px;
+  }
+  .settings-toggle-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .settings-save-bar {
+    bottom: 8px;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+  }
+  .settings-save-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .settings-save-actions > * {
+    width: 100%;
+  }
+}
 .standalone-field {
   width: min(100%, 360px);
   display: grid;

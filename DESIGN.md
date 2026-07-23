@@ -690,6 +690,14 @@ and the alternate is optional, place the optional field in a collapsible
 - **`.form-grid-thirds`** — 3-column responsive layout grid for settings and small inputs. Collapses to 2-columns on tablet, and 1-column on mobile.
 - **`.feature-option-card`** — 2-column layout wrapper card (natively mapped via `<label>` elements) for accessible checkbox/radio settings with description text. Support hover state, `:focus-within` outlines, checked active states (`brand-muted` background + `brand` border), and disabled states.
 
+#### Owner Settings Workspace
+
+- Short settings pages use a single-column stack of complete `{rounded.md}` cards. Avoid adding an overview rail when the page has only a few sections.
+- Each settings group has a clear heading, one-sentence description, and controls that preserve the existing form semantics.
+- Feature switches use a text label, supporting description, and explicit status text or badge. Never use the switch colour alone to communicate state.
+- A persistent save bar stays visible at the bottom of the form. It shows `Unsaved changes` while dirty, keeps the primary save action available, and keeps non-destructive secondary actions visible without competing with save.
+- The save bar must remain touch-ready on mobile and the form needs bottom padding so sticky controls never cover the last field.
+
 ### Data Display
 
 #### Data Table

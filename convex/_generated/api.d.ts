@@ -32,6 +32,7 @@ import type * as admissions_model from "../admissions/model.js";
 import type * as admissions_owner from "../admissions/owner.js";
 import type * as admissions_public from "../admissions/public.js";
 import type * as attendance_functions from "../attendance/functions.js";
+import type * as bulkSms_functions from "../bulkSms/functions.js";
 import type * as crons from "../crons.js";
 import type * as devReset from "../devReset.js";
 import type * as devSeedData from "../devSeedData.js";
@@ -126,6 +127,7 @@ declare const fullApi: ApiFromModules<{
   "admissions/owner": typeof admissions_owner;
   "admissions/public": typeof admissions_public;
   "attendance/functions": typeof attendance_functions;
+  "bulkSms/functions": typeof bulkSms_functions;
   crons: typeof crons;
   devReset: typeof devReset;
   devSeedData: typeof devSeedData;
