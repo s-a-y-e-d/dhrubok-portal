@@ -10,7 +10,7 @@ import { renderSmsTemplate } from "../messaging/templates";
 import { SMS_TEMPLATE_DEFAULTS } from "../messaging/templateCatalog";
 import { dhakaDate } from "../model/dates";
 import { internal } from "../_generated/api";
-import type { Id } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
 
 const scopeValidator = v.union(
   v.literal("all"),
@@ -44,6 +44,11 @@ function render(template: string, brand: string, student: string, overdueMinor: 
 function startOfDhakaMonth() {
   const [year, month] = dhakaDate().split("-").map(Number);
   return Date.parse(`${year}-${String(month).padStart(2, "0")}-01T00:00:00+06:00`);
+}
+
+function remainingMonthlyFeeMinor(record: Doc<"monthlyFeeRecords">) {
+  const paidAmountMinor = record.paidAmountMinor ?? (record.status === "paid" ? record.amountMinor : 0);
+  return Math.max(record.amountMinor - paidAmountMinor, 0);
 }
 
 export const createPreview = mutation({
@@ -145,16 +150,27 @@ export const createPreview = mutation({
     // aggregate summaries.
     const legacyTotals = new Map<string, number>();
     const legacyScope = new Map<string, Audience>();
-    const overdueRecords = await ctx.db
-      .query("monthlyFeeRecords")
-      .withIndex("by_status_and_dueDate", (q) =>
-        q.eq("status", "unpaid").lt("dueDate", dhakaDate()),
-      )
-      .take(1000);
+    const [unpaidOverdueRecords, partialOverdueRecords] = await Promise.all([
+      ctx.db
+        .query("monthlyFeeRecords")
+        .withIndex("by_status_and_dueDate", (q) =>
+          q.eq("status", "unpaid").lt("dueDate", dhakaDate()),
+        )
+        .take(1000),
+      ctx.db
+        .query("monthlyFeeRecords")
+        .withIndex("by_status_and_dueDate", (q) =>
+          q.eq("status", "partially_paid").lt("dueDate", dhakaDate()),
+        )
+        .take(1000),
+    ]);
+    const overdueRecords = [...unpaidOverdueRecords, ...partialOverdueRecords]
+      .filter((record) => remainingMonthlyFeeMinor(record) > 0);
     for (const record of overdueRecords) {
+      const remainingMinor = remainingMonthlyFeeMinor(record);
       legacyTotals.set(
         record.studentId,
-        (legacyTotals.get(record.studentId) ?? 0) + record.amountMinor,
+        (legacyTotals.get(record.studentId) ?? 0) + remainingMinor,
       );
       if (
         (args.scopeType === "course" && record.courseId !== args.courseId) ||
@@ -177,12 +193,12 @@ export const createPreview = mutation({
           Date.parse(`${record.dueDate}T00:00:00+06:00`)) /
           86_400_000,
       );
-      if (days <= 15) current.overdue1To15Minor += record.amountMinor;
-      else if (days <= 30) current.overdue16To30Minor += record.amountMinor;
-      else if (days <= 60) current.overdue31To60Minor += record.amountMinor;
-      else if (days <= 90) current.overdue61To90Minor += record.amountMinor;
-      else current.overdueOver90Minor += record.amountMinor;
-      current.overdueMinor += record.amountMinor;
+      if (days <= 15) current.overdue1To15Minor += remainingMinor;
+      else if (days <= 30) current.overdue16To30Minor += remainingMinor;
+      else if (days <= 60) current.overdue31To60Minor += remainingMinor;
+      else if (days <= 90) current.overdue61To90Minor += remainingMinor;
+      else current.overdueOver90Minor += remainingMinor;
+      current.overdueMinor += remainingMinor;
       legacyScope.set(record.studentId, current);
     }
     for (const [studentId, summary] of legacyScope) byStudent.set(studentId, summary);
@@ -616,13 +632,18 @@ export const runAutomaticDueReminders = internalMutation({
     });
     const aggregateSummaries = await ctx.db.query("studentFinancialSummaries").withIndex("by_overdueMinor", (q) => q.gt("overdueMinor", 0)).take(500);
     const summaries: Array<{ studentId: Id<"students">; overdueMinor: number; currentMinor: number; overdue1To15Minor: number; overdue16To30Minor: number; overdue31To60Minor: number; overdue61To90Minor: number; overdueOver90Minor: number }> = aggregateSummaries.map((row) => ({ studentId: row.studentId, overdueMinor: row.overdueMinor, currentMinor: row.currentMinor ?? 0, overdue1To15Minor: row.overdue1To15Minor ?? 0, overdue16To30Minor: row.overdue16To30Minor ?? 0, overdue31To60Minor: row.overdue31To60Minor ?? 0, overdue61To90Minor: row.overdue61To90Minor ?? 0, overdueOver90Minor: row.overdueOver90Minor ?? 0 }));
-    const records = await ctx.db.query("monthlyFeeRecords").withIndex("by_status_and_dueDate", (q) => q.eq("status", "unpaid").lt("dueDate", date)).take(1000);
+    const [unpaidRecords, partialRecords] = await Promise.all([
+      ctx.db.query("monthlyFeeRecords").withIndex("by_status_and_dueDate", (q) => q.eq("status", "unpaid").lt("dueDate", date)).take(1000),
+      ctx.db.query("monthlyFeeRecords").withIndex("by_status_and_dueDate", (q) => q.eq("status", "partially_paid").lt("dueDate", date)).take(1000),
+    ]);
+    const records = [...unpaidRecords, ...partialRecords].filter((record) => remainingMonthlyFeeMinor(record) > 0);
     const legacy = new Map<string, (typeof summaries)[number]>();
     for (const record of records) {
       const current = legacy.get(record.studentId) ?? { studentId: record.studentId, overdueMinor: 0, currentMinor: 0, overdue1To15Minor: 0, overdue16To30Minor: 0, overdue31To60Minor: 0, overdue61To90Minor: 0, overdueOver90Minor: 0 };
       const days = Math.floor((Date.parse(`${date}T00:00:00+06:00`) - Date.parse(`${record.dueDate}T00:00:00+06:00`)) / 86_400_000);
-      current.overdueMinor += record.amountMinor;
-      if (days <= 15) current.overdue1To15Minor += record.amountMinor; else if (days <= 30) current.overdue16To30Minor += record.amountMinor; else if (days <= 60) current.overdue31To60Minor += record.amountMinor; else if (days <= 90) current.overdue61To90Minor += record.amountMinor; else current.overdueOver90Minor += record.amountMinor;
+      const remainingMinor = remainingMonthlyFeeMinor(record);
+      current.overdueMinor += remainingMinor;
+      if (days <= 15) current.overdue1To15Minor += remainingMinor; else if (days <= 30) current.overdue16To30Minor += remainingMinor; else if (days <= 60) current.overdue31To60Minor += remainingMinor; else if (days <= 90) current.overdue61To90Minor += remainingMinor; else current.overdueOver90Minor += remainingMinor;
       legacy.set(record.studentId, current);
     }
     for (const legacySummary of legacy.values()) {

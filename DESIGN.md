@@ -1169,8 +1169,11 @@ See "Print Design" section below.
   workspace at `/owner/finance/students/[studentId]`, opened by selecting a
   student row; it is never shown as a general navigation tab.
 - Monthly fees become due on the first day of their month. The worklist exposes
-  only Due now and Future paid; do not reintroduce ageing buckets, partial,
-  credit, promise, campaign, import, cashier-session, or adjustment surfaces.
+  only Due now and Future paid; do not reintroduce ageing buckets, credit,
+  promise, campaign, import, cashier-session, or adjustment surfaces. Partial
+  due payment is available only inside a selected student's Finance workspace:
+  an owner enters one amount, sees an oldest-due-first allocation preview, and
+  confirms the immutable receipt and guardian-SMS side effect.
 - One-click collection previews every due month and amount, then pays all of
   those months in full in one cash collection.
 - Manual monthly collection may include older dues and any future month in the

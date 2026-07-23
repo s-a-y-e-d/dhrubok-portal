@@ -13,6 +13,14 @@ export const clearBatchRooms = migrations.define({ table: "batches", migrateOne:
 export const clearBatchScheduleRooms = migrations.define({ table: "batchSchedules", migrateOne: async (_ctx, row) => row.roomBn === undefined && row.roomEn === undefined ? undefined : ({ roomBn: undefined, roomEn: undefined }) });
 export const clearClassSessionRooms = migrations.define({ table: "classSessions", migrateOne: async (_ctx, row) => row.roomBn === undefined && row.roomEn === undefined ? undefined : ({ roomBn: undefined, roomEn: undefined }) });
 
+export const backfillMonthlyFeePaidAmounts = migrations.define({
+  table: "monthlyFeeRecords",
+  migrateOne: async (_ctx, row) =>
+    row.paidAmountMinor === undefined
+      ? { paidAmountMinor: row.status === "paid" ? row.amountMinor : 0 }
+      : undefined,
+});
+
 export const simplifyStudentRecords = migrations.define({
   table: "students",
   migrateOne: async (ctx, student) => {

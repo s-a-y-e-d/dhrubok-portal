@@ -735,7 +735,7 @@ describe("finance invariants", () => {
     });
   });
 
-  it("uses Finance monthly-fee dues when financial summaries have not been materialized", async () => {
+  it("uses remaining Finance monthly-fee dues when financial summaries have not been materialized", async () => {
     const t = convexTest(schema, modules);
     const data = await fixture(t);
     await t.run(async (ctx) => {
@@ -747,7 +747,8 @@ describe("finance invariants", () => {
         periodKey: "2026-01",
         dueDate: "2026-01-15",
         amountMinor: 350_000,
-        status: "unpaid",
+        paidAmountMinor: 100_000,
+        status: "partially_paid",
         createdAt: Date.now(),
       });
     });
@@ -759,7 +760,28 @@ describe("finance invariants", () => {
     });
     const detail = await owner.query(api.finance.campaigns.getCampaign, { campaignId });
     expect(detail?.campaign.eligibleRecipientCount).toBe(1);
-    expect(detail?.recipients[0]).toMatchObject({ studentId: data.studentId, overdueMinorSnapshot: 350_000 });
+    expect(detail?.recipients[0]).toMatchObject({ studentId: data.studentId, overdueMinorSnapshot: 250_000 });
+  });
+
+  it("uses remaining partially paid monthly fees in automatic due reminders", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-23T06:00:00+06:00"));
+    try {
+      const t = convexTest(schema, modules);
+      const data = await fixture(t);
+      await t.run(async (ctx) => {
+        const now = Date.now();
+        await ctx.db.insert("coachingSettings", { nameBn: "ধ্রুবক", nameEn: "Dhrubok", shortNameBn: "ধ্রুবক", shortNameEn: "Dhrubok", addressBn: "ঢাকা", addressEn: "Dhaka", phone: "8801712345678", email: "office@example.com", timezone: "Asia/Dhaka", currency: "BDT", defaultLocale: "en", defaultGuardianSmsLocale: "en", receiptPrefix: "RCPT", studentIdPrefix: "ST", applicationPrefix: "APP", receiptFooterBn: "ধন্যবাদ", receiptFooterEn: "Thank you", smsEnabled: true, automaticDueRemindersEnabled: true, automaticDueReminderDay: 23, publicAdmissionsOpen: true, createdAt: now, updatedAt: now });
+        await ctx.db.insert("monthlyFeeRecords", { studentId: data.studentId, enrolmentId: data.enrolmentId, courseId: data.courseId, batchId: data.batchId, periodKey: "2026-01", dueDate: "2026-01-01", amountMinor: 300_000, paidAmountMinor: 125_000, status: "partially_paid", createdAt: now });
+      });
+      const result = await t.mutation(internal.finance.campaigns.runAutomaticDueReminders, {});
+      expect(result.queued).toBe(2);
+      const recipients = await t.run((ctx) => ctx.db.query("dueReminderCampaignRecipients").take(10));
+      expect(recipients).toHaveLength(1);
+      expect(recipients[0]).toMatchObject({ studentId: data.studentId, overdueMinorSnapshot: 175_000 });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("groups a multi-course student once and collects course fees on one receipt", async () => {
@@ -774,5 +796,28 @@ describe("finance invariants", () => {
     const messages = await t.run(async (ctx) => ctx.db.query("smsMessages").withIndex("by_relatedEntityType_and_relatedEntityId", q => q.eq("relatedEntityType", "feeCollection").eq("relatedEntityId", result.collectionId)).take(10));
     expect(messages).toHaveLength(2);
     expect(messages.every((message) => message.eventType === "payment_posted" && message.body.includes("1850.00") && message.body.includes(result.receiptNumber) && !message.body.includes("ID card"))).toBe(true);
+  });
+
+  it("allocates partial due payments oldest-first and reverses only the voided receipt", async () => {
+    const t = convexTest(schema, modules);
+    const data = await fixture(t);
+    await t.run(async (ctx) => {
+      const now = Date.now();
+      for (const [periodKey, dueDate] of [["2026-01", "2026-01-01"], ["2026-02", "2026-02-01"]] as const) {
+        await ctx.db.insert("monthlyFeeRecords", { studentId: data.studentId, enrolmentId: data.enrolmentId, courseId: data.courseId, batchId: data.batchId, periodKey, dueDate, amountMinor: 100_000, status: "unpaid", paidAmountMinor: 0, createdAt: now });
+      }
+    });
+    const owner = t.withIdentity({ tokenIdentifier: "clerk|owner", email: "owner@example.com", emailVerified: true });
+    const first = await owner.mutation(api.fees.functions.collectPartialDue, { studentId: data.studentId, amountMinor: 150_000, collectedOn: "2026-07-23" });
+    const second = await owner.mutation(api.fees.functions.collectPartialDue, { studentId: data.studentId, amountMinor: 30_000, collectedOn: "2026-07-23" });
+    expect(first.amountMinor).toBe(150_000);
+    expect(second.amountMinor).toBe(30_000);
+    const beforeVoid = await t.run(async (ctx) => (await ctx.db.query("monthlyFeeRecords").withIndex("by_studentId_and_dueDate", (q) => q.eq("studentId", data.studentId)).take(10)).map((row) => ({ periodKey: row.periodKey, status: row.status, paidAmountMinor: row.paidAmountMinor })));
+    expect(beforeVoid).toEqual([{ periodKey: "2026-01", status: "paid", paidAmountMinor: 100_000 }, { periodKey: "2026-02", status: "partially_paid", paidAmountMinor: 80_000 }]);
+    await owner.mutation(api.fees.functions.voidCollection, { collectionId: second.collectionId, reason: "Correction" });
+    const afterVoid = await t.run(async (ctx) => (await ctx.db.query("monthlyFeeRecords").withIndex("by_studentId_and_dueDate", (q) => q.eq("studentId", data.studentId)).take(10)).map((row) => ({ periodKey: row.periodKey, status: row.status, paidAmountMinor: row.paidAmountMinor })));
+    expect(afterVoid).toEqual([{ periodKey: "2026-01", status: "paid", paidAmountMinor: 100_000 }, { periodKey: "2026-02", status: "partially_paid", paidAmountMinor: 50_000 }]);
+    const sms = await t.run(async (ctx) => ctx.db.query("smsMessages").withIndex("by_relatedEntityType_and_relatedEntityId", (q) => q.eq("relatedEntityType", "feeCollection").eq("relatedEntityId", first.collectionId)).take(10));
+    expect(sms).toHaveLength(2);
   });
 });

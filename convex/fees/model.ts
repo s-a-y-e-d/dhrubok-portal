@@ -75,6 +75,7 @@ export async function materializeEnrolmentMonths(
       dueDate: dueDateForPeriod(periodKey),
       amountMinor: monthlyAmount,
       status: "unpaid",
+      paidAmountMinor: 0,
       createdAt: Date.now(),
     });
     created += 1;

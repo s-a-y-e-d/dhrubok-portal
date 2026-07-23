@@ -556,7 +556,13 @@ export default defineSchema({
     periodKey: v.string(),
     dueDate: v.string(),
     amountMinor: v.number(),
-    status: v.union(v.literal("unpaid"), v.literal("paid")),
+    status: v.union(
+      v.literal("unpaid"),
+      v.literal("partially_paid"),
+      v.literal("paid"),
+    ),
+    // Optional during the partial-payment rollout; backfilled by migrations.
+    paidAmountMinor: v.optional(v.number()),
     collectionId: v.optional(v.id("feeCollections")),
     createdAt: v.number(),
     paidAt: v.optional(v.number()),

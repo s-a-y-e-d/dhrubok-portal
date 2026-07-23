@@ -655,6 +655,61 @@ function DueDialog({
   );
 }
 
+function PartialDueCollection({ locale, studentId, dueMinor }: { locale: "bn" | "en"; studentId: Id<"students">; dueMinor: number }) {
+  const bn = locale === "bn";
+  const collectPartialDue = useMutation(api.fees.functions.collectPartialDue);
+  const [amount, setAmount] = useState("");
+  const [collectedOn, setCollectedOn] = useState(today());
+  const [note, setNote] = useState("");
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const amountMinor = Number.isFinite(Number(amount)) ? Math.round(Number(amount) * 100) : 0;
+  const preview = useQuery(
+    api.fees.functions.previewPartialDue,
+    amountMinor > 0 ? { studentId, amountMinor } : "skip",
+  );
+  const valid = amountMinor > 0 && amountMinor <= dueMinor && preview && preview.allocatedMinor === amountMinor;
+
+  async function confirm() {
+    if (!valid) return;
+    setBusy(true);
+    try {
+      const result = await collectPartialDue({ studentId, amountMinor, collectedOn, note: note.trim() || undefined });
+      toast.success(bn ? `রশিদ ${result.receiptNumber} তৈরি হয়েছে` : `Receipt ${result.receiptNumber} created`, {
+        action: { label: bn ? "খুলুন" : "Open", onClick: () => window.open(`/${locale}/owner/receipt/${result.collectionId}`, "_blank") },
+      });
+      setAmount("");
+      setNote("");
+      setConfirming(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Collection failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <Card className="order-2 border-[var(--warning)]/30 shadow-xs">
+    <CardHeader className="border-b border-[var(--border)] pb-4">
+      <CardTitle className="flex items-center gap-2 text-lg"><ReceiptText className="size-5 text-[var(--warning)]" />{bn ? "আংশিক বকেয়া পরিশোধ" : "Partial due payment"}</CardTitle>
+      <CardDescription>{bn ? "প্রদত্ত অর্থটি সবচেয়ে পুরোনো বকেয়া মাস থেকে স্বয়ংক্রিয়ভাবে সমন্বয় হবে।" : "The payment is automatically allocated to the oldest outstanding months first."}</CardDescription>
+    </CardHeader>
+    <CardContent className="flex flex-col gap-4 pt-5">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field><FieldLabel htmlFor="partial-due-amount">{bn ? "প্রদেয় পরিমাণ (টাকা)" : "Payment amount (BDT)"}</FieldLabel><Input id="partial-due-amount" value={amount} onChange={(event) => setAmount(event.target.value)} type="number" min="0.01" max={(dueMinor / 100).toFixed(2)} step="0.01" placeholder="0.00" className="font-mono" /></Field>
+        <Field><FieldLabel htmlFor="partial-due-date">{bn ? "সংগ্রহের তারিখ" : "Collection date"}</FieldLabel><Input id="partial-due-date" value={collectedOn} onChange={(event) => setCollectedOn(event.target.value)} type="date" max={today()} className="font-mono" /></Field>
+        <Field className="sm:col-span-2"><FieldLabel htmlFor="partial-due-note">{bn ? "নোট (ঐচ্ছিক)" : "Note (optional)"}</FieldLabel><Input id="partial-due-note" value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} /></Field>
+      </div>
+      <div className="rounded-[var(--radius-md)] border border-[var(--warning)]/30 bg-[var(--warning-muted)] p-4">
+        <div className="flex items-center justify-between gap-3"><span className="text-sm font-medium">{bn ? "বর্তমান বকেয়া" : "Current due"}</span><span className="font-mono font-semibold">{money(dueMinor, locale)}</span></div>
+        {amountMinor > dueMinor ? <p className="mt-2 text-sm text-[var(--danger)]">{bn ? "প্রদেয় পরিমাণ বকেয়ার চেয়ে বেশি হতে পারবে না।" : "Payment amount cannot exceed the current due balance."}</p> : null}
+        {preview ? <div className="mt-3 border-t border-[var(--warning)]/30 pt-3"><p className="text-sm font-medium">{bn ? "সমন্বয়ের পূর্বরূপ" : "Allocation preview"}</p><div className="mt-2 flex flex-col gap-1 text-sm">{preview.allocations.map((allocation) => <div key={allocation.monthlyFeeRecordId} className="flex justify-between gap-3"><span>{monthName(allocation.periodKey, locale)}</span><span className="font-mono">{money(allocation.amountMinor, locale)}</span></div>)}</div><div className="mt-3 flex justify-between border-t border-[var(--warning)]/30 pt-2 text-sm font-medium"><span>{bn ? "পরিশোধের পর বাকি" : "Due after payment"}</span><span className="font-mono">{money(preview.remainingAfterMinor, locale)}</span></div></div> : null}
+      </div>
+      <div className="flex justify-end"><Button disabled={!valid || busy} onClick={() => setConfirming(true)} className="w-full sm:w-auto"><ReceiptText data-icon="inline-start" />{bn ? "পেমেন্ট পর্যালোচনা করুন" : "Review payment"}</Button></div>
+      <AlertDialog open={confirming} onOpenChange={(open) => !busy && setConfirming(open)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{bn ? "আংশিক পেমেন্ট নিশ্চিত করুন" : "Confirm partial payment"}</AlertDialogTitle><AlertDialogDescription>{bn ? "একটি রশিদ তৈরি হবে, অভিভাবককে পেমেন্ট SMS পাঠানো হবে এবং সংশোধনের জন্য রশিদ বাতিল করতে হবে।" : "A receipt will be created, the guardian will receive the payment SMS, and corrections require voiding the receipt."}</AlertDialogDescription></AlertDialogHeader><div className="flex justify-between gap-3"><span>{bn ? "প্রাপ্তি" : "Received"}</span><span className="font-mono font-semibold">{money(amountMinor, locale)}</span></div><AlertDialogFooter><AlertDialogCancel>{bn ? "বাতিল" : "Cancel"}</AlertDialogCancel><AlertDialogAction disabled={busy} onClick={(event) => { event.preventDefault(); void confirm(); }}>{busy ? <Spinner data-icon="inline-start" /> : null}{bn ? "নিশ্চিত করুন" : "Confirm collection"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+    </CardContent>
+  </Card>;
+}
+
 function StudentFinanceCollection({
   locale,
   studentId,
@@ -726,7 +781,7 @@ function StudentFinanceCollection({
     }
   }
   const allMonths = options.enrolments.flatMap((enrolment) => enrolment.months.map((month) => ({ ...month, enrolmentId: enrolment.enrolmentId })));
-  const dueMonths = allMonths.filter((month) => month.status === "due");
+  const dueMonths = allMonths.filter((month) => month.status === "due" || month.status === "partially_paid");
   const futurePaidMonths = allMonths.filter((month) => month.status === "paid");
   const dueMinor = dueMonths.reduce(
     (total, month) => total + month.amountMinor,
@@ -864,8 +919,10 @@ function StudentFinanceCollection({
         </CardContent>
       </Card>
 
+      <PartialDueCollection locale={locale} studentId={studentId} dueMinor={dueMinor} />
+
       {/* Manual Fee Collection Card */}
-      <Card className="border-border/80 shadow-xs">
+      <Card className="order-1 border-border/80 shadow-xs">
         <CardHeader className="border-b border-border/50 pb-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
@@ -883,13 +940,13 @@ function StudentFinanceCollection({
         </CardHeader>
         <CardContent className="pt-6">
           <form className="flex flex-col gap-6" onSubmit={submit}>
-            <FieldGroup className="grid gap-4 rounded-[var(--radius-md)] border border-[var(--border)] p-4 sm:grid-cols-2">
+            <FieldGroup className="order-2 grid gap-4 rounded-[var(--radius-md)] border border-[var(--border)] p-4 sm:grid-cols-2">
               <div className="sm:col-span-2"><strong>{bn ? "অন্যান্য ফি" : "Other fee"}</strong><FieldDescription>{bn ? "শিক্ষার্থী-স্তরের ঐচ্ছিক ফি; কোনো কোর্সের অধীনে নয়।" : "Optional student-level fee; it is not assigned to a course."}</FieldDescription></div>
               <Field><FieldLabel htmlFor="fee-name">{bn ? "ফির নাম" : "Fee name"}</FieldLabel><Input id="fee-name" name="feeName" placeholder={bn ? "যেমন: জরিমানা, ড্রেস" : "e.g. Fine, Uniform"} maxLength={120} /></Field>
               <Field><FieldLabel htmlFor="fee-amount">{bn ? "পরিমাণ (টাকা)" : "Amount (BDT)"}</FieldLabel><Input id="fee-amount" name="amount" type="number" min="0.01" step="0.01" placeholder="0.00" className="font-mono" /></Field>
             </FieldGroup>
             {(
-              <div className="flex flex-col gap-3">
+              <div className="order-1 flex flex-col gap-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                   <FieldLabel className="text-sm font-semibold text-foreground">
                     {bn ? "মাস নির্বাচন" : "Select months"}
@@ -906,7 +963,8 @@ function StudentFinanceCollection({
                   {enrolment.months.map((row) => {
                     const selectionKey = `${enrolment.enrolmentId}:${row.periodKey}`;
                     const isPaid = row.status === "paid";
-                    const isDue = row.status === "due";
+                    const isDue = row.status === "due" || row.status === "partially_paid";
+                    const isPartial = row.status === "partially_paid";
                     const isSelected = selected.includes(selectionKey);
 
                     let cardStyle =
@@ -963,6 +1021,10 @@ function StudentFinanceCollection({
                               >
                                 {bn ? "পরিশোধিত" : "Paid"}
                               </Badge>
+                            ) : isPartial ? (
+                              <Badge variant="warning">
+                                {bn ? "আংশিক" : "Partial"}
+                              </Badge>
                             ) : isDue ? (
                               <Badge variant="danger">
                                 {bn ? "বকেয়া" : "Due"}
@@ -1002,9 +1064,9 @@ function StudentFinanceCollection({
                 </div>
               </div>
             )}
-            <Separator className="my-1" />
+            <Separator className="order-3 my-1" />
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="order-4 grid gap-4 sm:grid-cols-2">
               <Field>
                 <FieldLabel htmlFor="collected-on">
                   {bn ? "সংগ্রহের তারিখ" : "Collection date"}
@@ -1036,7 +1098,7 @@ function StudentFinanceCollection({
               </Field>
             </div>
 
-            <div className="flex justify-end pt-2">
+            <div className="order-5 flex justify-end pt-2">
               <Button
                 type="submit"
                 size="default"
@@ -1178,7 +1240,7 @@ function ReceiptHistory({
     }
   }
   return (
-    <Card className="border-border/80 shadow-xs">
+    <Card className="order-3 border-border/80 shadow-xs">
       <CardHeader className="border-b border-border/50 pb-4">
         <CardTitle className="text-lg font-semibold flex items-center gap-2">
           <FileText className="size-5 text-brand" />

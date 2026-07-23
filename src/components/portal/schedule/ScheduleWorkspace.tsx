@@ -71,6 +71,8 @@ type Options = FunctionReturnType<
 type StatusFilter = "all" | "scheduled" | "open" | "submitted" | "cancelled";
 type MutationMode = "extra" | "reschedule" | "cancel" | null;
 const DAY_MS = 86_400_000;
+const HOUR_HEIGHT = 88;
+const MIN_SESSION_CARD_HEIGHT = 64;
 const weekdaysEn = [
   "Saturday",
   "Sunday",
@@ -640,7 +642,7 @@ function WeekCalendar({
   const maxHour = minuteValues.length
     ? Math.min(24, Math.max(22, Math.ceil(Math.max(...minuteValues) / 60) + 1))
     : 22;
-  const height = (maxHour - minHour) * 64;
+  const height = (maxHour - minHour) * HOUR_HEIGHT;
   return (
     <ScrollArea className="w-full rounded-[var(--radius-md)] border border-[var(--border)]">
       <div className="min-w-[980px]">
@@ -668,7 +670,7 @@ function WeekCalendar({
               <span
                 key={index}
                 className="absolute end-2 -translate-y-1/2 text-xs text-[var(--ink-mute)]"
-                style={{ top: index * 64 }}
+                style={{ top: index * HOUR_HEIGHT }}
               >
                 {String(minHour + index).padStart(2, "0")}:00
               </span>
@@ -689,7 +691,7 @@ function WeekCalendar({
                   <Separator
                     key={index}
                     className="absolute inset-x-0"
-                    style={{ top: index * 64 }}
+                    style={{ top: index * HOUR_HEIGHT }}
                   />
                 ))}
                 {dayRows.map((row) => {
@@ -713,20 +715,22 @@ function WeekCalendar({
                       onClick={() => onSelect(row)}
                       aria-label={`${displayTime(row.startsAt, locale)} ${bn ? row.batchNameBn : row.batchNameEn} ${row.teacherName} ${statusLabel(row.status, bn)}`}
                       className={cn(
-                        "absolute inset-x-1 overflow-hidden rounded-[var(--radius-sm)] border p-2 text-start text-xs shadow-[var(--shadow-1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]",
+                        "absolute inset-x-1 overflow-hidden rounded-[var(--radius-sm)] border px-2 py-1.5 text-start text-xs leading-4 shadow-[var(--shadow-2)] transition-[border-color,box-shadow] duration-150 ease-out hover:shadow-[var(--shadow-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]",
                         row.status === "cancelled"
                           ? "border-[var(--border-strong)] bg-[var(--canvas-subtle)] opacity-70"
                           : row.isOneOffOverride
                             ? "border-[var(--warning)] bg-[var(--warning-muted)]"
                             : row.occurrenceType === "extra"
                               ? "border-[var(--info)] bg-[var(--info-muted)]"
-                              : "border-[var(--border-strong)] bg-[var(--canvas)]",
+                              : "border-[var(--ink-faint)] bg-[var(--canvas-subtle)]",
                       )}
                       style={{
-                        top: ((startMinutes - minHour * 60) / 60) * 64,
+                        top:
+                          ((startMinutes - minHour * 60) / 60) *
+                          HOUR_HEIGHT,
                         height: Math.max(
-                          42,
-                          ((endMinutes - startMinutes) / 60) * 64,
+                          MIN_SESSION_CARD_HEIGHT,
+                          ((endMinutes - startMinutes) / 60) * HOUR_HEIGHT,
                         ),
                         left: `calc(${(lane / laneCount) * 100}% + 4px)`,
                         right: `calc(${((laneCount - lane - 1) / laneCount) * 100}% + 4px)`,

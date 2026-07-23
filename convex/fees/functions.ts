@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
-import type { Id } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
 import { internalMutation, mutation, query } from "../_generated/server";
 import { requireAccount, requireOwner, requireStudent } from "../model/auth";
 import { writeAudit } from "../model/audit";
@@ -40,6 +40,41 @@ function validateCollectionDate(value: string) {
   assertLocalDate(value);
   if (value > dhakaDate())
     throw new Error("Collection date cannot be in the future");
+}
+
+function paidAmountFor(record: Doc<"monthlyFeeRecords">) {
+  return record.paidAmountMinor ?? (record.status === "paid" ? record.amountMinor : 0);
+}
+
+function remainingAmountFor(record: Doc<"monthlyFeeRecords">) {
+  return Math.max(record.amountMinor - paidAmountFor(record), 0);
+}
+
+function isDueRecord(record: Doc<"monthlyFeeRecords">, today: string) {
+  return record.dueDate <= today && remainingAmountFor(record) > 0;
+}
+
+function paymentStatus(amountMinor: number, paidAmountMinor: number) {
+  if (paidAmountMinor <= 0) return "unpaid" as const;
+  return paidAmountMinor >= amountMinor ? "paid" as const : "partially_paid" as const;
+}
+
+function allocateOldestDue(
+  records: Doc<"monthlyFeeRecords">[],
+  amountMinor: number,
+  today: string,
+) {
+  let remaining = amountMinor;
+  const allocations: Array<{ record: Doc<"monthlyFeeRecords">; amountMinor: number }> = [];
+  for (const record of records
+    .filter((row) => isDueRecord(row, today))
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate) || a.periodKey.localeCompare(b.periodKey) || a._creationTime - b._creationTime)) {
+    if (remaining <= 0) break;
+    const allocatedMinor = Math.min(remaining, remainingAmountFor(record));
+    allocations.push({ record, amountMinor: allocatedMinor });
+    remaining -= allocatedMinor;
+  }
+  return { allocations, unallocatedMinor: remaining };
 }
 
 export const materializeBatch = internalMutation({
@@ -155,22 +190,20 @@ export const ownerWorklist = query({
       )
         continue;
       const scopedRecords = records.filter((record) => record.enrolmentId === enrolment._id);
-      const due = scopedRecords.filter(
-        (record) => record.status === "unpaid" && record.dueDate <= today,
-      );
+      const due = scopedRecords.filter((record) => isDueRecord(record, today));
       const future = scopedRecords.filter(
         (record) =>
           record.status === "paid" && record.periodKey > currentPeriod,
       );
       if (args.dueOnly && due.length === 0) continue;
-      const dueMinor = due.reduce((sum, record) => sum + record.amountMinor, 0);
+      const dueMinor = due.reduce((sum, record) => sum + remainingAmountFor(record), 0);
       totalDueMinor += dueMinor;
       futurePaidMonths += future.length;
       const existing = byStudent.get(student._id);
       const row = existing ?? { studentId: student._id, studentNumber: student.studentNumber, displayName: student.displayName, photoUrl: student.photoStorageId ? await ctx.storage.getUrl(student.photoStorageId) : null, guardianPhone: student.guardianPhone, monthlyFeeMinor: 0, dueMinor: 0, futurePaidItems: 0, dueItems: [] };
       row.monthlyFeeMinor += enrolment.agreedMonthlyAmountMinor ?? 0;
       row.dueMinor += dueMinor; row.futurePaidItems += future.length;
-      row.dueItems.push(...due.map((record) => ({ enrolmentId: enrolment._id, periodKey: record.periodKey, amountMinor: record.amountMinor, courseNameBn: course.nameBn, courseNameEn: course.nameEn, batchNameBn: batch.nameBn, batchNameEn: batch.nameEn })));
+      row.dueItems.push(...due.map((record) => ({ enrolmentId: enrolment._id, periodKey: record.periodKey, amountMinor: remainingAmountFor(record), courseNameBn: course.nameBn, courseNameEn: course.nameEn, batchNameBn: batch.nameBn, batchNameEn: batch.nameEn })));
       byStudent.set(student._id, row);
     }
     const rows = [...byStudent.values()];
@@ -208,7 +241,7 @@ export const studentCollectionOptions = query({
     enrolments: v.array(v.object({
       enrolmentId: v.id("enrolments"), courseNameBn: v.string(), courseNameEn: v.string(), batchNameBn: v.string(), batchNameEn: v.string(),
       enrolmentStatus: v.union(v.literal("active"), v.literal("completed"), v.literal("withdrawn"), v.literal("transferred")), monthlyFeeMinor: v.number(),
-      months: v.array(v.object({ periodKey: v.string(), amountMinor: v.number(), status: v.union(v.literal("due"), v.literal("future"), v.literal("paid")) })),
+      months: v.array(v.object({ periodKey: v.string(), amountMinor: v.number(), originalAmountMinor: v.number(), paidAmountMinor: v.number(), status: v.union(v.literal("due"), v.literal("partially_paid"), v.literal("future"), v.literal("paid")) })),
     })),
   }),
   handler: async (ctx, args) => {
@@ -233,15 +266,16 @@ export const studentCollectionOptions = query({
     const enrolmentOptions = [];
     for (const enrolment of enrolments) {
       const enrolmentRecords = records.filter((record) => record.enrolmentId === enrolment._id);
-      const unpaid = enrolmentRecords.filter((record) => record.status === "unpaid");
-      if (enrolment.status !== "active" && unpaid.length === 0) continue;
+      const outstanding = enrolmentRecords.filter((record) => remainingAmountFor(record) > 0);
+      if (enrolment.status !== "active" && outstanding.length === 0) continue;
       const [course, batch] = await Promise.all([ctx.db.get("courses", enrolment.courseId), ctx.db.get("batches", enrolment.batchId)]);
       if (!course || !batch) continue;
       const byPeriod = new Map(enrolmentRecords.map((record) => [record.periodKey, record]));
-      const months: Array<{ periodKey: string; amountMinor: number; status: "due" | "future" | "paid" }> = unpaid.filter((record) => record.dueDate <= today).map((record) => ({ periodKey: record.periodKey, amountMinor: record.amountMinor, status: "due" }));
+      const months: Array<{ periodKey: string; amountMinor: number; originalAmountMinor: number; paidAmountMinor: number; status: "due" | "partially_paid" | "future" | "paid" }> = outstanding.filter((record) => record.dueDate <= today).map((record) => ({ periodKey: record.periodKey, amountMinor: remainingAmountFor(record), originalAmountMinor: record.amountMinor, paidAmountMinor: paidAmountFor(record), status: record.status === "partially_paid" ? "partially_paid" : "due" }));
       if (enrolment.status === "active") for (let month = Number(currentPeriod.slice(5, 7)) + 1; month <= 12; month += 1) {
         const periodKey = `${currentYear}-${String(month).padStart(2, "0")}`; const record = byPeriod.get(periodKey);
-        months.push({ periodKey, amountMinor: record?.amountMinor ?? enrolment.agreedMonthlyAmountMinor ?? 0, status: record?.status === "paid" ? "paid" : "future" });
+        const originalAmountMinor = record?.amountMinor ?? enrolment.agreedMonthlyAmountMinor ?? 0;
+        months.push({ periodKey, amountMinor: originalAmountMinor, originalAmountMinor, paidAmountMinor: record ? paidAmountFor(record) : 0, status: record?.status === "paid" ? "paid" : "future" });
       }
       enrolmentOptions.push({ enrolmentId: enrolment._id, courseNameBn: course.nameBn, courseNameEn: course.nameEn, batchNameBn: batch.nameBn, batchNameEn: batch.nameEn, enrolmentStatus: enrolment.status, monthlyFeeMinor: enrolment.agreedMonthlyAmountMinor ?? 0, months });
     }
@@ -257,6 +291,30 @@ export const studentCollectionOptions = query({
   },
 });
 
+export const previewPartialDue = query({
+  args: { studentId: v.id("students"), amountMinor: v.number() },
+  returns: v.object({
+    dueMinor: v.number(),
+    allocatedMinor: v.number(),
+    remainingAfterMinor: v.number(),
+    allocations: v.array(v.object({ monthlyFeeRecordId: v.id("monthlyFeeRecords"), periodKey: v.string(), amountMinor: v.number(), remainingMinor: v.number() })),
+  }),
+  handler: async (ctx, args) => {
+    await requireOwner(ctx);
+    assertMinorUnits(args.amountMinor);
+    if (args.amountMinor <= 0) throw new Error("Payment amount must be greater than zero");
+    const records = await ctx.db.query("monthlyFeeRecords").withIndex("by_studentId_and_dueDate", (q) => q.eq("studentId", args.studentId)).take(500);
+    const dueMinor = records.filter((record) => isDueRecord(record, dhakaDate())).reduce((sum, record) => sum + remainingAmountFor(record), 0);
+    const { allocations } = allocateOldestDue(records, Math.min(args.amountMinor, dueMinor), dhakaDate());
+    return {
+      dueMinor,
+      allocatedMinor: allocations.reduce((sum, allocation) => sum + allocation.amountMinor, 0),
+      remainingAfterMinor: Math.max(dueMinor - args.amountMinor, 0),
+      allocations: allocations.map(({ record, amountMinor }) => ({ monthlyFeeRecordId: record._id, periodKey: record.periodKey, amountMinor, remainingMinor: remainingAmountFor(record) - amountMinor })),
+    };
+  },
+});
+
 export const collectDue = mutation({
   args: { studentId: v.id("students"), collectedOn: v.string() },
   returns: collectionResultValidator,
@@ -264,18 +322,13 @@ export const collectDue = mutation({
     const { account } = await requireOwner(ctx);
     validateCollectionDate(args.collectedOn);
     const today = dhakaDate();
-    const records = await ctx.db
-      .query("monthlyFeeRecords")
-      .withIndex("by_studentId_and_status", (q) =>
-        q.eq("studentId", args.studentId).eq("status", "unpaid"),
-      )
-      .take(240);
-    const due = records.filter((record) => record.dueDate <= today);
+    const records = await ctx.db.query("monthlyFeeRecords").withIndex("by_studentId_and_dueDate", (q) => q.eq("studentId", args.studentId)).take(240);
+    const due = records.filter((record) => isDueRecord(record, today));
     if (!due.length) throw new Error("This student has no monthly fees due");
     const items = await Promise.all(due.map(async (record) => {
       const enrolment = record.enrolmentId ? await ctx.db.get("enrolments", record.enrolmentId) : null;
       const course = enrolment ? await ctx.db.get("courses", enrolment.courseId) : null;
-      return { itemType: "monthly" as const, description: `${course ? `${course.nameEn} - ` : ""}${monthLabel(record.periodKey)} Monthly Fee`, amountMinor: record.amountMinor, periodKey: record.periodKey, monthlyFeeRecordId: record._id };
+      return { itemType: "monthly" as const, description: `${course ? `${course.nameEn} - ` : ""}${monthLabel(record.periodKey)} Monthly Fee`, amountMinor: remainingAmountFor(record), periodKey: record.periodKey, monthlyFeeRecordId: record._id };
     }));
     const result = await postCollection(ctx, {
       studentId: args.studentId,
@@ -284,12 +337,9 @@ export const collectDue = mutation({
       collectedByAccountId: account._id,
       items,
     });
+    const now = Date.now();
     for (const record of due)
-      await ctx.db.patch(record._id, {
-        status: "paid",
-        collectionId: result.collectionId,
-        paidAt: Date.now(),
-      });
+      await ctx.db.patch(record._id, { status: "paid", paidAmountMinor: record.amountMinor, collectionId: result.collectionId, paidAt: now });
     await writeAudit(ctx, {
       actorAccountId: account._id,
       actorRole: "owner",
@@ -299,6 +349,35 @@ export const collectDue = mutation({
       summary: "Collected all due monthly fees",
       metadata: { amountMinor: result.amountMinor },
     });
+    return result;
+  },
+});
+
+export const collectPartialDue = mutation({
+  args: { studentId: v.id("students"), amountMinor: v.number(), collectedOn: v.string(), note: v.optional(v.string()) },
+  returns: collectionResultValidator,
+  handler: async (ctx, args) => {
+    const { account } = await requireOwner(ctx);
+    validateCollectionDate(args.collectedOn);
+    assertMinorUnits(args.amountMinor);
+    if (args.amountMinor <= 0) throw new Error("Payment amount must be greater than zero");
+    const today = dhakaDate();
+    const records = await ctx.db.query("monthlyFeeRecords").withIndex("by_studentId_and_dueDate", (q) => q.eq("studentId", args.studentId)).take(500);
+    const { allocations, unallocatedMinor } = allocateOldestDue(records, args.amountMinor, today);
+    if (!allocations.length) throw new Error("This student has no monthly fees due");
+    if (unallocatedMinor > 0) throw new Error("Payment amount exceeds the current due balance");
+    const items = await Promise.all(allocations.map(async ({ record, amountMinor }) => {
+      const course = await ctx.db.get("courses", record.courseId);
+      return { itemType: "monthly" as const, description: `${course?.nameEn ?? "Monthly fee"} - ${monthLabel(record.periodKey)} payment`, amountMinor, periodKey: record.periodKey, monthlyFeeRecordId: record._id };
+    }));
+    const result = await postCollection(ctx, { studentId: args.studentId, collectionType: "monthly", collectedOn: args.collectedOn, note: optionalText(args.note, "Note", 500), collectedByAccountId: account._id, items });
+    const now = Date.now();
+    for (const { record, amountMinor } of allocations) {
+      const paidAmountMinor = paidAmountFor(record) + amountMinor;
+      const status = paymentStatus(record.amountMinor, paidAmountMinor);
+      await ctx.db.patch(record._id, { status, paidAmountMinor, collectionId: status === "paid" ? result.collectionId : undefined, paidAt: status === "paid" ? now : undefined });
+    }
+    await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: "fee.collection_posted", entityType: "feeCollection", entityId: result.collectionId, summary: "Collected partial monthly dues", metadata: { amountMinor: result.amountMinor } });
     return result;
   },
 });
@@ -359,11 +438,12 @@ export const collectMonths = mutation({
           dueDate: dueDateForPeriod(periodKey),
           amountMinor,
           status: "unpaid",
+          paidAmountMinor: 0,
           createdAt: Date.now(),
         });
         record = (await ctx.db.get("monthlyFeeRecords", id)) ?? undefined;
       }
-      if (!record || record.status !== "unpaid")
+      if (!record || remainingAmountFor(record) <= 0)
         throw new Error(`${monthLabel(periodKey)} is already paid`);
       selected.push(record);
     }
@@ -376,7 +456,7 @@ export const collectMonths = mutation({
       items: selected.map((record) => ({
         itemType: "monthly",
         description: `${monthLabel(record.periodKey)} Monthly Fee`,
-        amountMinor: record.amountMinor,
+        amountMinor: remainingAmountFor(record),
         periodKey: record.periodKey,
         monthlyFeeRecordId: record._id,
       })),
@@ -384,6 +464,7 @@ export const collectMonths = mutation({
     for (const record of selected)
       await ctx.db.patch(record._id, {
         status: "paid",
+        paidAmountMinor: record.amountMinor,
         collectionId: result.collectionId,
         paidAt: Date.now(),
       });
@@ -469,18 +550,18 @@ export const collectManual = mutation({
       if (!record) {
         const firstBillingMonth = enrolment.firstBillingMonth ?? periodFromDate(enrolment.enrolledOn); const amountMinor = enrolment.agreedMonthlyAmountMinor ?? 0;
         if (amountMinor <= 0) throw new Error("Monthly fee is not configured"); if (selection.periodKey < firstBillingMonth) throw new Error("Month is before the first billing month");
-        const id = await ctx.db.insert("monthlyFeeRecords", { studentId: args.studentId, enrolmentId: enrolment._id, courseId: enrolment.courseId, batchId: enrolment.batchId, periodKey: selection.periodKey, dueDate: dueDateForPeriod(selection.periodKey), amountMinor, status: "unpaid", createdAt: Date.now() });
+        const id = await ctx.db.insert("monthlyFeeRecords", { studentId: args.studentId, enrolmentId: enrolment._id, courseId: enrolment.courseId, batchId: enrolment.batchId, periodKey: selection.periodKey, dueDate: dueDateForPeriod(selection.periodKey), amountMinor, status: "unpaid", paidAmountMinor: 0, createdAt: Date.now() });
         record = (await ctx.db.get("monthlyFeeRecords", id)) ?? undefined;
       }
-      if (!record || record.status !== "unpaid") throw new Error(`${monthLabel(selection.periodKey)} is already paid`);
+      if (!record || remainingAmountFor(record) <= 0) throw new Error(`${monthLabel(selection.periodKey)} is already paid`);
       const course = await ctx.db.get("courses", enrolment.courseId); if (!course) throw new Error("Course not found");
       selected.push({ record, courseName: course.nameEn });
     }
     const result = await postCollection(ctx, { studentId: args.studentId, collectionType: selected.length ? "monthly" : "other", collectedOn: args.collectedOn, note: optionalText(args.note, "Note", 500), collectedByAccountId: account._id, items: [
-      ...selected.map(({ record, courseName }) => ({ itemType: "monthly" as const, description: `${courseName} - ${monthLabel(record.periodKey)} Monthly Fee`, amountMinor: record.amountMinor, periodKey: record.periodKey, monthlyFeeRecordId: record._id })),
+      ...selected.map(({ record, courseName }) => ({ itemType: "monthly" as const, description: `${courseName} - ${monthLabel(record.periodKey)} Monthly Fee`, amountMinor: remainingAmountFor(record), periodKey: record.periodKey, monthlyFeeRecordId: record._id })),
       ...(otherFee ? [{ itemType: "other" as const, description: otherFee.feeName, amountMinor: otherFee.amountMinor }] : []),
     ] });
-    for (const { record } of selected) await ctx.db.patch(record._id, { status: "paid", collectionId: result.collectionId, paidAt: Date.now() });
+    for (const { record } of selected) await ctx.db.patch(record._id, { status: "paid", paidAmountMinor: record.amountMinor, collectionId: result.collectionId, paidAt: Date.now() });
     await writeAudit(ctx, { actorAccountId: account._id, actorRole: "owner", action: "fee.collection_posted", entityType: "feeCollection", entityId: result.collectionId, summary: "Collected manual student fees", metadata: { amountMinor: result.amountMinor } });
     return result;
   },
@@ -506,12 +587,11 @@ export const voidCollection = mutation({
           "monthlyFeeRecords",
           item.monthlyFeeRecordId,
         );
-        if (record?.collectionId === collection._id)
-          await ctx.db.patch(record._id, {
-            status: "unpaid",
-            collectionId: undefined,
-            paidAt: undefined,
-          });
+        if (record) {
+          const paidAmountMinor = Math.max(paidAmountFor(record) - item.amountMinor, 0);
+          const status = paymentStatus(record.amountMinor, paidAmountMinor);
+          await ctx.db.patch(record._id, { status, paidAmountMinor, collectionId: status === "paid" ? record.collectionId : undefined, paidAt: status === "paid" ? record.paidAt : undefined });
+        }
       }
       await ctx.db.patch(item._id, { reversedAt: now });
     }
@@ -740,9 +820,7 @@ export const myFees = query({
         q.eq("studentId", student._id),
       )
       .take(240);
-    const due = records.filter(
-      (record) => record.status === "unpaid" && record.dueDate <= today,
-    );
+    const due = records.filter((record) => isDueRecord(record, today));
     const future = records.filter(
       (record) => record.status === "paid" && record.periodKey > currentPeriod,
     );
@@ -770,7 +848,7 @@ export const myFees = query({
       });
     }
     return {
-      dueMinor: due.reduce((sum, record) => sum + record.amountMinor, 0),
+      dueMinor: due.reduce((sum, record) => sum + remainingAmountFor(record), 0),
       dueMonths: due.map((record) => record.periodKey),
       futurePaidMonths: future.map((record) => record.periodKey),
       collections,
