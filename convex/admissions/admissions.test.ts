@@ -207,6 +207,7 @@ describe("admission application backend", () => {
       normalizedGuardianPhone: "8801712345678",
       smsRecipient: "both",
     });
+    expect(student?.studentNumber).toMatch(/^\d{5}$/);
   });
 
   it("supports multiple course enrolments in direct admission", async () => {

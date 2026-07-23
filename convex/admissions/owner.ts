@@ -91,7 +91,7 @@ const applicationDetailValidator = v.object({
   duplicateCandidates: v.array(candidateValidator),
 });
 
-const STUDENT_NUMBER_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+const STUDENT_NUMBER_ALPHABET = "0123456789";
 const STUDENT_NUMBER_LENGTH = 5;
 const STUDENT_NUMBER_ATTEMPTS = 25;
 
