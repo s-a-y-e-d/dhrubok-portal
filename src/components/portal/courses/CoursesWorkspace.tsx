@@ -1290,7 +1290,7 @@ export function CoursesWorkspace({ locale }: { locale: Locale }) {
     <div className="grid gap-5">
       <header className="portal-page-header flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="eyebrow">{bn ? "একাডেমিক" : "Academics"}</p>
+          <p className="eyebrow">{bn ? "কোর্স" : "Courses"}</p>
           <h1>{bn ? "কোর্স" : "Courses"}</h1>
           <p>
             {bn

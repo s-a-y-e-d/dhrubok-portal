@@ -42,8 +42,11 @@ describe("PortalShell role navigation", () => {
 
   it("shows owner operations without dead hrefs", () => {
     render(<PortalShell role="owner" locale="en"><p>Owner content</p></PortalShell>);
-    const academics = screen.getAllByRole("link", { name: /Academics/i })[0];
-    expect(academics).toHaveAttribute("href", "/en/owner/courses");
+    const courses = screen.getAllByRole("link", { name: /Courses/i })[0];
+    expect(courses).toHaveAttribute("href", "/en/owner/courses");
+    const exams = screen.getAllByRole("link", { name: "Exams" });
+    expect(exams.some((link) => link.getAttribute("href") === "/en/owner/exams")).toBe(true);
+    expect(screen.queryByRole("button", { name: "More Menu" })).not.toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: /Settings/i }).length).toBeGreaterThan(0);
   });
 

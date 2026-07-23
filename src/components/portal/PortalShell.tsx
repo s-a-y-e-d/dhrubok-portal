@@ -72,8 +72,8 @@ const ownerNavGroups: NavGroupDef[] = [
         icon: Users,
       },
       {
-        labelEn: "Academics",
-        labelBn: "একাডেমিক",
+        labelEn: "Courses",
+        labelBn: "কোর্স",
         path: "/courses",
         icon: BookOpen,
       },
@@ -279,8 +279,8 @@ const navMetadata: Record<
     descBn: "নিবন্ধিত শিক্ষার্থীদের প্রোফাইল এবং কোর্স তালিকা পরিচালনা করুন।",
   },
   "/courses": {
-    titleEn: "Academics",
-    titleBn: "একাডেমিক",
+    titleEn: "Courses",
+    titleBn: "কোর্স",
     descEn: "Manage courses, subjects, batches, and class routines.",
     descBn: "কোর্স, বিষয়, ব্যাচ এবং ক্লাস রুটিন পরিচালনা করুন।",
   },
@@ -812,20 +812,32 @@ export function PortalShell({
                 </li>
               );
             })}
-            {/* MORE BUTTON */}
-            <li className={styles.bottomNavItem}>
-              <button
-                onClick={() => setDrawerOpen(true)}
-                className={styles.bottomNavLink}
-                aria-label={isBn ? "আরও মেনু" : "More Menu"}
-                aria-expanded={drawerOpen}
-              >
-                <Menu className={styles.bottomNavIcon} aria-hidden="true" />
-                <span className={styles.bottomNavLabel}>
-                  {isBn ? "আরও / More" : "More / আরও"}
-                </span>
-              </button>
-            </li>
+            {role === "owner" ? (
+              <li className={styles.bottomNavItem}>
+                <Link
+                  href={`/${locale}/owner/exams`}
+                  className={`${styles.bottomNavLink} ${isItemActive("/exams") ? styles.bottomNavLinkActive : ""}`}
+                  aria-current={isItemActive("/exams") ? "page" : undefined}
+                >
+                  <FileSpreadsheet className={styles.bottomNavIcon} aria-hidden="true" />
+                  <span className={styles.bottomNavLabel}>{isBn ? "পরীক্ষা" : "Exams"}</span>
+                </Link>
+              </li>
+            ) : (
+              <li className={styles.bottomNavItem}>
+                <button
+                  onClick={() => setDrawerOpen(true)}
+                  className={styles.bottomNavLink}
+                  aria-label={isBn ? "আরও মেনু" : "More Menu"}
+                  aria-expanded={drawerOpen}
+                >
+                  <Menu className={styles.bottomNavIcon} aria-hidden="true" />
+                  <span className={styles.bottomNavLabel}>
+                    {isBn ? "আরও / More" : "More / আরও"}
+                  </span>
+                </button>
+              </li>
+            )}
           </ul>
         </nav>
       </div>

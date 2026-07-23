@@ -119,6 +119,7 @@ export const getTeacherDetails = query({
         status: teacherStatus,
         accountStatus,
         isPublic: v.boolean(),
+        publicSortOrder: v.number(),
         joinedAt: v.optional(v.number()),
         photoUrl: v.union(v.string(), v.null()),
       }),
@@ -224,6 +225,7 @@ export const getTeacherDetails = query({
         status: teacher.status,
         accountStatus: account.status,
         isPublic: teacher.isPublic,
+        publicSortOrder: teacher.publicSortOrder,
         joinedAt: teacher.joinedAt,
         photoUrl: teacher.photoStorageId
           ? await ctx.storage.getUrl(teacher.photoStorageId)

@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Archive, Plus, Search, UserCheck, Users } from "lucide-react";
+import { Archive, Pencil, Plus, Search, UserCheck, Users } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,6 +44,14 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import {
   Table,
   TableBody,
   TableCell,
@@ -67,8 +75,6 @@ const teacherStatusLabel = (status: string, bn: boolean) => {
 const initial = {
   employeeCode: "",
   displayName: "",
-  nameBn: "",
-  nameEn: "",
   loginEmail: "",
   phone: "",
   bioBn: "",
@@ -77,6 +83,39 @@ const initial = {
   qualificationsEn: "",
   joinedAt: "",
 };
+
+function useIsMobile() {
+  return useSyncExternalStore(
+    (notify) => {
+      const query = window.matchMedia("(max-width: 767px)");
+      query.addEventListener("change", notify);
+      return () => query.removeEventListener("change", notify);
+    },
+    () => window.matchMedia("(max-width: 767px)").matches,
+    () => false,
+  );
+}
+
+function TeacherPanel({
+  mobile,
+  open,
+  onOpenChange,
+  title,
+  description,
+  children,
+}: {
+  mobile: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  if (mobile) {
+    return <Drawer open={open} onOpenChange={onOpenChange}><DrawerContent className="mx-auto max-h-[92dvh] max-w-3xl"><DrawerHeader><DrawerTitle>{title}</DrawerTitle><DrawerDescription>{description}</DrawerDescription></DrawerHeader>{children}</DrawerContent></Drawer>;
+  }
+  return <Sheet open={open} onOpenChange={onOpenChange}><SheetContent className="w-[min(560px,calc(100%-24px))]"><SheetHeader><SheetTitle>{title}</SheetTitle><SheetDescription>{description}</SheetDescription></SheetHeader>{children}</SheetContent></Sheet>;
+}
 
 function initials(name: string) {
   return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
@@ -123,8 +162,6 @@ function CreateTeacherDialog({
       const result = await create({
         employeeCode: values.employeeCode,
         displayName: values.displayName,
-        nameBn: values.nameBn || undefined,
-        nameEn: values.nameEn || undefined,
         loginEmail: values.loginEmail,
         phone: values.phone,
         bioBn: values.bioBn,
@@ -185,8 +222,6 @@ function CreateTeacherDialog({
               [
                 "displayName",
                 "employeeCode",
-                "nameBn",
-                "nameEn",
                 "loginEmail",
                 "phone",
                 "joinedAt",
@@ -202,15 +237,7 @@ function CreateTeacherDialog({
                       ? bn
                         ? "কর্মী কোড"
                         : "Employee code"
-                      : key === "nameBn"
-                        ? bn
-                          ? "বাংলা নাম (ঐচ্ছিক)"
-                          : "Bangla name (optional)"
-                        : key === "nameEn"
-                          ? bn
-                            ? "ইংরেজি নাম (ঐচ্ছিক)"
-                            : "English name (optional)"
-                          : key === "loginEmail"
+                    : key === "loginEmail"
                             ? bn
                               ? "লগইন ইমেইল"
                               : "Login email"
@@ -322,6 +349,8 @@ export function TeachersWorkspace({ locale }: { locale: Locale }) {
   );
   const [query, setQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+  const [panelMode, setPanelMode] = useState<"profile" | "edit">("profile");
+  const mobile = useIsMobile();
   const [selectedId, setSelectedId] = useState<Id<"teachers"> | null>(null);
   const [confirmAction, setConfirmAction] = useState<
     "deactivate" | "reactivate" | "archive" | null
@@ -338,6 +367,52 @@ export function TeachersWorkspace({ locale }: { locale: Locale }) {
   );
   const setActive = useMutation(api.academics.teacherWorkspace.setActiveState);
   const archive = useMutation(api.academics.teachers.archive);
+  const updateTeacher = useMutation(api.academics.teachers.update);
+  const [editValues, setEditValues] = useState<typeof initial>(initial);
+  const [editing, setEditing] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const openEditor = () => {
+    if (!details) return;
+    setEditValues({
+      employeeCode: details.teacher.employeeCode,
+      displayName: details.teacher.displayName,
+      loginEmail: details.teacher.loginEmail,
+      phone: details.teacher.phone,
+      bioBn: details.teacher.bioBn,
+      bioEn: details.teacher.bioEn,
+      qualificationsBn: details.teacher.qualificationsBn,
+      qualificationsEn: details.teacher.qualificationsEn,
+      joinedAt: details.teacher.joinedAt
+        ? new Date(details.teacher.joinedAt).toISOString().slice(0, 10)
+        : "",
+    });
+    setEditError(null);
+    setPanelMode("edit");
+  };
+  const saveTeacher = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!details) return;
+    setEditing(true);
+    setEditError(null);
+    try {
+      await updateTeacher({
+        teacherId: details.teacher.teacherId,
+        ...editValues,
+        joinedAt: editValues.joinedAt
+          ? Date.parse(`${editValues.joinedAt}T00:00:00+06:00`)
+          : undefined,
+        status: details.teacher.status === "archived" ? "inactive" : details.teacher.status,
+        isPublic: details.teacher.isPublic,
+        publicSortOrder: details.teacher.publicSortOrder,
+      });
+      setPanelMode("profile");
+      setFeedback(bn ? "শিক্ষকের প্রোফাইল হালনাগাদ হয়েছে।" : "Teacher profile updated.");
+    } catch (cause) {
+      setEditError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setEditing(false);
+    }
+  };
   const runAction = async () => {
     if (!selectedId || !confirmAction) return;
     try {
@@ -536,14 +611,17 @@ export function TeachersWorkspace({ locale }: { locale: Locale }) {
         locale={locale}
         onCreated={setSelectedId}
       />
-      <Sheet
+      <TeacherPanel
+        mobile={mobile}
         open={Boolean(selectedId)}
         onOpenChange={(open) => {
-          if (!open) setSelectedId(null);
+          if (!open) { setSelectedId(null); setPanelMode("profile"); }
         }}
+        title={panelMode === "edit" ? (bn ? "শিক্ষক প্রোফাইল সম্পাদনা" : "Edit teacher profile") : (details?.teacher.displayName ?? (bn ? "শিক্ষক" : "Teacher"))}
+        description={panelMode === "edit" ? (bn ? "প্রোফাইলের তথ্য হালনাগাদ করুন।" : "Update the teacher's profile information.") : (details ? `${details.teacher.employeeCode} · ${details.teacher.loginEmail}` : "")}
       >
-        <SheetContent className="w-[min(560px,calc(100%-24px))]">
-          <SheetHeader>
+        <div className="min-h-0 overflow-y-auto px-4 pb-4">
+          {panelMode === "profile" && <SheetHeader>
             <SheetTitle>
               {details?.teacher.displayName ?? (bn ? "শিক্ষক" : "Teacher")}
             </SheetTitle>
@@ -552,8 +630,22 @@ export function TeachersWorkspace({ locale }: { locale: Locale }) {
                 ? `${details.teacher.employeeCode} · ${details.teacher.loginEmail}`
                 : ""}
             </SheetDescription>
-          </SheetHeader>
-          {details && (
+          </SheetHeader>}
+          {panelMode === "edit" && details && (
+            <form className="flex flex-col gap-4" onSubmit={saveTeacher}>
+              {editError && <p role="alert" className="text-sm text-[var(--danger)]">{editError}</p>}
+              <div className="grid gap-3 sm:grid-cols-2">
+                {(["displayName", "employeeCode", "loginEmail", "phone", "joinedAt"] as const).map((key) => (
+                  <label key={key} className="grid gap-1.5"><Label htmlFor={`edit-teacher-${key}`}>{key === "displayName" ? (bn ? "প্রদর্শিত নাম" : "Display name") : key === "employeeCode" ? (bn ? "কর্মী কোড" : "Employee code") : key === "loginEmail" ? (bn ? "লগইন ইমেইল" : "Login email") : key === "joinedAt" ? (bn ? "যোগদানের তারিখ" : "Joined date") : (bn ? "ফোন" : "Phone")}</Label><Input id={`edit-teacher-${key}`} type={key === "loginEmail" ? "email" : key === "joinedAt" ? "date" : "text"} value={editValues[key]} onChange={(event) => setEditValues((current) => ({ ...current, [key]: event.target.value }))} required={["displayName", "employeeCode", "loginEmail", "phone"].includes(key)} /></label>
+                ))}
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {(["qualificationsBn", "qualificationsEn", "bioBn", "bioEn"] as const).map((key) => <label key={key} className="grid gap-1.5"><Label htmlFor={`edit-teacher-${key}`}>{key === "qualificationsBn" ? (bn ? "বাংলা যোগ্যতা" : "Bangla qualifications") : key === "qualificationsEn" ? (bn ? "ইংরেজি যোগ্যতা" : "English qualifications") : key === "bioBn" ? (bn ? "বাংলা পরিচিতি" : "Bangla bio") : (bn ? "ইংরেজি পরিচিতি" : "English bio")}</Label><Textarea id={`edit-teacher-${key}`} value={editValues[key]} onChange={(event) => setEditValues((current) => ({ ...current, [key]: event.target.value }))} /></label>)}
+              </div>
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button type="button" variant="secondary" onClick={() => setPanelMode("profile")}>{bn ? "বাতিল" : "Cancel"}</Button><Button type="submit" disabled={editing}>{editing ? (bn ? "সংরক্ষণ হচ্ছে…" : "Saving…") : (bn ? "পরিবর্তন সংরক্ষণ" : "Save changes")}</Button></div>
+            </form>
+          )}
+          {panelMode === "profile" && details && (
             <div className="grid gap-5">
               <Avatar className="size-20">
                 <AvatarImage src={details.teacher.photoUrl ?? undefined} alt={details.teacher.displayName} />
@@ -645,6 +737,12 @@ export function TeachersWorkspace({ locale }: { locale: Locale }) {
                 )}
               </section>
               <div className="flex flex-wrap gap-2">
+                {details.teacher.status !== "archived" && (
+                  <Button variant="secondary" onClick={openEditor}>
+                    <Pencil data-icon="inline-start" />
+                    {bn ? "প্রোফাইল সম্পাদনা" : "Edit profile"}
+                  </Button>
+                )}
                 {details.teacher.status === "active" && (
                   <Button
                     variant="secondary"
@@ -670,8 +768,52 @@ export function TeachersWorkspace({ locale }: { locale: Locale }) {
               </div>
             </div>
           )}
-        </SheetContent>
-      </Sheet>
+        </div>
+      </TeacherPanel>
+      <Drawer open={false}>
+        <DrawerContent className="mx-auto max-h-[92dvh] max-w-3xl">
+          <DrawerHeader>
+            <DrawerTitle>{bn ? "শিক্ষক প্রোফাইল সম্পাদনা" : "Edit teacher profile"}</DrawerTitle>
+            <DrawerDescription>
+              {bn ? "প্রোফাইলের তথ্য হালনাগাদ করুন।" : "Update the teacher's profile information."}
+            </DrawerDescription>
+          </DrawerHeader>
+          <form className="flex min-h-0 flex-col gap-4 overflow-y-auto px-4 pb-4" onSubmit={saveTeacher}>
+            {editError && <p role="alert" className="text-sm text-[var(--danger)]">{editError}</p>}
+            <div className="grid gap-3 sm:grid-cols-2">
+              {([
+                ["displayName", bn ? "প্রদর্শিত নাম" : "Display name", "text"],
+                ["employeeCode", bn ? "কর্মী কোড" : "Employee code", "text"],
+                ["loginEmail", bn ? "লগইন ইমেইল" : "Login email", "email"],
+                ["phone", bn ? "ফোন" : "Phone", "text"],
+                ["joinedAt", bn ? "যোগদানের তারিখ" : "Joined date", "date"],
+              ] as const).map(([key, label, type]) => (
+                <label key={key} className="grid gap-1.5">
+                  <Label htmlFor={`edit-teacher-${key}`}>{label}</Label>
+                  <Input id={`edit-teacher-${key}`} type={type} value={editValues[key]} onChange={(event) => setEditValues((current) => ({ ...current, [key]: event.target.value }))} required={["displayName", "employeeCode", "loginEmail", "phone"].includes(key)} />
+                </label>
+              ))}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {([
+                ["qualificationsBn", bn ? "বাংলা যোগ্যতা" : "Bangla qualifications"],
+                ["qualificationsEn", bn ? "ইংরেজি যোগ্যতা" : "English qualifications"],
+                ["bioBn", bn ? "বাংলা পরিচিতি" : "Bangla bio"],
+                ["bioEn", bn ? "ইংরেজি পরিচিতি" : "English bio"],
+              ] as const).map(([key, label]) => (
+                <label key={key} className="grid gap-1.5">
+                  <Label htmlFor={`edit-teacher-${key}`}>{label}</Label>
+                  <Textarea id={`edit-teacher-${key}`} value={editValues[key]} onChange={(event) => setEditValues((current) => ({ ...current, [key]: event.target.value }))} />
+                </label>
+              ))}
+            </div>
+            <DrawerFooter className="sticky bottom-0 -mx-4 border-t border-[var(--border)] bg-[var(--canvas)] px-4">
+              <Button type="submit" disabled={editing}>{editing ? (bn ? "সংরক্ষণ হচ্ছে…" : "Saving…") : (bn ? "পরিবর্তন সংরক্ষণ" : "Save changes")}</Button>
+              <Button type="button" variant="secondary" onClick={() => setPanelMode("profile")}>{bn ? "বাতিল" : "Cancel"}</Button>
+            </DrawerFooter>
+          </form>
+        </DrawerContent>
+      </Drawer>
       <AlertDialog
         open={Boolean(confirmAction)}
         onOpenChange={(open) => {
